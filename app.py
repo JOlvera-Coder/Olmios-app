@@ -16,7 +16,7 @@ PHOENIX_SVG = """<svg width="120" height="120" viewBox="0 0 100 100" fill="none"
     <path d="M50 22 C52 22 55 24 55 27 C55 30 52 32 50 34 C49 36 49 42 50 50 C51 58 53 68 50 78 C47 68 49 58 50 50 C51 42 51 36 50 34 C48 32 45 30 45 27 C45 24 48 22 50 22 Z" fill="url(#goldFeathers)" />
     <path d="M50 18 L53 23 L50 21 L47 23 Z" fill="#d97706"/>
     <path d="M53 26 L58 28 L54 30 Z" fill="#b45309"/>
-    <path d="M48 36 C38 30 26 28 16 34 C24 38 32 40 40 46 C28 46 18 50 14 58 C22 58 32 56 42 58 C32 62 24 68 22 74 C30 72 38 68 46 64 Z" fill="url(#goldFeathers)" />
+    <path d="M48 36 C38 30 26 28 16 34 C24 38 32 40 40 46 C28 46 18 50 14 58 C22 58 32 56 42 58 C32 62 24 68 46 64 Z" fill="url(#goldFeathers)" />
     <path d="M52 36 C62 30 74 28 84 34 C76 38 68 40 60 46 C72 46 82 50 86 58 C68 62 76 68 78 74 C70 72 62 68 54 64 Z" fill="url(#goldFeathers)"/>
     <path d="M50 70 L44 86 L50 82 L56 86 Z" fill="url(#goldFeathers)"/>
 </svg>"""
@@ -399,15 +399,24 @@ def dispatch_request():
     }
 
     function parseModelNumberDetails(modelStr) {
-        let m = modelStr ? modelStr.toUpperCase() : '';
+        let m = modelStr ? modelStr.toUpperCase().trim() : '';
         let result = { brand: 'Trane', tonnage: '3.0 Tons', SEER: '16 SEER2', refrig: 'R-410A' };
 
-        if(m.includes('5TTR') || m.includes('S8X') || m.includes('5TXC')) result.brand = 'Trane';
+        if(m.includes('5TTR') || m.includes('4TTR') || m.includes('S8X') || m.includes('5TXC')) result.brand = 'Trane';
         else if(m.includes('24AA') || m.includes('59SC')) result.brand = 'Carrier';
         else if(m.includes('GSX') || m.includes('GM9')) result.brand = 'Goodman';
         else if(m.includes('XC') || m.includes('EL19')) result.brand = 'Lennox';
 
-        // Extract tonnage digits from model number (048 = 4.0 Tons, 036 = 3.0 Tons, 024 = 2.0 Tons, 060 = 5.0 Tons)
+        // ACCURATE REFRIGERANT PARSING BASED ON TRANE NOMENCLATURE PREFIX
+        if(m.startsWith('5')) {
+            result.refrig = 'R-454B';
+        } else if(m.startsWith('4')) {
+            result.refrig = 'R-410A';
+        } else if(m.startsWith('2')) {
+            result.refrig = 'R-22';
+        }
+
+        // TONNAGE DECODING (048 = 4.0 Tons, 036 = 3.0 Tons, 024 = 2.0 Tons, 060 = 5.0 Tons)
         if(m.includes('048')) result.tonnage = '4.0 Tons';
         else if(m.includes('036')) result.tonnage = '3.0 Tons';
         else if(m.includes('024')) result.tonnage = '2.0 Tons';
@@ -429,7 +438,6 @@ def dispatch_request():
         let isGas = sysType.includes('gas');
         let sysEnergyLabel = isGas ? 'Gas System' : 'Electric System';
 
-        // Check if leak symptom mentioned to display interactive AI follow-up
         let lowerChat = chatInput.toLowerCase();
         if(lowerChat.includes('leak') || lowerChat.includes('coil')) {
             followupBox.style.display = 'block';
@@ -663,7 +671,7 @@ def profile():
                 <input type="text" id="prof_tag_url" class="form-control rounded-3" placeholder="Upload or paste image URL of equipment tag">
             </div>
 
-            <!-- ACCESSORY ADD-ON BOX (WITH TOP-RIGHT DELETE BUTTON) -->
+            <!-- ACCESSORY ADD-ON BOX -->
             <div id="add_acc_box" class="add-on-box">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-sliders me-1"></i> Add Additional Accessory</h6>
@@ -680,7 +688,7 @@ def profile():
                 <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_acc_box')">Save Accessory</button>
             </div>
 
-            <!-- ADDITIONAL HVAC TAG BOX (WITH TOP-RIGHT DELETE BUTTON & SYSTEM HEATING TYPE DROPDOWN) -->
+            <!-- ADDITIONAL HVAC TAG BOX -->
             <div id="add_hvac_box" class="add-on-box">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-circle-plus me-1"></i> Add Additional HVAC System Tag</h6>
