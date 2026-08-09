@@ -510,6 +510,7 @@ def invoices():
 </html>"""
 
 # --- 6. DOWNLOAD PHOENIX LOGO PAGE ('/download_logo') ---
+# --- 6. DOWNLOAD PHOENIX LOGO PAGE ('/download_logo') ---
 @app.route('/download_logo')
 def download_logo():
     return f"""<!DOCTYPE html>
@@ -517,7 +518,7 @@ def download_logo():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olmios - Download Phoenix Logo</title>
+    <title>Olmios - Download Phoenix Logo (.JPG)</title>
     {COMMON_HEADER}
     <style>
         body {{ background-color: #0b1329; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 20px; }}
@@ -526,34 +527,68 @@ def download_logo():
 </head>
 <body>
     <div class="logo-card">
-        <h4 class="fw-bold text-dark mb-3">Olmios Phoenix Symbol</h4>
+        <h4 class="fw-bold text-dark mb-1">Olmios Phoenix Symbol</h4>
+        <p class="text-muted small mb-3">High-Resolution .JPG Format</p>
         
-        <div id="svg_container" class="p-3 mb-4 border rounded-3 bg-light d-flex justify-content-center">
-            {get_phoenix_svg(220, 220)}
+        <!-- Hidden SVG Source -->
+        <div id="svg_container" style="display:none;">
+            {get_phoenix_svg(600, 600)}
         </div>
 
-        <button class="btn btn-warning btn-lg w-100 fw-bold rounded-3 shadow-sm mb-2 text-dark" onclick="downloadSVG()">
-            <i class="fa-solid fa-download me-1"></i> Download / Save Phoenix Logo
+        <!-- Rendered Native JPG Preview -->
+        <div class="p-3 mb-3 border rounded-3 bg-light d-flex justify-content-center align-items-center" style="min-height: 260px;">
+            <img id="jpg_preview" style="max-width: 220px; height: auto;" alt="Olmios Phoenix Logo JPG">
+        </div>
+
+        <canvas id="jpg_canvas" width="1200" height="1200" style="display:none;"></canvas>
+
+        <button class="btn btn-warning btn-lg w-100 fw-bold rounded-3 shadow-sm mb-2 text-dark" onclick="downloadJPG()">
+            <i class="fa-solid fa-file-image me-1"></i> Download .JPG Logo File
         </button>
         <a href="/customer_home" class="btn btn-outline-secondary w-100 fw-bold rounded-3">Return to Dashboard</a>
     </div>
 
     <script>
-    function downloadSVG() {{
+    function renderJPG() {{
         let svgElement = document.querySelector('#svg_container svg');
         let svgData = new XMLSerializer().serializeToString(svgElement);
         let svgBlob = new Blob([svgData], {{type: "image/svg+xml;charset=utf-8"}});
-        let svgUrl = URL.createObjectURL(svgBlob);
+        let URLObj = window.URL || window.webkitURL || window;
+        let blobURL = URLObj.createObjectURL(svgBlob);
+        
+        let img = new Image();
+        img.onload = function() {{
+            let canvas = document.getElementById('jpg_canvas');
+            let ctx = canvas.getContext('2d');
+            
+            // Clean white background for JPG
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            let jpgDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+            document.getElementById('jpg_preview').src = jpgDataUrl;
+        }};
+        img.src = blobURL;
+    }}
+
+    function downloadJPG() {{
+        let canvas = document.getElementById('jpg_canvas');
+        let jpgUrl = canvas.toDataURL('image/jpeg', 0.95);
         let downloadLink = document.createElement("a");
-        downloadLink.href = svgUrl;
-        downloadLink.download = "olmios_phoenix_logo.svg";
+        downloadLink.href = jpgUrl;
+        downloadLink.download = "olmios_phoenix_logo.jpg";
         document.body.appendChild(downloadLink);
         downloadLink.click();
         document.body.removeChild(downloadLink);
     }}
+
+    window.onload = renderJPG;
     </script>
 </body>
 </html>"""
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
