@@ -1,7 +1,8 @@
 import os
-from flask import Flask, render_template_string, request, redirect, url_for, jsonify
+from flask import Flask, render_template_string, request, redirect, url_for, jsonify, session
 
 app = Flask(__name__)
+app.secret_key = 'olmios_secure_customer_session_key'
 
 PHOENIX_SVG = """<svg width="120" height="120" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -16,7 +17,7 @@ PHOENIX_SVG = """<svg width="120" height="120" viewBox="0 0 100 100" fill="none"
     <path d="M50 18 L53 23 L50 21 L47 23 Z" fill="#d97706"/>
     <path d="M53 26 L58 28 L54 30 Z" fill="#b45309"/>
     <path d="M48 36 C38 30 26 28 16 34 C24 38 32 40 40 46 C28 46 18 50 14 58 C22 58 32 56 42 58 C32 62 24 68 22 74 C30 72 38 68 46 64 Z" fill="url(#goldFeathers)" />
-    <path d="M52 36 C62 30 74 28 84 34 C76 38 68 40 60 46 C72 46 82 50 86 58 C68 62 76 68 78 74 C70 72 62 68 54 64 Z" fill="url(#goldFeathers)" />
+    <path d="M52 36 C62 30 74 28 84 34 C76 38 68 40 60 46 C72 46 82 50 86 58 C68 62 76 68 78 74 C70 72 62 68 54 64 Z" fill="url(#goldFeathers)"/>
     <path d="M50 70 L44 86 L50 82 L56 86 Z" fill="url(#goldFeathers)"/>
 </svg>"""
 
@@ -66,19 +67,19 @@ def index():
         <div id="form-login">
             <div class="mb-3">
                 <label class="form-label"><i class="fa-solid fa-envelope me-1"></i> USERNAME / EMAIL</label>
-                <input type="text" class="form-control" placeholder="Enter username or email">
+                <input type="text" id="login_user" class="form-control" placeholder="Enter username or email">
             </div>
             <div class="mb-4">
                 <label class="form-label"><i class="fa-solid fa-lock me-1"></i> PASSWORD</label>
                 <input type="password" class="form-control" placeholder="Enter password">
             </div>
-            <a href="/customer_home" class="btn btn-amber w-100 d-flex align-items-center justify-content-center">Access Dashboard</a>
+            <button type="button" class="btn btn-amber w-100 d-flex align-items-center justify-content-center" onclick="handleLogin()">Access Dashboard</button>
         </div>
 
         <div id="form-register" style="display: none;">
             <div class="mb-2">
                 <label class="form-label"><i class="fa-solid fa-user me-1"></i> FULL NAME</label>
-                <input type="text" class="form-control" placeholder="Enter full name">
+                <input type="text" id="reg_fullname" class="form-control" placeholder="Enter full name">
             </div>
             <div class="mb-2">
                 <label class="form-label"><i class="fa-solid fa-at me-1"></i> CREATE USERNAME</label>
@@ -90,9 +91,9 @@ def index():
             </div>
             <div class="mb-4">
                 <label class="form-label"><i class="fa-solid fa-location-dot me-1"></i> SERVICE ADDRESS</label>
-                <input type="text" class="form-control" placeholder="Enter street address, city, state">
+                <input type="text" id="reg_address" class="form-control" placeholder="Enter street address, city, state">
             </div>
-            <a href="/customer_home" class="btn btn-amber w-100 d-flex align-items-center justify-content-center">Create Account & Continue</a>
+            <button type="button" class="btn btn-amber w-100 d-flex align-items-center justify-content-center" onclick="handleRegister()">Create Account & Continue</button>
         </div>
     </div>
 
@@ -110,10 +111,34 @@ def index():
             document.getElementById('tab-register').className = 'nav-link active py-2.5';
         }
     }
+
+    function handleLogin() {
+        localStorage.setItem('olmios_is_first_login', 'false');
+        let userVal = document.getElementById('login_user').value.trim();
+        if(userVal && !localStorage.getItem('olmios_fullname')) {
+            localStorage.setItem('olmios_fullname', userVal);
+        }
+        window.location.href = '/customer_home';
+    }
+
+    function handleRegister() {
+        let name = document.getElementById('reg_fullname').value.trim() || 'John Doe';
+        let addr = document.getElementById('reg_address').value.trim();
+        localStorage.setItem('olmios_fullname', name);
+        if(addr) localStorage.setItem('olmios_saved_address', addr);
+        localStorage.setItem('olmios_is_first_login', 'true');
+        window.location.href = '/customer_home';
+    }
     </script>
 </body>
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(130, 130))
+
+# --- LOGOFF ROUTE ---
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/')
 
 # --- 2. MAIN CUSTOMER DASHBOARD ('/customer_home') ---
 @app.route('/customer_home')
@@ -135,6 +160,8 @@ def customer_home():
         .btn-nav-thin { border: 1px solid #cbd5e1; background: #ffffff; color: #1e293b; font-weight: 700; border-radius: 10px; transition: all 0.2s; }
         .btn-nav-thin:hover { background: #f8fafc; color: #0284c7; border-color: #38bdf8; }
         .guarantee-box { background: #059669; color: white; padding: 10px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; text-align: center; }
+        .btn-logoff { border: 1px solid #fca5a5; background: #fef2f2; color: #dc2626; font-weight: 800; border-radius: 12px; padding: 10px; width: 100%; transition: all 0.2s; text-decoration: none; display: block; text-align: center; }
+        .btn-logoff:hover { background: #fee2e2; color: #991b1b; }
     </style>
 </head>
 <body>
@@ -143,8 +170,8 @@ def customer_home():
             <div class="d-flex align-items-center gap-2">
                 <img id="home_avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
                 <div>
-                    <h6 class="fw-bold mb-0 text-muted small">WELCOME BACK</h6>
-                    <span class="fw-bold text-dark fs-6">Customer Account</span>
+                    <h6 class="fw-bold mb-0 text-muted small" id="greeting_title">WELCOME BACK</h6>
+                    <span class="fw-bold text-dark fs-6" id="display_fullname">Customer Account</span>
                 </div>
             </div>
             <a href="/customer_home" title="Home">{{PHOENIX}}</a>
@@ -154,7 +181,10 @@ def customer_home():
             <span class="fw-bold text-dark fs-6"><i class="fa-solid fa-star text-warning"></i> <i class="fa-solid fa-star text-warning"></i> <i class="fa-solid fa-star text-warning"></i> <i class="fa-solid fa-star text-warning"></i> <i class="fa-solid fa-star text-warning"></i> 4.9</span>
         </div>
 
-        <h6 class="fw-bold text-muted small text-center mb-2"><i class="fa-solid fa-map-location-dot me-1 text-primary"></i> LIVE ACTIVE FIELD TECHNICIAN COVERAGE BY ZIP CODE</h6>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold text-muted small mb-0"><i class="fa-solid fa-map-location-dot me-1 text-primary"></i> LIVE ACTIVE FIELD TECHNICIAN COVERAGE</h6>
+            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 fw-bold" style="font-size:0.75rem;" onclick="focusSavedLocation()"><i class="fa-solid fa-location-crosshairs me-1"></i> Saved Location</button>
+        </div>
         <div id="map"></div>
 
         <a href="/dispatch_request" class="btn btn-amber w-100 py-3 rounded-3 fw-bold fs-6 mb-3 shadow-sm">
@@ -166,9 +196,13 @@ def customer_home():
             <div class="col-6"><a href="/invoices" class="btn btn-nav-thin w-100 py-2.5 small"><i class="fa-solid fa-receipt me-1 text-primary"></i> View Invoices</a></div>
         </div>
 
-        <div class="guarantee-box shadow-sm">
+        <div class="guarantee-box shadow-sm mb-3">
             <i class="fa-solid fa-shield-halved me-1"></i> VERIFIED OLMIOS GUARANTEE - 100% Licensed & Background-Checked
         </div>
+
+        <a href="/logout" class="btn-logoff shadow-sm" onclick="localStorage.removeItem('olmios_is_first_login');">
+            <i class="fa-solid fa-right-from-bracket me-1"></i> Log Off
+        </a>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -184,9 +218,40 @@ def customer_home():
             [29.75, -95.38], [29.72, -95.32], [29.68, -95.36], [29.70, -95.42]
         ], { color: '#ef4444', strokeWidth: 1, fillColor: '#ef4444', fillOpacity: 0.35 }).addTo(map).bindPopup("<b>Emergency Zip Code: 77021</b>");
 
-        var standardZip = L.polygon([
-            [29.80, -95.25], [29.85, -95.15], [29.75, -95.10], [29.72, -95.20]
-        ], { color: '#0284c7', strokeWidth: 1, fillColor: '#0284c7', fillOpacity: 0.35 }).addTo(map).bindPopup("<b>Standard Coverage Zip Code: 77015</b>");
+        var customerMarker = null;
+
+        function loadCustomerSession() {
+            let isFirst = localStorage.getItem('olmios_is_first_login');
+            let name = localStorage.getItem('olmios_fullname') || 'John Doe';
+            let addr = localStorage.getItem('olmios_saved_address') || '18510 Ranch View Trail Cir, Houston, TX';
+
+            if(isFirst === 'true') {
+                document.getElementById('greeting_title').innerText = "WELCOME";
+            } else {
+                document.getElementById('greeting_title').innerText = "WELCOME BACK";
+            }
+            document.getElementById('display_fullname').innerText = name;
+
+            if(addr) {
+                plotCustomerAddress(addr);
+            }
+        }
+
+        function plotCustomerAddress(addressStr) {
+            if(customerMarker) map.removeLayer(customerMarker);
+            customerMarker = L.marker([29.7604, -95.3698]).addTo(map)
+                .bindPopup("<b>🏠 Saved Residence Location</b><br>" + addressStr + "<br><span class='text-success fw-bold'>Tech in Route upon Service Request</span>")
+                .openPopup();
+        }
+
+        function focusSavedLocation() {
+            if(customerMarker) {
+                map.setView(customerMarker.getLatLng(), 13);
+                customerMarker.openPopup();
+            }
+        }
+
+        window.onload = loadCustomerSession;
     </script>
 </body>
 </html>"""
@@ -207,8 +272,8 @@ def dispatch_request():
         .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
         .form-label { font-weight: 800; color: #475569 !important; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase; }
-        .btn-category { border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; font-weight: 700; border-radius: 12px; padding: 10px 6px; font-size: 0.85rem; width: 100%; transition: all 0.2s; }
-        .btn-category.active { background: #ffffff; border-color: #0284c7; color: #0284c7; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15); }
+        .btn-category { border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; border-radius: 12px; padding: 12px 6px; font-size: 0.85rem; width: 100%; transition: all 0.2s; cursor: pointer; }
+        .btn-category.active { background: #f0f9ff; border-color: #0284c7; color: #0284c7; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2); }
     </style>
 </head>
 <body>
@@ -222,22 +287,22 @@ def dispatch_request():
 
         <div class="p-2 mb-3 rounded-3 bg-success-subtle border border-success-subtle text-success small fw-bold d-flex align-items-center gap-2">
             <i class="fa-solid fa-circle-check fs-6"></i>
-            <span>Profile Verified: John Doe ((832) 388-4957)</span>
+            <span id="verified_status_line">Profile Verified & Ready</span>
         </div>
 
         <div class="row g-2 mb-3">
             <div class="col-4">
-                <button type="button" class="btn-category active" onclick="selectCat(this)">
+                <button type="button" class="btn-category active" id="cat_cooling" onclick="selectCat('cooling')">
                     <i class="fa-solid fa-snowflake text-info mb-1 d-block fs-5"></i> Cooling & AC
                 </button>
             </div>
             <div class="col-4">
-                <button type="button" class="btn-category" onclick="selectCat(this)">
+                <button type="button" class="btn-category" id="cat_heating" onclick="selectCat('heating')">
                     <i class="fa-solid fa-fire text-danger mb-1 d-block fs-5"></i> Heating
                 </button>
             </div>
             <div class="col-4">
-                <button type="button" class="btn-category" onclick="selectCat(this)">
+                <button type="button" class="btn-category" id="cat_maintenance" onclick="selectCat('maintenance')">
                     <i class="fa-solid fa-screwdriver-wrench text-warning mb-1 d-block fs-5"></i> Maintenance
                 </button>
             </div>
@@ -245,8 +310,8 @@ def dispatch_request():
 
         <div class="mb-3">
             <label class="form-label">SELECT JOB SITE PROPERTY ADDRESS</label>
-            <select class="form-select rounded-3">
-                <option value="primary">📍 Primary Residential: 3217 Montrose Blvd, Suite 100, Houston, TX</option>
+            <select class="form-select rounded-3" id="dispatch_address_select">
+                <option value="primary">📍 Primary Residential Address</option>
             </select>
         </div>
 
@@ -310,34 +375,36 @@ def dispatch_request():
     </div>
 
     <script>
-    function selectCat(btn) {
+    function selectCat(catName) {
         document.querySelectorAll('.btn-category').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        document.getElementById('cat_' + catName).classList.add('active');
     }
 
     function autoFillDescription() {
         let chatInput = document.getElementById('chat_assistant_input').value.trim();
         let issueBox = document.getElementById('issue_description');
-        let lowerChat = chatInput.toLowerCase();
         
-        let isOutdoor = lowerChat.includes('condenser') || lowerChat.includes('outdoor') || lowerChat.includes('outside') || lowerChat.includes('compressor');
-        let isIndoorBlower = lowerChat.includes('blower') || lowerChat.includes('furnace') || lowerChat.includes('air handler');
-        let isCommercial = lowerChat.includes('rtu') || lowerChat.includes('rooftop');
-        
-        let specText = "";
-        if (isCommercial) {
-            specText = " | [SAVED PROFILE SPECS]: RTU M/N: Commercial Packaged Unit";
-        } else if (isIndoorBlower) {
-            specText = " | [SAVED PROFILE SPECS]: Furnace M/N: S8X1B040M (S/N: 24001MN091)";
-        } else if (isOutdoor) {
-            specText = " | [SAVED PROFILE SPECS]: Condenser M/N: 4TTR6036N (S/N: 21045XY892)";
-        } else {
-            specText = " | [SAVED PROFILE SPECS]: Condenser M/N: 4TTR6036N (S/N: 21045XY892), Furnace M/N: S8X1B040M";
-        }
+        let prioritizedSpecs = " | [TECH SPECS SUMMARY]: " +
+            "1. Manufacturer: Trane " +
+            "| 2. System Energy: Gas Heat Pump " +
+            "| 3. Tonnage: 3.0 Tons " +
+            "| 4. SEER Rating: 16 SEER2 " +
+            "| 5. Refrigerant Type: R-410A " +
+            "| 6. Line Size: 3/8' Liquid x 7/8' Suction " +
+            "| 7. Model/Serial: Condenser 4TTR6036N (S/N: 21045XY892), Furnace S8X1B040M";
 
         if (chatInput !== "") {
-            issueBox.value = chatInput + specText;
+            issueBox.value = chatInput + prioritizedSpecs;
+        } else {
+            issueBox.value = "Customer requested diagnostic service." + prioritizedSpecs;
         }
+    }
+
+    window.onload = function() {
+        let name = localStorage.getItem('olmios_fullname') || 'John Doe';
+        let addr = localStorage.getItem('olmios_saved_address') || '18510 Ranch View Trail Cir, Houston, TX';
+        document.getElementById('verified_status_line').innerText = "Profile Verified: " + name;
+        document.getElementById('dispatch_address_select').options[0].text = "📍 " + addr;
     }
     </script>
 </body>
@@ -378,7 +445,7 @@ def profile():
 
         {{SAVED_MSG}}
 
-        <form method="POST">
+        <form method="POST" onsubmit="saveProfileToLocal()">
             <div class="mb-3 text-center">
                 <img id="profile_avatar_preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 85px; height: 85px; object-fit: cover; border-radius: 50%; border: 3px solid #3b82f6;" class="mb-2">
                 <div>
@@ -397,11 +464,11 @@ def profile():
             <div class="row g-2 mb-2">
                 <div class="col-6">
                     <label class="form-label">FIRST NAME</label>
-                    <input type="text" class="form-control rounded-3" placeholder="Enter first name">
+                    <input type="text" id="prof_fname" class="form-control rounded-3" placeholder="Enter first name">
                 </div>
                 <div class="col-6">
                     <label class="form-label">LAST NAME</label>
-                    <input type="text" class="form-control rounded-3" placeholder="Enter last name">
+                    <input type="text" id="prof_lname" class="form-control rounded-3" placeholder="Enter last name">
                 </div>
             </div>
             
@@ -417,7 +484,7 @@ def profile():
 
             <div class="mb-3">
                 <label class="form-label">PRIMARY RESIDENCE STREET ADDRESS</label>
-                <input type="text" id="primary_street_addr" class="form-control rounded-3" placeholder="Enter street address" onchange="syncAddressToLeaflet(this.value)">
+                <input type="text" id="primary_street_addr" class="form-control rounded-3" placeholder="Enter street address">
             </div>
 
             <!-- SECTION 2: Business & Commercial Information -->
@@ -450,10 +517,10 @@ def profile():
                 <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-building-circle-add me-1"></i> Add Commercial / Business Unit Specs</h6>
                 <div class="mb-2">
                     <label class="form-label">COMMERCIAL SYSTEM TYPE</label>
-                    <select class="form-select rounded-3" id="comm_sys_type" onchange="toggleCommFields(this.value)">
+                    <select class="form-select rounded-3">
                         <option value="">Select Equipment Category...</option>
-                        <option value="gas">Gas System</option>
-                        <option value="electric">Electric System</option>
+                        <option>Gas System</option>
+                        <option>Electric System</option>
                     </select>
                 </div>
                 <div class="mb-2">
@@ -467,14 +534,13 @@ def profile():
                 </div>
                 <div class="mb-2">
                     <label class="form-label">SYSTEM TYPE</label>
-                    <select class="form-select rounded-3" id="comm_unit_config" onchange="toggleCommConfig(this.value)">
+                    <select class="form-select rounded-3" onchange="toggleCommConfig(this.value)">
                         <option value="">Select Configuration...</option>
                         <option value="rtu">Rooftop Unit (Under 25 Tons)</option>
                         <option value="split">Split System (Under 25 Tons)</option>
                     </select>
                 </div>
 
-                <!-- RTU Fields -->
                 <div id="rtu_fields" style="display:none;">
                     <div class="row g-2 mb-2">
                         <div class="col-6"><label class="form-label">RTU MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
@@ -482,7 +548,6 @@ def profile():
                     </div>
                 </div>
 
-                <!-- Split Fields -->
                 <div id="split_fields" style="display:none;">
                     <div class="row g-2 mb-2">
                         <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
@@ -504,55 +569,46 @@ def profile():
             <!-- SECTION 3: HVAC System Specs -->
             <div class="section-header">
                 <span><i class="fa-solid fa-sliders me-1"></i> 3. HVAC System Equipment & Data Plate Specs</span>
-                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_hvac_box')"><i class="fa-solid fa-plus me-1"></i> Add-On</button>
+                <div class="d-flex gap-1">
+                    <button type="button" class="btn btn-outline-secondary add-tab-btn" onclick="toggleAddBox('add_acc_box')"><i class="fa-solid fa-plus me-1"></i> Add Accessory</button>
+                    <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_hvac_box')"><i class="fa-solid fa-plus me-1"></i> Add-On</button>
+                </div>
             </div>
             
-            <div class="mb-2">
+            <div class="mb-3">
                 <label class="form-label">SYSTEM HEATING TYPE</label>
-                <select class="form-select rounded-3">
+                <select class="form-select rounded-3 fw-bold text-primary" id="main_heating_type_select" onchange="renderDynamicHvacFields(this.value)">
                     <option value="">Select System Type...</option>
-                    <option>Gas Heating System (Condenser, Coil, Furnace)</option>
-                    <option>Electric Heat Pump System</option>
-                    <option>Commercial Packaged RTU</option>
+                    <option value="gas_sys">Gas System (Condenser, Coil, Furnace)</option>
+                    <option value="elec_sys">Electric System (Condenser, Air Handler, Heat Kit)</option>
+                    <option value="gas_hp">Gas Heat Pump System</option>
+                    <option value="elec_hp">Electric Heat Pump System</option>
+                    <option value="res_pkg">Residential Package Unit</option>
+                    <option value="comm_pkg">Commercial Package Unit</option>
+                    <option value="comm_split">Commercial Split System</option>
                 </select>
             </div>
 
-            <div class="row g-2 mb-2">
-                <div class="col-6">
-                    <label class="form-label">CONDENSER MODEL #</label>
-                    <input type="text" class="form-control rounded-3" placeholder="Model #">
-                </div>
-                <div class="col-6">
-                    <label class="form-label">CONDENSER SERIAL #</label>
-                    <input type="text" class="form-control rounded-3" placeholder="Serial #">
-                </div>
-            </div>
-
-            <div class="row g-2 mb-2">
-                <div class="col-6">
-                    <label class="form-label">EVAPORATOR COIL MODEL #</label>
-                    <input type="text" class="form-control rounded-3" placeholder="Model #">
-                </div>
-                <div class="col-6">
-                    <label class="form-label">COIL SERIAL #</label>
-                    <input type="text" class="form-control rounded-3" placeholder="Serial #">
-                </div>
-            </div>
-
-            <div class="row g-2 mb-2">
-                <div class="col-6">
-                    <label class="form-label">FURNACE MODEL #</label>
-                    <input type="text" class="form-control rounded-3" placeholder="Model #">
-                </div>
-                <div class="col-6">
-                    <label class="form-label">FURNACE SERIAL #</label>
-                    <input type="text" class="form-control rounded-3" placeholder="Serial #">
-                </div>
-            </div>
+            <!-- DYNAMIC HVAC CONTAINER -->
+            <div id="dynamic_hvac_container"></div>
 
             <div class="mb-3">
-                <label class="form-label"><i class="fa-solid fa-image me-1 text-primary"></i> UNIT RATING PLATE PHOTO URL / UPLOAD</label>
+                <label class="form-label"><i class="fa-solid fa-image me-1 text-primary"></i> UNIT RATING PLATE PHOTO URL / UPLOAD <span class="text-muted fw-normal">(OPTIONAL)</span></label>
                 <input type="text" class="form-control rounded-3" placeholder="Upload or paste image URL of equipment tag">
+            </div>
+
+            <!-- ACCESSORY ADD-ON BOX -->
+            <div id="add_acc_box" class="add-on-box">
+                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-sliders me-1"></i> Add Additional Accessory (e.g. Thermostat)</h6>
+                <div class="mb-2">
+                    <label class="form-label">ACCESSORY TYPE / NAME</label>
+                    <input type="text" class="form-control rounded-3" placeholder="e.g., Smart Thermostat, Surge Protector, Dehumidifier">
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>
+                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_acc_box')">Save Accessory</button>
             </div>
 
             <div id="add_hvac_box" class="add-on-box">
@@ -621,7 +677,7 @@ def profile():
                 <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-house-chimney-medical me-1"></i> Add Additional Location Specs</h6>
                 <div class="mb-2">
                     <label class="form-label">PROPERTY ADDRESS</label>
-                    <input type="text" class="form-control rounded-3" placeholder="Street Address, City, State" onchange="syncAddressToLeaflet(this.value)">
+                    <input type="text" class="form-control rounded-3" placeholder="Street Address, City, State">
                 </div>
                 <div class="mb-2">
                     <label class="form-label">SYSTEM TYPE</label>
@@ -674,6 +730,91 @@ def profile():
         document.getElementById('split_fields').style.display = (val === 'split') ? 'block' : 'none';
     }
 
+    function renderDynamicHvacFields(systemType) {
+        let container = document.getElementById('dynamic_hvac_container');
+        let html = '';
+
+        if (systemType === 'gas_sys') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">EVAPORATOR COIL MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">COIL SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">FURNACE MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">FURNACE SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>`;
+        } else if (systemType === 'elec_sys') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>`;
+        } else if (systemType === 'gas_hp') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">HP CONDENSER MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">HP CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">EVAPORATOR COIL MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">COIL SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">FURNACE MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">FURNACE SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>`;
+        } else if (systemType === 'elec_hp') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">HP CONDENSER MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">HP CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>`;
+        } else if (systemType === 'res_pkg' || systemType === 'comm_pkg') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">UNIT MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">UNIT SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>`;
+        } else if (systemType === 'comm_split') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">COMMERCIAL CONDENSER MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">COMMERCIAL CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">HEAT KIT MODEL # <span class="text-muted fw-normal">(OPTIONAL)</span></label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL # <span class="text-muted fw-normal">(OPTIONAL)</span></label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>`;
+        }
+
+        container.innerHTML = html;
+    }
+
     function deleteCard(cardId) {
         let cardEl = document.getElementById(cardId);
         if(cardEl && confirm('Are you sure you want to delete this payment card?')) {
@@ -703,8 +844,30 @@ def profile():
         toggleAddBox('add_card_box');
     }
 
-    function syncAddressToLeaflet(address) {
-        console.log("Syncing address to Leaflet coverage map:", address);
+    function saveProfileToLocal() {
+        let fname = document.getElementById('prof_fname').value.trim();
+        let lname = document.getElementById('prof_lname').value.trim();
+        let addr = document.getElementById('primary_street_addr').value.trim();
+
+        if(fname || lname) {
+            localStorage.setItem('olmios_fullname', (fname + ' ' + lname).trim());
+        }
+        if(addr) {
+            localStorage.setItem('olmios_saved_address', addr);
+        }
+    }
+
+    window.onload = function() {
+        let savedName = localStorage.getItem('olmios_fullname') || '';
+        let parts = savedName.split(' ');
+        if(parts.length > 0) document.getElementById('prof_fname').value = parts[0] || '';
+        if(parts.length > 1) document.getElementById('prof_lname').value = parts.slice(1).join(' ') || '';
+        
+        let savedAddr = localStorage.getItem('olmios_saved_address') || '';
+        if(savedAddr) document.getElementById('primary_street_addr').value = savedAddr;
+
+        renderDynamicHvacFields('gas_sys');
+        document.getElementById('main_heating_type_select').value = 'gas_sys';
     }
     </script>
 </body>
