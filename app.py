@@ -3,18 +3,37 @@ from flask import Flask, render_template_string, request, redirect, url_for, jso
 
 app = Flask(__name__)
 
-# --- EMBEDDED GOLD PHOENIX SVG LOGO ---
-PHOENIX_SVG = """<svg class="phoenix-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+# --- EXACT RECREATION OF THE OLMIOS PHOENIX LOGO (INLINE SVG) ---
+PHOENIX_SVG = """<svg class="phoenix-logo" viewBox="0 0 200 240" fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
-        <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#fbbf24" />
+        <linearGradient id="phoenixGold" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f59e0b" />
             <stop offset="50%" stop-color="#d97706" />
-            <stop offset="100%" stop-color="#92400e" />
+            <stop offset="100%" stop-color="#b45309" />
         </linearGradient>
     </defs>
-    <path d="M50 5 L60 30 L85 35 L65 52 L72 78 L50 63 L28 78 L35 52 L15 35 L40 30 Z" fill="url(#goldGrad)" stroke="#fef08a" stroke-width="1.5"/>
-    <circle cx="50" cy="45" r="12" fill="#f59e0b"/>
-    <path d="M50 15 L53 25 L60 25 L55 30 L57 38 L50 33 L43 38 L45 30 L40 25 L47 25 Z" fill="#ffffff"/>
+    <!-- Outer Teardrop Shield -->
+    <path d="M100 10 C150 10 180 60 180 120 C180 170 140 210 100 230 C60 210 20 170 20 120 C20 60 50 10 100 10 Z" fill="#ffffff" stroke="#e2e8f0" stroke-width="3"/>
+    
+    <!-- Phoenix Wings Left -->
+    <path d="M96 90 C70 70 45 80 32 100 C50 105 75 105 96 100 Z" fill="url(#phoenixGold)"/>
+    <path d="M96 110 C65 100 35 120 28 140 C50 140 75 135 96 120 Z" fill="url(#phoenixGold)"/>
+    <path d="M96 130 C70 135 45 155 42 170 C60 160 80 150 96 140 Z" fill="url(#phoenixGold)"/>
+
+    <!-- Phoenix Wings Right -->
+    <path d="M104 90 C130 70 155 80 168 100 C150 105 125 105 104 100 Z" fill="url(#phoenixGold)"/>
+    <path d="M104 110 C135 100 165 120 172 140 C150 140 125 135 104 120 Z" fill="url(#phoenixGold)"/>
+    <path d="M104 130 C130 135 155 155 158 170 C140 160 120 150 104 140 Z" fill="url(#phoenixGold)"/>
+
+    <!-- Head & Diamond Crown -->
+    <path d="M100 42 L108 55 L100 68 L92 55 Z" fill="url(#phoenixGold)"/>
+    <polygon points="100,42 108,50 100,55 92,50" fill="#fef08a"/>
+
+    <!-- Body Center Pillar -->
+    <path d="M97 68 L103 68 L102 175 L98 175 Z" fill="url(#phoenixGold)"/>
+
+    <!-- Fishtail Base -->
+    <path d="M98 175 L100 170 L102 175 L112 195 L100 188 L88 195 Z" fill="url(#phoenixGold)"/>
 </svg>"""
 
 # --- 1. SIGN IN / REGISTER GATEWAY ('/') ---
@@ -31,7 +50,7 @@ def index():
     <style>
         body { background-color: #0b1329; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 20px; }
         .auth-card { background: #162038; border: 1px solid #2a3756; border-radius: 24px; padding: 32px 28px; width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); text-align: center; }
-        .phoenix-logo { width: 110px; height: 110px; margin-bottom: 12px; filter: drop-shadow(0 0 22px rgba(217, 119, 6, 0.75)); animation: float 3s ease-in-out infinite; }
+        .phoenix-logo { width: 120px; height: 130px; margin-bottom: 8px; filter: drop-shadow(0 0 20px rgba(217, 119, 6, 0.6)); animation: float 3s ease-in-out infinite; }
         .brand-title { font-size: 2.6rem; font-weight: 900; letter-spacing: 6px; background: linear-gradient(135deg, #ffffff 30%, #fbbf24 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; margin-bottom: 6px; }
         .hero-badge { display: inline-block; background: rgba(217, 119, 6, 0.18); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); padding: 6px 16px; border-radius: 50px; font-weight: 700; font-size: 0.82rem; letter-spacing: 0.5px; margin-bottom: 24px; }
         .nav-pills { background: #0b1329; padding: 5px; border-radius: 14px; border: 1px solid #2a3756; }
@@ -100,7 +119,7 @@ def index():
         } else {
             document.getElementById('form-login').style.display = 'none';
             document.getElementById('form-register').style.display = 'block';
-            document.getElementById('tab-login').className = 'nav-link py-2.5';
+            document.getElementById('tab-login').className = 'nav-link text-white py-2.5';
             document.getElementById('tab-register').className = 'nav-link active py-2.5';
         }
     }
@@ -125,7 +144,7 @@ def customer_home():
         #map { height: 260px; border-radius: 12px; margin-bottom: 15px; }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 700; }
         .btn-amber:hover { background: #b45309; color: white; }
-        .phoenix-logo { width: 36px; height: 36px; }
+        .phoenix-logo { width: 42px; height: 48px; }
     </style>
 </head>
 <body>
