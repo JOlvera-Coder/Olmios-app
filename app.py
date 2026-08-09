@@ -86,7 +86,26 @@ def init_db():
             phone TEXT DEFAULT '(832) 388-4957',
             email TEXT DEFAULT 'john.doe@example.com',
             dl_number TEXT DEFAULT 'TX-88492014',
-            profile_photo TEXT DEFAULT 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+            profile_photo TEXT DEFAULT '
+<div class="mb-3 text-center">
+    <div class="mb-2">
+        <img id="profile_avatar_preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 90px; height: 90px; object-fit: cover; border-radius: 50%; border: 3px solid #3b82f6;">
+    </div>
+    <label class="btn btn-sm btn-outline-primary fw-bold rounded-3">
+        📷 Upload Profile Picture
+        <input type="file" accept="image/*" style="display: none;" onchange="previewProfilePic(event)">
+    </label>
+</div>
+<script>
+function previewProfilePic(e) {
+    if(e.target.files && e.target.files[0]) {
+        let reader = new FileReader();
+        reader.onload = function(evt) { document.getElementById('profile_avatar_preview').src = evt.target.result; }
+        reader.readAsDataURL(e.target.files[0]);
+    }
+}
+</script>
+to-1534528741775-53994a69daeb?w=150',
             primary_address TEXT DEFAULT '3217 Montrose Blvd, Suite 100',
             city TEXT DEFAULT 'Houston',
             zip_code TEXT DEFAULT '77006',
@@ -319,7 +338,26 @@ def manifest():
         "name": "Olmios",
         "icons": [
             {
-                "src": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=512",
+                "src": "
+<div class="mb-3 text-center">
+    <div class="mb-2">
+        <img id="profile_avatar_preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 90px; height: 90px; object-fit: cover; border-radius: 50%; border: 3px solid #3b82f6;">
+    </div>
+    <label class="btn btn-sm btn-outline-primary fw-bold rounded-3">
+        📷 Upload Profile Picture
+        <input type="file" accept="image/*" style="display: none;" onchange="previewProfilePic(event)">
+    </label>
+</div>
+<script>
+function previewProfilePic(e) {
+    if(e.target.files && e.target.files[0]) {
+        let reader = new FileReader();
+        reader.onload = function(evt) { document.getElementById('profile_avatar_preview').src = evt.target.result; }
+        reader.readAsDataURL(e.target.files[0]);
+    }
+}
+</script>
+to-1618005182384-a83a8bd57fbe?w=512",
                 "type": "image/png",
                 "sizes": "512x512",
             }
@@ -339,28 +377,64 @@ def index():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olmios</title>
+    <title>Olmios - Customer Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #0f172a; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, sans-serif; }
-        .splash-card { text-align: center; }
-        .phoenix-logo { width: 160px; height: 160px; margin-bottom: 24px; filter: drop-shadow(0 0 25px rgba(217, 119, 6, 0.6)); animation: pulse 1.8s infinite ease-in-out; }
-        .brand-title { font-size: 2.8rem; font-weight: 800; letter-spacing: 5px; color: #ffffff; }
-        .spinner-border { color: #d97706; width: 2.5rem; height: 2.5rem; margin-top: 25px; }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+        .auth-card { background: #1e293b; border-radius: 20px; padding: 30px; width: 100%; max-width: 420px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
+        .phoenix-svg { width: 100px; height: 100px; filter: drop-shadow(0 0 15px rgba(217, 119, 6, 0.5)); }
+        .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 700; }
+        .btn-amber:hover { background: #b45309; color: white; }
     </style>
-    <script>
-        setTimeout(function() { window.location.href = "/customer_home"; }, 1800);
-    </script>
 </head>
 <body>
-    <div class="splash-card">
-        <img src="https://raw.githubusercontent.com/JOlvera-Coder/Olmios-app/main/static/phoenix.png" class="phoenix-logo" alt="Olmios Logo">
-        <div class="brand-title">OLMIOS</div>
-        <div class="spinner-border" role="status"></div>
+    <div class="auth-card text-center">
+        <svg class="phoenix-svg mb-3" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 5 L60 30 L85 35 L65 52 L72 78 L50 63 L28 78 L35 52 L15 35 L40 30 Z" fill="#d97706" stroke="#fbbf24" stroke-width="2"/>
+            <circle cx="50" cy="45" r="12" fill="#f59e0b"/>
+            <path d="M50 15 L53 25 L60 25 L55 30 L57 38 L50 33 L43 38 L45 30 L40 25 L47 25 Z" fill="#ffffff"/>
+        </svg>
+        <h2 class="fw-bold tracking-wide text-white mb-1">OLMIOS</h2>
+        <p class="small text-muted mb-4">Dedicated HVAC Customer Portal</p>
+        
+        <ul class="nav nav-pills nav-justified mb-3 bg-dark rounded-3 p-1" id="pills-tab">
+            <li class="nav-item"><button class="nav-link active py-2 fw-bold" id="tab-login" onclick="toggleAuth('login')">Sign In</button></li>
+            <li class="nav-item"><button class="nav-link text-white py-2 fw-bold" id="tab-register" onclick="toggleAuth('register')">Register</button></li>
+        </ul>
+
+        <div id="form-login">
+            <div class="mb-3 text-start"><label class="small text-muted fw-bold">USERNAME / EMAIL</label><input type="text" class="form-control rounded-3" placeholder="john.doe@example.com"></div>
+            <div class="mb-3 text-start"><label class="small text-muted fw-bold">PASSWORD</label><input type="password" class="form-control rounded-3" placeholder="••••••••"></div>
+            <a href="/customer_home" class="btn btn-amber w-100 py-2.5 rounded-3 mb-2">Access Dashboard</a>
+        </div>
+
+        <div id="form-register" style="display: none;">
+            <div class="mb-2 text-start"><label class="small text-muted fw-bold">FULL NAME</label><input type="text" class="form-control rounded-3" placeholder="John Doe"></div>
+            <div class="mb-2 text-start"><label class="small text-muted fw-bold">CREATE USERNAME</label><input type="text" class="form-control rounded-3" placeholder="johndoe_hvac"></div>
+            <div class="mb-2 text-start"><label class="small text-muted fw-bold">PASSWORD</label><input type="password" class="form-control rounded-3" placeholder="Create strong password"></div>
+            <div class="mb-3 text-start"><label class="small text-muted fw-bold">SERVICE ADDRESS</label><input type="text" class="form-control rounded-3" placeholder="1234 Main St, Houston, TX"></div>
+            <a href="/customer_home" class="btn btn-amber w-100 py-2.5 rounded-3">Create Account & Continue</a>
+        </div>
     </div>
+
+    <script>
+    function toggleAuth(mode) {
+        if(mode === 'login') {
+            document.getElementById('form-login').style.display = 'block';
+            document.getElementById('form-register').style.display = 'none';
+            document.getElementById('tab-login').className = 'nav-link active py-2 fw-bold';
+            document.getElementById('tab-register').className = 'nav-link text-white py-2 fw-bold';
+        } else {
+            document.getElementById('form-login').style.display = 'none';
+            document.getElementById('form-register').style.display = 'block';
+            document.getElementById('tab-login').className = 'nav-link text-white py-2 fw-bold';
+            document.getElementById('tab-register').className = 'nav-link active py-2 fw-bold';
+        }
+    }
+    </script>
 </body>
 </html>"""
+
 
 @app.route("/customer_home")
 def customer_home():
@@ -444,9 +518,47 @@ def customer_home():
     if active_req:
         r_id, r_tech, r_status, r_equip, r_addr, r_city, r_urgency = active_req
         tech_photo = (
-            "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150"
+            "
+<div class="mb-3 text-center">
+    <div class="mb-2">
+        <img id="profile_avatar_preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 90px; height: 90px; object-fit: cover; border-radius: 50%; border: 3px solid #3b82f6;">
+    </div>
+    <label class="btn btn-sm btn-outline-primary fw-bold rounded-3">
+        📷 Upload Profile Picture
+        <input type="file" accept="image/*" style="display: none;" onchange="previewProfilePic(event)">
+    </label>
+</div>
+<script>
+function previewProfilePic(e) {
+    if(e.target.files && e.target.files[0]) {
+        let reader = new FileReader();
+        reader.onload = function(evt) { document.getElementById('profile_avatar_preview').src = evt.target.result; }
+        reader.readAsDataURL(e.target.files[0]);
+    }
+}
+</script>
+to-1560250097-0b93528c311a?w=150"
             if r_tech != "Unassigned"
-            else "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
+            else "
+<div class="mb-3 text-center">
+    <div class="mb-2">
+        <img id="profile_avatar_preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 90px; height: 90px; object-fit: cover; border-radius: 50%; border: 3px solid #3b82f6;">
+    </div>
+    <label class="btn btn-sm btn-outline-primary fw-bold rounded-3">
+        📷 Upload Profile Picture
+        <input type="file" accept="image/*" style="display: none;" onchange="previewProfilePic(event)">
+    </label>
+</div>
+<script>
+function previewProfilePic(e) {
+    if(e.target.files && e.target.files[0]) {
+        let reader = new FileReader();
+        reader.onload = function(evt) { document.getElementById('profile_avatar_preview').src = evt.target.result; }
+        reader.readAsDataURL(e.target.files[0]);
+    }
+}
+</script>
+to-1534528741775-53994a69daeb?w=150"
         )
 
         active_ticket_card = f"""
@@ -475,7 +587,26 @@ def customer_home():
         </div>
         """
 
-    profile_pic = profile[6] if profile[6] else "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
+    profile_pic = profile[6] if profile[6] else "
+<div class="mb-3 text-center">
+    <div class="mb-2">
+        <img id="profile_avatar_preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 90px; height: 90px; object-fit: cover; border-radius: 50%; border: 3px solid #3b82f6;">
+    </div>
+    <label class="btn btn-sm btn-outline-primary fw-bold rounded-3">
+        📷 Upload Profile Picture
+        <input type="file" accept="image/*" style="display: none;" onchange="previewProfilePic(event)">
+    </label>
+</div>
+<script>
+function previewProfilePic(e) {
+    if(e.target.files && e.target.files[0]) {
+        let reader = new FileReader();
+        reader.onload = function(evt) { document.getElementById('profile_avatar_preview').src = evt.target.result; }
+        reader.readAsDataURL(e.target.files[0]);
+    }
+}
+</script>
+to-1534528741775-53994a69daeb?w=150"
 
     return f"""
     <!DOCTYPE html>
@@ -566,7 +697,7 @@ def customer_home():
                     <div style="font-size: 10px; color: #64748b; font-weight: 800;">WELCOME BACK</div>
                     <div style="font-size: 15px; font-weight: 800; color: #0f172a;">{profile[1]} {profile[2]}</div>
                     <div class="star-rating-pill">
-                        ⭐⭐⭐⭐⭐ 4.9 (1,250+ Verified Reviews)
+                        ⭐⭐⭐⭐⭐ 4.9 (Customer Rating from Field Techs)
                     </div>
                 </div>
             </div>
@@ -1474,7 +1605,7 @@ def quote():
                     </select>
 
                     <button type="submit" class="btn btn-accent submit-btn" style="padding:16px; font-size:15px; font-weight:800; margin-bottom:15px;">
-                        💳 💳 Request Service & Dispatch Tech
+                        💳 Request Service & Dispatch Tech
                     </button>
                 </form>
 
