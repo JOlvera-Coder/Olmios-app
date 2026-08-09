@@ -362,9 +362,11 @@ def profile():
         body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
         .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .form-label { font-weight: 800; color: #334155 !important; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase; }
-        .section-header { font-weight: 800; color: #0284c7; font-size: 0.92rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; margin-top: 18px; }
+        .section-header { font-weight: 800; color: #0284c7; font-size: 0.92rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; margin-top: 18px; display: flex; justify-content: space-between; align-items: center; }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
-        #add_equip_form { display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 15px; margin-top: 10px; }
+        .add-tab-btn { font-size: 0.75rem; padding: 2px 10px; border-radius: 20px; font-weight: 700; }
+        .add-on-box { display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+        .card-box { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -387,7 +389,10 @@ def profile():
                 </div>
             </div>
 
-            <div class="section-header"><i class="fa-solid fa-user me-1"></i> 1. Basic Personal Information & Residence</div>
+            <!-- SECTION 1: Personal Info -->
+            <div class="section-header">
+                <span><i class="fa-solid fa-user me-1"></i> 1. Basic Personal Information & Residence</span>
+            </div>
             
             <div class="row g-2 mb-2">
                 <div class="col-6">
@@ -410,17 +415,21 @@ def profile():
                 <input type="email" class="form-control rounded-3" placeholder="Enter email address">
             </div>
 
+            <div class="mb-3">
+                <label class="form-label">PRIMARY RESIDENCE STREET ADDRESS</label>
+                <input type="text" id="primary_street_addr" class="form-control rounded-3" placeholder="Enter street address" onchange="syncAddressToLeaflet(this.value)">
+            </div>
+
+            <!-- SECTION 2: Business & Commercial Information -->
+            <div class="section-header">
+                <span><i class="fa-solid fa-briefcase me-1"></i> 2. Business & Commercial Information</span>
+                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_biz_box')"><i class="fa-solid fa-plus me-1"></i> Add-On</button>
+            </div>
+
             <div class="mb-2">
                 <label class="form-label">DRIVER'S LICENSE / STATE ID # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
                 <input type="text" class="form-control rounded-3" placeholder="Enter Driver's License #">
             </div>
-
-            <div class="mb-3">
-                <label class="form-label">PRIMARY RESIDENCE STREET ADDRESS</label>
-                <input type="text" class="form-control rounded-3" placeholder="Enter street address">
-            </div>
-
-            <div class="section-header"><i class="fa-solid fa-briefcase me-1"></i> 2. Business & Commercial Information</div>
             
             <div class="mb-2">
                 <label class="form-label">BUSINESS / COMPANY NAME</label>
@@ -437,7 +446,66 @@ def profile():
                 </div>
             </div>
 
-            <div class="section-header"><i class="fa-solid fa-sliders me-1"></i> 3. HVAC System Equipment & Data Plate Specs</div>
+            <div id="add_biz_box" class="add-on-box">
+                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-building-circle-add me-1"></i> Add Commercial / Business Unit Specs</h6>
+                <div class="mb-2">
+                    <label class="form-label">COMMERCIAL SYSTEM TYPE</label>
+                    <select class="form-select rounded-3" id="comm_sys_type" onchange="toggleCommFields(this.value)">
+                        <option value="">Select Equipment Category...</option>
+                        <option value="gas">Gas System</option>
+                        <option value="electric">Electric System</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">VOLTAGE SPECIFICATION</label>
+                    <select class="form-select rounded-3">
+                        <option value="">Select Voltage...</option>
+                        <option>230/60/1</option>
+                        <option>230/60/3</option>
+                        <option>460/60/3</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">SYSTEM TYPE</label>
+                    <select class="form-select rounded-3" id="comm_unit_config" onchange="toggleCommConfig(this.value)">
+                        <option value="">Select Configuration...</option>
+                        <option value="rtu">Rooftop Unit (Under 25 Tons)</option>
+                        <option value="split">Split System (Under 25 Tons)</option>
+                    </select>
+                </div>
+
+                <!-- RTU Fields -->
+                <div id="rtu_fields" style="display:none;">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">RTU MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                        <div class="col-6"><label class="form-label">RTU SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                    </div>
+                </div>
+
+                <!-- Split Fields -->
+                <div id="split_fields" style="display:none;">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                        <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                        <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">HEAT KIT MODEL # <span class="text-muted fw-normal">(OPTIONAL)</span></label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                        <div class="col-6"><label class="form-label">HEAT KIT SERIAL # <span class="text-muted fw-normal">(OPTIONAL)</span></label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-2" onclick="toggleAddBox('add_biz_box')">Save Commercial Specs</button>
+            </div>
+
+            <!-- SECTION 3: HVAC System Specs -->
+            <div class="section-header">
+                <span><i class="fa-solid fa-sliders me-1"></i> 3. HVAC System Equipment & Data Plate Specs</span>
+                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_hvac_box')"><i class="fa-solid fa-plus me-1"></i> Add-On</button>
+            </div>
             
             <div class="mb-2">
                 <label class="form-label">SYSTEM HEATING TYPE</label>
@@ -487,37 +555,90 @@ def profile():
                 <input type="text" class="form-control rounded-3" placeholder="Upload or paste image URL of equipment tag">
             </div>
 
-            <div class="section-header"><i class="fa-solid fa-credit-card me-1"></i> 4. Saved Payment Cards & Wallet</div>
-            <div class="p-3 mb-3 border rounded-3 bg-light">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="fw-bold text-dark"><i class="fa-brands fa-cc-visa text-primary me-1 fs-5"></i> Visa ending in 1004</span>
-                    <span class="badge bg-primary">Primary</span>
+            <div id="add_hvac_box" class="add-on-box">
+                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-circle-plus me-1"></i> Add Additional HVAC System Tag</h6>
+                <div class="mb-2">
+                    <label class="form-label">HEATING ENERGY TYPE</label>
+                    <select class="form-select rounded-3">
+                        <option value="">Select Energy Type...</option>
+                        <option>Gas System</option>
+                        <option>Electric System</option>
+                    </select>
                 </div>
-                <div class="row g-2 mt-1">
-                    <div class="col-12"><input type="text" class="form-control rounded-3 mb-2" placeholder="Cardholder Name"></div>
-                    <div class="col-8"><input type="text" class="form-control rounded-3" placeholder="Card Number (XXXX-XXXX-XXXX-XXXX)"></div>
-                    <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>
+                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_hvac_box')">Save Additional HVAC Specs</button>
+            </div>
+
+            <!-- SECTION 4: Saved Payment Cards & Wallet -->
+            <div class="section-header">
+                <span><i class="fa-solid fa-credit-card me-1"></i> 4. Saved Payment Cards & Wallet</span>
+                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_card_box')"><i class="fa-solid fa-plus me-1"></i> Add Additional Card</button>
+            </div>
+
+            <div id="card_list_container">
+                <div class="card-box" id="card_1004">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold text-dark"><i class="fa-brands fa-cc-visa text-primary me-1 fs-5"></i> Visa ending in 1004</span>
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="badge bg-primary me-1">Primary</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="deleteCard('card_1004')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                        </div>
+                    </div>
+                    <div class="row g-2 mt-1">
+                        <div class="col-12"><input type="text" class="form-control rounded-3 mb-1" placeholder="Cardholder Name"></div>
+                        <div class="col-8"><input type="text" class="form-control rounded-3" placeholder="Card Number (XXXX-XXXX-XXXX-1004)"></div>
+                        <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
+                    </div>
                 </div>
             </div>
 
-            <div class="p-3 mb-3 border rounded-3 bg-light">
-                <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-location-dot me-1 text-danger"></i> Manage Additional Property Locations</h6>
+            <div id="add_card_box" class="add-on-box">
+                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-credit-card me-1"></i> Add New Payment Card</h6>
+                <input type="text" id="new_card_name" class="form-control rounded-3 mb-2" placeholder="Cardholder Name">
+                <div class="row g-2 mb-2">
+                    <div class="col-8"><input type="text" id="new_card_num" class="form-control rounded-3" placeholder="Card Number"></div>
+                    <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
+                </div>
+                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3" onclick="addNewCard()">Save Card to Wallet</button>
+            </div>
+
+            <!-- SECTION 5: Additional Property Locations -->
+            <div class="section-header">
+                <span><i class="fa-solid fa-location-dot me-1"></i> 5. Manage Additional Property Locations</span>
+                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_location_box')"><i class="fa-solid fa-plus me-1"></i> Add Location Specs</button>
+            </div>
+
+            <div class="mb-3">
                 <select class="form-select rounded-3 mb-2">
                     <option value="">Select Property Address...</option>
                 </select>
-                <button type="button" class="btn btn-sm btn-outline-primary fw-bold rounded-3 w-100" onclick="toggleAddEquip()">
-                    <i class="fa-solid fa-plus me-1"></i> Add Additional Location Equipment
-                </button>
-
-                <div id="add_equip_form">
-                    <h6 class="fw-bold text-primary mb-2">New Location Specs</h6>
-                    <input type="text" class="form-control rounded-3 mb-2" placeholder="Location Address">
-                    <input type="text" class="form-control rounded-3 mb-2" placeholder="Equipment Model & Serial #">
-                    <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3" onclick="toggleAddEquip()">Save Location Specs</button>
-                </div>
             </div>
 
-            <div class="row g-2 mb-3">
+            <div id="add_location_box" class="add-on-box">
+                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-house-chimney-medical me-1"></i> Add Additional Location Specs</h6>
+                <div class="mb-2">
+                    <label class="form-label">PROPERTY ADDRESS</label>
+                    <input type="text" class="form-control rounded-3" placeholder="Street Address, City, State" onchange="syncAddressToLeaflet(this.value)">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">SYSTEM TYPE</label>
+                    <select class="form-select rounded-3">
+                        <option value="">Select Gas or Electric...</option>
+                        <option>Gas System</option>
+                        <option>Electric System</option>
+                    </select>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">MODEL #</label><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
+                    <div class="col-6"><label class="form-label">SERIAL #</label><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
+                </div>
+                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3" onclick="toggleAddBox('add_location_box')">Save Location Specs</button>
+            </div>
+
+            <div class="row g-2 mb-3 mt-4">
                 <div class="col-6">
                     <button type="submit" class="btn btn-amber w-100 py-2.5 rounded-3 fw-bold shadow-sm">
                         <i class="fa-solid fa-floppy-disk me-1"></i> Save Profile
@@ -543,9 +664,47 @@ def profile():
         }
     }
 
-    function toggleAddEquip() {
-        let box = document.getElementById('add_equip_form');
+    function toggleAddBox(boxId) {
+        let box = document.getElementById(boxId);
         box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function toggleCommConfig(val) {
+        document.getElementById('rtu_fields').style.display = (val === 'rtu') ? 'block' : 'none';
+        document.getElementById('split_fields').style.display = (val === 'split') ? 'block' : 'none';
+    }
+
+    function deleteCard(cardId) {
+        let cardEl = document.getElementById(cardId);
+        if(cardEl && confirm('Are you sure you want to delete this payment card?')) {
+            cardEl.remove();
+        }
+    }
+
+    function addNewCard() {
+        let name = document.getElementById('new_card_name').value || 'New Card';
+        let num = document.getElementById('new_card_num').value || '4000';
+        let last4 = num.slice(-4) || '4000';
+        let newId = 'card_' + Date.now();
+
+        let newCardHtml = `
+            <div class="card-box" id="${newId}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold text-dark"><i class="fa-solid fa-credit-card text-success me-1 fs-5"></i> Card ending in ${last4}</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="deleteCard('${newId}')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                </div>
+                <div class="row g-2 mt-1">
+                    <div class="col-12"><input type="text" class="form-control rounded-3 mb-1" value="${name}"></div>
+                    <div class="col-8"><input type="text" class="form-control rounded-3" value="**** **** **** ${last4}"></div>
+                    <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
+                </div>
+            </div>`;
+        document.getElementById('card_list_container').insertAdjacentHTML('beforeend', newCardHtml);
+        toggleAddBox('add_card_box');
+    }
+
+    function syncAddressToLeaflet(address) {
+        console.log("Syncing address to Leaflet coverage map:", address);
     }
     </script>
 </body>
