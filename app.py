@@ -332,41 +332,35 @@ def manifest():
     }
     return Response(json.dumps(manifest_data), mimetype="application/json")
 
-@app.route("/")
-def home():
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Olmios Technologies</title>
-        {PWA_HEAD_TAGS}
-        <style>
-            {COMMON_CSS}
-            .container {{ display: flex; justify-content: center; align-items: center; min-height: 80vh; }}
-            .card {{ padding: 45px 40px; text-align: center; max-width: 440px; width: 100%; }}
-            p {{ color: #64748b; font-size: 13px; margin: 6px 0 30px; letter-spacing: 1.5px; font-weight: 600; }}
-            .actions {{ display: flex; flex-direction: column; gap: 12px; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="panel card">
-                <a href="/" class="home-phoenix-btn" title="Olmios Technologies Home">
-                    {get_phoenix_svg(120, 120)}
-                </a>
-                <h1 class="brand-logo">OLMIOS</h1>
-                <p>TECHNOLOGIES DISPATCH</p>
-                <div class="actions">
-                    <a href="/customer_home" class="btn btn-accent">📲 CUSTOMER MOBILE HOME & MAP</a>
-                    <a href="/tech_app" class="btn btn-primary" style="background-color: #059669;">🚚 TECH / DRIVER MOBILE APP</a>
-                    <a href="/admin" class="btn btn-primary">💻 DISPATCH COMMAND CENTER</a>
-                </div>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
+@app.route('/')
+def index():
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, sans-serif; }
+        .splash-card { text-align: center; }
+        .phoenix-logo { width: 160px; height: 160px; margin-bottom: 24px; filter: drop-shadow(0 0 25px rgba(217, 119, 6, 0.6)); animation: pulse 1.8s infinite ease-in-out; }
+        .brand-title { font-size: 2.8rem; font-weight: 800; letter-spacing: 5px; color: #ffffff; }
+        .spinner-border { color: #d97706; width: 2.5rem; height: 2.5rem; margin-top: 25px; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    </style>
+    <script>
+        setTimeout(function() { window.location.href = "/customer_home"; }, 1800);
+    </script>
+</head>
+<body>
+    <div class="splash-card">
+        <img src="https://raw.githubusercontent.com/JOlvera-Coder/Olmios-app/main/static/phoenix.png" class="phoenix-logo" alt="Olmios Logo">
+        <div class="brand-title">OLMIOS</div>
+        <div class="spinner-border" role="status"></div>
+    </div>
+</body>
+</html>"""
 
 @app.route("/customer_home")
 def customer_home():
