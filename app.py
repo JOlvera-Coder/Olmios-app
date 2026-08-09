@@ -3,6 +3,20 @@ from flask import Flask, render_template_string, request, redirect, url_for, jso
 
 app = Flask(__name__)
 
+# --- EMBEDDED GOLD PHOENIX SVG LOGO ---
+PHOENIX_SVG = """<svg class="phoenix-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fbbf24" />
+            <stop offset="50%" stop-color="#d97706" />
+            <stop offset="100%" stop-color="#92400e" />
+        </linearGradient>
+    </defs>
+    <path d="M50 5 L60 30 L85 35 L65 52 L72 78 L50 63 L28 78 L35 52 L15 35 L40 30 Z" fill="url(#goldGrad)" stroke="#fef08a" stroke-width="1.5"/>
+    <circle cx="50" cy="45" r="12" fill="#f59e0b"/>
+    <path d="M50 15 L53 25 L60 25 L55 30 L57 38 L50 33 L43 38 L45 30 L40 25 L47 25 Z" fill="#ffffff"/>
+</svg>"""
+
 # --- 1. SIGN IN / REGISTER GATEWAY ('/') ---
 @app.route('/')
 def index():
@@ -17,7 +31,7 @@ def index():
     <style>
         body { background-color: #0b1329; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 20px; }
         .auth-card { background: #162038; border: 1px solid #2a3756; border-radius: 24px; padding: 32px 28px; width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); text-align: center; }
-        .phoenix-logo { width: 110px; height: 110px; margin-bottom: 12px; filter: drop-shadow(0 0 22px rgba(217, 119, 6, 0.6)); animation: float 3s ease-in-out infinite; }
+        .phoenix-logo { width: 110px; height: 110px; margin-bottom: 12px; filter: drop-shadow(0 0 22px rgba(217, 119, 6, 0.75)); animation: float 3s ease-in-out infinite; }
         .brand-title { font-size: 2.6rem; font-weight: 900; letter-spacing: 6px; background: linear-gradient(135deg, #ffffff 30%, #fbbf24 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; margin-bottom: 6px; }
         .hero-badge { display: inline-block; background: rgba(217, 119, 6, 0.18); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); padding: 6px 16px; border-radius: 50px; font-weight: 700; font-size: 0.82rem; letter-spacing: 0.5px; margin-bottom: 24px; }
         .nav-pills { background: #0b1329; padding: 5px; border-radius: 14px; border: 1px solid #2a3756; }
@@ -33,7 +47,7 @@ def index():
 </head>
 <body>
     <div class="auth-card">
-        <img src="https://raw.githubusercontent.com/JOlvera-Coder/Olmios-app/main/static/phoenix.png" class="phoenix-logo" alt="Olmios Phoenix">
+        """ + PHOENIX_SVG + """
         
         <div class="brand-title">OLMIOS</div>
         <div class="hero-badge">⚡ On-Demand HVAC Techs at Your Door</div>
@@ -111,6 +125,7 @@ def customer_home():
         #map { height: 260px; border-radius: 12px; margin-bottom: 15px; }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 700; }
         .btn-amber:hover { background: #b45309; color: white; }
+        .phoenix-logo { width: 36px; height: 36px; }
     </style>
 </head>
 <body>
@@ -123,7 +138,7 @@ def customer_home():
                     <span class="fw-bold text-primary">Customer Account</span>
                 </div>
             </div>
-            <img src="https://raw.githubusercontent.com/JOlvera-Coder/Olmios-app/main/static/phoenix.png" style="width:36px; height:36px;" alt="Phoenix">
+            """ + PHOENIX_SVG + """
         </div>
 
         <div class="bg-light p-2 rounded-3 text-center mb-3 border">
@@ -196,7 +211,6 @@ def dispatch_request():
             </select>
         </div>
 
-        <!-- DIAGNOSTIC CHAT + FILE DRAG & DROP -->
         <div class="p-3 mb-3 rounded-4" style="background: #f0f7ff; border: 2px solid #3b82f6;">
             <div class="d-flex align-items-center gap-2 mb-2">
                 <span style="font-size: 1.2rem;">🦅</span>
