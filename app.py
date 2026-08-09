@@ -279,6 +279,7 @@ def dispatch_request():
         .form-label { font-weight: 800; color: #475569 !important; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase; }
         .btn-category { border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; border-radius: 12px; padding: 12px 6px; font-size: 0.85rem; width: 100%; transition: all 0.2s; cursor: pointer; }
         .btn-category.active { background: #f0f9ff; border-color: #0284c7; color: #0284c7; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2); }
+        .ai-followup-box { background: #e0f2fe; border: 1.5px solid #0284c7; border-radius: 12px; padding: 12px; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
@@ -352,11 +353,21 @@ def dispatch_request():
             </div>
             <p class="small text-muted mb-2">Tell us what's going on! Mention symptoms, specific defective part notes, or paste image URLs:</p>
             
-            <textarea id="chat_assistant_input" class="form-control mb-2" rows="3" placeholder="e.g., Fan motor is humming and unit is blowing warm air. Defective capacitor photo: https://example.com/cap.jpg"></textarea>
+            <textarea id="chat_assistant_input" class="form-control mb-2" rows="3" placeholder="e.g., Coil leaking water near furnace..."></textarea>
             
             <button type="button" class="btn btn-primary w-100 py-2 fw-bold rounded-3 shadow-sm" onclick="autoFillDescription()">
                 <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AUTO-FILL ISSUE DESCRIPTION
             </button>
+
+            <!-- INTERACTIVE AI FOLLOW-UP PROMPT -->
+            <div id="ai_followup_box" class="ai-followup-box">
+                <div class="fw-bold text-primary small mb-1"><i class="fa-solid fa-robot me-1"></i> AI Diagnostic Follow-Up:</div>
+                <p class="small text-dark mb-2" id="ai_followup_question">Is the leak on the outdoor condenser coil or the indoor evaporator coil/air handler?</p>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold w-50" onclick="answerAiLeak('Outdoor Condenser Coil')">Outdoor Condenser Coil</button>
+                    <button type="button" class="btn btn-sm btn-primary fw-bold w-50" onclick="answerAiLeak('Indoor Evaporator Coil')">Indoor Evaporator Coil</button>
+                </div>
+            </div>
         </div>
 
         <div class="mb-3">
@@ -380,29 +391,74 @@ def dispatch_request():
     </div>
 
     <script>
+    var currentCoilSelection = "";
+
     function selectCat(catName) {
         document.querySelectorAll('.btn-category').forEach(b => b.classList.remove('active'));
         document.getElementById('cat_' + catName).classList.add('active');
     }
 
+    function parseModelNumberDetails(modelStr) {
+        let m = modelStr ? modelStr.toUpperCase() : '';
+        let result = { brand: 'Trane', tonnage: '3.0 Tons', SEER: '16 SEER2', refrig: 'R-410A' };
+
+        if(m.includes('5TTR') || m.includes('S8X') || m.includes('5TXC')) result.brand = 'Trane';
+        else if(m.includes('24AA') || m.includes('59SC')) result.brand = 'Carrier';
+        else if(m.includes('GSX') || m.includes('GM9')) result.brand = 'Goodman';
+        else if(m.includes('XC') || m.includes('EL19')) result.brand = 'Lennox';
+
+        // Extract tonnage digits from model number (048 = 4.0 Tons, 036 = 3.0 Tons, 024 = 2.0 Tons, 060 = 5.0 Tons)
+        if(m.includes('048')) result.tonnage = '4.0 Tons';
+        else if(m.includes('036')) result.tonnage = '3.0 Tons';
+        else if(m.includes('024')) result.tonnage = '2.0 Tons';
+        else if(m.includes('060')) result.tonnage = '5.0 Tons';
+        else if(m.includes('018')) result.tonnage = '1.5 Tons';
+
+        return result;
+    }
+
     function autoFillDescription() {
         let chatInput = document.getElementById('chat_assistant_input').value.trim();
         let issueBox = document.getElementById('issue_description');
-        
+        let followupBox = document.getElementById('ai_followup_box');
+
+        let condModel = localStorage.getItem('olmios_cond_mod') || '5TTR6048';
+        let sysType = localStorage.getItem('olmios_hvac_type') || 'gas_sys';
+        let parsed = parseModelNumberDetails(condModel);
+
+        let isGas = sysType.includes('gas');
+        let sysEnergyLabel = isGas ? 'Gas System' : 'Electric System';
+
+        // Check if leak symptom mentioned to display interactive AI follow-up
+        let lowerChat = chatInput.toLowerCase();
+        if(lowerChat.includes('leak') || lowerChat.includes('coil')) {
+            followupBox.style.display = 'block';
+        } else {
+            followupBox.style.display = 'none';
+        }
+
+        let leakContext = currentCoilSelection ? " (" + currentCoilSelection + " Specified)" : "";
+
         let prioritizedSpecs = " | [TECH SPECS SUMMARY]: " +
-            "1. Manufacturer: Trane " +
-            "| 2. System Energy: Gas Heat Pump " +
-            "| 3. Tonnage: 3.0 Tons " +
-            "| 4. SEER Rating: 16 SEER2 " +
-            "| 5. Refrigerant Type: R-410A " +
+            "1. Manufacturer: " + parsed.brand + " " +
+            "| 2. System Energy: " + sysEnergyLabel + " " +
+            "| 3. Tonnage: " + parsed.tonnage + " " +
+            "| 4. SEER Rating: " + parsed.SEER + " " +
+            "| 5. Refrigerant Type: " + parsed.refrig + " " +
             "| 6. Line Size: 3/8' Liquid x 7/8' Suction " +
-            "| 7. Model/Serial: Condenser 4TTR6036N (S/N: 21045XY892), Furnace S8X1B040M";
+            "| 7. Model/Serial: Condenser " + condModel + leakContext;
 
         if (chatInput !== "") {
             issueBox.value = chatInput + prioritizedSpecs;
         } else {
             issueBox.value = "Customer requested diagnostic service." + prioritizedSpecs;
         }
+    }
+
+    function answerAiLeak(coilType) {
+        currentCoilSelection = coilType;
+        document.getElementById('ai_followup_box').style.display = 'none';
+        autoFillDescription();
     }
 
     window.onload = function() {
