@@ -509,6 +509,52 @@ def invoices():
 </body>
 </html>"""
 
+# --- 6. DOWNLOAD PHOENIX LOGO PAGE ('/download_logo') ---
+@app.route('/download_logo')
+def download_logo():
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios - Download Phoenix Logo</title>
+    {COMMON_HEADER}
+    <style>
+        body {{ background-color: #0b1329; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 20px; }}
+        .logo-card {{ background: #ffffff; padding: 40px; border-radius: 24px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5); max-width: 480px; width: 100%; color: #0f172a; }}
+    </style>
+</head>
+<body>
+    <div class="logo-card">
+        <h4 class="fw-bold text-dark mb-3">Olmios Phoenix Symbol</h4>
+        
+        <div id="svg_container" class="p-3 mb-4 border rounded-3 bg-light d-flex justify-content-center">
+            {get_phoenix_svg(220, 220)}
+        </div>
+
+        <button class="btn btn-warning btn-lg w-100 fw-bold rounded-3 shadow-sm mb-2 text-dark" onclick="downloadSVG()">
+            <i class="fa-solid fa-download me-1"></i> Download / Save Phoenix Logo
+        </button>
+        <a href="/customer_home" class="btn btn-outline-secondary w-100 fw-bold rounded-3">Return to Dashboard</a>
+    </div>
+
+    <script>
+    function downloadSVG() {{
+        let svgElement = document.querySelector('#svg_container svg');
+        let svgData = new XMLSerializer().serializeToString(svgElement);
+        let svgBlob = new Blob([svgData], {{type: "image/svg+xml;charset=utf-8"}});
+        let svgUrl = URL.createObjectURL(svgBlob);
+        let downloadLink = document.createElement("a");
+        downloadLink.href = svgUrl;
+        downloadLink.download = "olmios_phoenix_logo.svg";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }}
+    </script>
+</body>
+</html>"""
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
