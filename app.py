@@ -577,10 +577,10 @@ def profile():
             
             <div class="mb-3">
                 <label class="form-label">SYSTEM HEATING TYPE</label>
-                <select class="form-select rounded-3 fw-bold text-primary" id="main_heating_type_select" onchange="renderDynamicHvacFields(this.value)">
+                <select class="form-select rounded-3 fw-bold text-primary" id="main_heating_type_select" onchange="renderDynamicHvacFields(this.value, 'dynamic_hvac_container')">
                     <option value="">Select System Type...</option>
-                    <option value="gas_sys">Gas System (Condenser, Coil, Furnace)</option>
-                    <option value="elec_sys">Electric System (Condenser, Air Handler, Heat Kit)</option>
+                    <option value="gas_sys">Gas System</option>
+                    <option value="elec_sys">Electric System</option>
                     <option value="gas_hp">Gas Heat Pump System</option>
                     <option value="elec_hp">Electric Heat Pump System</option>
                     <option value="res_pkg">Residential Package Unit</option>
@@ -597,9 +597,12 @@ def profile():
                 <input type="text" class="form-control rounded-3" placeholder="Upload or paste image URL of equipment tag">
             </div>
 
-            <!-- ACCESSORY ADD-ON BOX -->
+            <!-- ACCESSORY ADD-ON BOX (WITH TOP-RIGHT DELETE BUTTON) -->
             <div id="add_acc_box" class="add-on-box">
-                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-sliders me-1"></i> Add Additional Accessory (e.g. Thermostat)</h6>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-sliders me-1"></i> Add Additional Accessory</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="toggleAddBox('add_acc_box')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                </div>
                 <div class="mb-2">
                     <label class="form-label">ACCESSORY TYPE / NAME</label>
                     <input type="text" class="form-control rounded-3" placeholder="e.g., Smart Thermostat, Surge Protector, Dehumidifier">
@@ -611,20 +614,26 @@ def profile():
                 <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_acc_box')">Save Accessory</button>
             </div>
 
+            <!-- ADDITIONAL HVAC TAG BOX (WITH TOP-RIGHT DELETE BUTTON & SYSTEM HEATING TYPE DROPDOWN) -->
             <div id="add_hvac_box" class="add-on-box">
-                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-circle-plus me-1"></i> Add Additional HVAC System Tag</h6>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-circle-plus me-1"></i> Add Additional HVAC System Tag</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="toggleAddBox('add_hvac_box')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                </div>
                 <div class="mb-2">
-                    <label class="form-label">HEATING ENERGY TYPE</label>
-                    <select class="form-select rounded-3">
-                        <option value="">Select Energy Type...</option>
-                        <option>Gas System</option>
-                        <option>Electric System</option>
+                    <label class="form-label">SYSTEM HEATING TYPE</label>
+                    <select class="form-select rounded-3 fw-bold text-primary" onchange="renderDynamicHvacFields(this.value, 'addon_hvac_container')">
+                        <option value="">Select System Type...</option>
+                        <option value="gas_sys">Gas System</option>
+                        <option value="elec_sys">Electric System</option>
+                        <option value="gas_hp">Gas Heat Pump System</option>
+                        <option value="elec_hp">Electric Heat Pump System</option>
+                        <option value="res_pkg">Residential Package Unit</option>
+                        <option value="comm_pkg">Commercial Package Unit</option>
+                        <option value="comm_split">Commercial Split System</option>
                     </select>
                 </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><input type="text" class="form-control rounded-3" placeholder="Model #"></div>
-                    <div class="col-6"><input type="text" class="form-control rounded-3" placeholder="Serial #"></div>
-                </div>
+                <div id="addon_hvac_container" class="mb-2"></div>
                 <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_hvac_box')">Save Additional HVAC Specs</button>
             </div>
 
@@ -730,8 +739,9 @@ def profile():
         document.getElementById('split_fields').style.display = (val === 'split') ? 'block' : 'none';
     }
 
-    function renderDynamicHvacFields(systemType) {
-        let container = document.getElementById('dynamic_hvac_container');
+    function renderDynamicHvacFields(systemType, targetId) {
+        let container = document.getElementById(targetId);
+        if(!container) return;
         let html = '';
 
         if (systemType === 'gas_sys') {
@@ -866,7 +876,7 @@ def profile():
         let savedAddr = localStorage.getItem('olmios_saved_address') || '';
         if(savedAddr) document.getElementById('primary_street_addr').value = savedAddr;
 
-        renderDynamicHvacFields('gas_sys');
+        renderDynamicHvacFields('gas_sys', 'dynamic_hvac_container');
         document.getElementById('main_heating_type_select').value = 'gas_sys';
     }
     </script>
