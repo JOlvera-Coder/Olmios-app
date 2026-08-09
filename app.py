@@ -277,9 +277,11 @@ def dispatch_request():
         .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
         .form-label { font-weight: 800; color: #475569 !important; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase; }
+        .btn-service-type { border: 2px solid #3b82f6; background: #ffffff; color: #1e3a8a; font-weight: 800; border-radius: 14px; padding: 14px 10px; font-size: 0.95rem; width: 100%; transition: all 0.2s; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); }
+        .btn-service-type:hover { background: #f0f7ff; border-color: #1d4ed8; }
         .btn-category { border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; border-radius: 12px; padding: 12px 6px; font-size: 0.85rem; width: 100%; transition: all 0.2s; cursor: pointer; }
         .btn-category.active { background: #f0f9ff; border-color: #0284c7; color: #0284c7; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2); }
-        .ai-followup-box { background: #e0f2fe; border: 1.5px solid #0284c7; border-radius: 12px; padding: 12px; margin-top: 10px; display: none; }
+        .ai-followup-box { background: #e0f2fe; border: 1.5px solid #0284c7; border-radius: 14px; padding: 14px; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
@@ -296,7 +298,25 @@ def dispatch_request():
             <span id="verified_status_line">Profile Verified & Ready</span>
         </div>
 
-        <div class="row g-2 mb-3">
+        <!-- INITIAL SERVICE MODE CHOICE: SYSTEM REPAIR VS SYSTEM REPLACEMENT -->
+        <div id="service_mode_container" class="mb-3">
+            <label class="form-label text-center d-block text-primary fw-bold fs-6 mb-2"><i class="fa-solid fa-list-check me-1"></i> SELECT SERVICE NEED</label>
+            <div class="row g-2">
+                <div class="col-6">
+                    <button type="button" class="btn-service-type" onclick="chooseServiceMode('repair')">
+                        <i class="fa-solid fa-screwdriver-wrench text-warning mb-1 d-block fs-4"></i> System Repair
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button type="button" class="btn-service-type" onclick="chooseServiceMode('replacement')">
+                        <i class="fa-solid fa-arrows-rotate text-success mb-1 d-block fs-4"></i> System Replacement
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- REPAIR OPTION TABS (SHOWS ON 'SYSTEM REPAIR' SELECTION) -->
+        <div id="repair_tabs_container" class="row g-2 mb-3" style="display: none;">
             <div class="col-4">
                 <button type="button" class="btn-category active" id="cat_cooling" onclick="selectCat('cooling')">
                     <i class="fa-solid fa-snowflake text-info mb-1 d-block fs-5"></i> Cooling & AC
@@ -309,9 +329,15 @@ def dispatch_request():
             </div>
             <div class="col-4">
                 <button type="button" class="btn-category" id="cat_maintenance" onclick="selectCat('maintenance')">
-                    <i class="fa-solid fa-screwdriver-wrench text-warning mb-1 d-block fs-5"></i> Maintenance
+                    <i class="fa-solid fa-wrench text-warning mb-1 d-block fs-5"></i> Maintenance
                 </button>
             </div>
+        </div>
+
+        <!-- REPLACEMENT EQUIPMENT TABS (DYNAMICALLY POPULATED FROM CUSTOMER PROFILE) -->
+        <div id="replacement_tabs_container" class="mb-3" style="display: none;">
+            <label class="form-label small text-muted mb-1">SELECT SAVED EQUIPMENT TO REPLACE:</label>
+            <div id="dynamic_replacement_tabs" class="d-flex flex-wrap gap-2"></div>
         </div>
 
         <div class="mb-3">
@@ -359,10 +385,13 @@ def dispatch_request():
                 <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AUTO-FILL ISSUE DESCRIPTION
             </button>
 
-            <!-- INTERACTIVE AI FOLLOW-UP PROMPT -->
+            <!-- INTERACTIVE AI FOLLOW-UP PROMPT WITH PHOENIX SYMBOL & BRANDING -->
             <div id="ai_followup_box" class="ai-followup-box">
-                <div class="fw-bold text-primary small mb-1"><i class="fa-solid fa-robot me-1"></i> AI Diagnostic Follow-Up:</div>
-                <p class="small text-dark mb-2" id="ai_followup_question">Is the leak on the outdoor condenser coil or the indoor evaporator coil/air handler?</p>
+                <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-info-subtle">
+                    {{PHOENIX_SMALL}}
+                    <span class="fw-bold text-primary small"><i class="fa-solid fa-robot me-1"></i> Olmios AI Diagnostic Follow-Up:</span>
+                </div>
+                <p class="small text-dark fw-semibold mb-2" id="ai_followup_question">Is the leak on the outdoor condenser coil or the indoor evaporator coil/air handler?</p>
                 <div class="d-flex gap-2">
                     <button type="button" class="btn btn-sm btn-outline-primary fw-bold w-50" onclick="answerAiLeak('Outdoor Condenser Coil')">Outdoor Condenser Coil</button>
                     <button type="button" class="btn btn-sm btn-primary fw-bold w-50" onclick="answerAiLeak('Indoor Evaporator Coil')">Indoor Evaporator Coil</button>
@@ -392,9 +421,54 @@ def dispatch_request():
 
     <script>
     var currentCoilSelection = "";
+    var currentServiceMode = "";
+
+    function chooseServiceMode(mode) {
+        currentServiceMode = mode;
+        document.getElementById('service_mode_container').style.display = 'none';
+
+        if(mode === 'repair') {
+            document.getElementById('repair_tabs_container').style.display = 'flex';
+            document.getElementById('replacement_tabs_container').style.display = 'none';
+        } else if(mode === 'replacement') {
+            document.getElementById('repair_tabs_container').style.display = 'none';
+            document.getElementById('replacement_tabs_container').style.display = 'block';
+            loadProfileEquipmentTabs();
+        }
+    }
+
+    function loadProfileEquipmentTabs() {
+        let savedType = localStorage.getItem('olmios_hvac_type') || 'gas_sys';
+        let condModel = localStorage.getItem('olmios_cond_mod') || '5TTR6048';
+        let coilModel = localStorage.getItem('olmios_coil_mod') || '5TXCC007';
+
+        let typeLabel = "Gas System";
+        if(savedType === 'elec_sys') typeLabel = "Electric System";
+        else if(savedType === 'gas_hp') typeLabel = "Gas Heat Pump System";
+        else if(savedType === 'elec_hp') typeLabel = "Electric Heat Pump System";
+        else if(savedType === 'comm_pkg') typeLabel = "Commercial Package Unit";
+        else if(savedType === 'comm_split') typeLabel = "Commercial Split System";
+        else if(savedType.includes('mini')) typeLabel = "Mini Split System";
+
+        let container = document.getElementById('dynamic_replacement_tabs');
+        container.innerHTML = `
+            <button type="button" class="btn-category active" onclick="selectReplacementTab('${typeLabel}')">
+                <i class="fa-solid fa-arrows-rotate text-success mb-1 d-block fs-5"></i> Replace ${typeLabel} (${condModel})
+            </button>
+            <button type="button" class="btn-category" onclick="selectReplacementTab('Evaporator Coil')">
+                <i class="fa-solid fa-box text-info mb-1 d-block fs-5"></i> Replace Evaporator Coil (${coilModel})
+            </button>`;
+    }
+
+    function selectReplacementTab(tabName) {
+        document.querySelectorAll('#dynamic_replacement_tabs .btn-category').forEach(b => b.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        let issueBox = document.getElementById('issue_description');
+        issueBox.value = "Customer requested FULL SYSTEM REPLACEMENT evaluation for: " + tabName;
+    }
 
     function selectCat(catName) {
-        document.querySelectorAll('.btn-category').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#repair_tabs_container .btn-category').forEach(b => b.classList.remove('active'));
         document.getElementById('cat_' + catName).classList.add('active');
     }
 
@@ -407,7 +481,6 @@ def dispatch_request():
         else if(m.includes('GSX') || m.includes('GM9')) result.brand = 'Goodman';
         else if(m.includes('XC') || m.includes('EL19')) result.brand = 'Lennox';
 
-        // ACCURATE REFRIGERANT PARSING BASED ON TRANE NOMENCLATURE PREFIX
         if(m.startsWith('5')) {
             result.refrig = 'R-454B';
         } else if(m.startsWith('4')) {
@@ -416,7 +489,6 @@ def dispatch_request():
             result.refrig = 'R-22';
         }
 
-        // TONNAGE DECODING (048 = 4.0 Tons, 036 = 3.0 Tons, 024 = 2.0 Tons, 060 = 5.0 Tons)
         if(m.includes('048')) result.tonnage = '4.0 Tons';
         else if(m.includes('036')) result.tonnage = '3.0 Tons';
         else if(m.includes('024')) result.tonnage = '2.0 Tons';
@@ -432,6 +504,7 @@ def dispatch_request():
         let followupBox = document.getElementById('ai_followup_box');
 
         let condModel = localStorage.getItem('olmios_cond_mod') || '5TTR6048';
+        let coilModel = localStorage.getItem('olmios_coil_mod') || '5TXCC007';
         let sysType = localStorage.getItem('olmios_hvac_type') || 'gas_sys';
         let parsed = parseModelNumberDetails(condModel);
 
@@ -445,7 +518,13 @@ def dispatch_request():
             followupBox.style.display = 'none';
         }
 
-        let leakContext = currentCoilSelection ? " (" + currentCoilSelection + " Specified)" : "";
+        // ACCURATE COIL MODEL SYNCING
+        let componentDetails = "Condenser " + condModel;
+        if(currentCoilSelection === 'Indoor Evaporator Coil') {
+            componentDetails = "Evaporator Coil " + coilModel + " (Indoor Evaporator Coil Specified)";
+        } else if(currentCoilSelection === 'Outdoor Condenser Coil') {
+            componentDetails = "Condenser " + condModel + " (Outdoor Condenser Coil Specified)";
+        }
 
         let prioritizedSpecs = " | [TECH SPECS SUMMARY]: " +
             "1. Manufacturer: " + parsed.brand + " " +
@@ -454,7 +533,7 @@ def dispatch_request():
             "| 4. SEER Rating: " + parsed.SEER + " " +
             "| 5. Refrigerant Type: " + parsed.refrig + " " +
             "| 6. Line Size: 3/8' Liquid x 7/8' Suction " +
-            "| 7. Model/Serial: Condenser " + condModel + leakContext;
+            "| 7. Model/Serial: " + componentDetails;
 
         if (chatInput !== "") {
             issueBox.value = chatInput + prioritizedSpecs;
