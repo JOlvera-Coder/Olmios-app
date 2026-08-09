@@ -435,6 +435,58 @@ def invoices():
 </body>
 </html>"""
 
+
+
+# --- DOWNLOAD PHOENIX LOGO PAGE ('/download_logo') ---
+@app.route('/download_logo')
+def download_logo():
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios Phoenix Logo Download</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, sans-serif; padding: 20px; }
+        .logo-card { background: #ffffff; padding: 40px; border-radius: 24px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5); max-width: 480px; width: 100%; }
+        .phoenix-logo { width: 240px; height: 280px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="logo-card">
+        <h4 class="fw-bold text-dark mb-3">Olmios Phoenix Symbol</h4>
+        
+        <div id="svg_container" class="p-3 mb-4 border rounded-3 bg-light d-flex justify-content-center">
+            """ + PHOENIX_SVG.replace('class="phoenix-logo"', 'class="phoenix-logo" style="width:220px; height:260px;"') + """
+        </div>
+
+        <button class="btn btn-warning btn-lg w-100 fw-bold rounded-3 shadow-sm" onclick="downloadSVG()">
+            💾 Download / Save Phoenix Logo
+        </button>
+        <div class="mt-3">
+            <small class="text-muted">Or right-click (or long-press) the logo above to copy/save image.</small>
+        </div>
+    </div>
+
+    <script>
+    function downloadSVG() {
+        let svgElement = document.querySelector('#svg_container svg');
+        let svgData = new XMLSerializer().serializeToString(svgElement);
+        let svgBlob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
+        let svgUrl = URL.createObjectURL(svgBlob);
+        let downloadLink = document.createElement("a");
+        downloadLink.href = svgUrl;
+        downloadLink.download = "olmios_phoenix_logo.svg";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+    </script>
+</body>
+</html>"""
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
