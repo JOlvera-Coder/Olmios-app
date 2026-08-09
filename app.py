@@ -11,43 +11,68 @@ def index():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olmios - Customer Portal</title>
+    <title>Olmios - On-Demand HVAC</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #0f172a; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, sans-serif; }
-        .auth-card { background: #1e293b; border-radius: 20px; padding: 30px; width: 100%; max-width: 420px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
-        .phoenix-svg { width: 90px; height: 90px; filter: drop-shadow(0 0 15px rgba(217, 119, 6, 0.5)); }
-        .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 700; }
-        .btn-amber:hover { background: #b45309; color: white; }
+        body { background-color: #0b1329; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 20px; }
+        .auth-card { background: #162038; border: 1px solid #2a3756; border-radius: 24px; padding: 32px 28px; width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); text-align: center; }
+        .phoenix-logo { width: 110px; height: 110px; margin-bottom: 12px; filter: drop-shadow(0 0 22px rgba(217, 119, 6, 0.6)); animation: float 3s ease-in-out infinite; }
+        .brand-title { font-size: 2.6rem; font-weight: 900; letter-spacing: 6px; background: linear-gradient(135deg, #ffffff 30%, #fbbf24 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; margin-bottom: 6px; }
+        .hero-badge { display: inline-block; background: rgba(217, 119, 6, 0.18); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); padding: 6px 16px; border-radius: 50px; font-weight: 700; font-size: 0.82rem; letter-spacing: 0.5px; margin-bottom: 24px; }
+        .nav-pills { background: #0b1329; padding: 5px; border-radius: 14px; border: 1px solid #2a3756; }
+        .nav-pills .nav-link { color: #94a3b8; border-radius: 10px; font-weight: 800; font-size: 0.95rem; transition: all 0.2s ease; }
+        .nav-pills .nav-link.active { background: #3b82f6; color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+        .form-label { color: #ffffff !important; font-weight: 800; font-size: 0.8rem; letter-spacing: 1px; display: block; text-align: left; margin-bottom: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .form-control { height: 48px; border-radius: 12px; font-weight: 600; border: 1px solid #334155; font-size: 0.95rem; background: #ffffff; color: #0f172a; }
+        .form-control:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25); }
+        .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; font-size: 1.05rem; height: 50px; border-radius: 12px; box-shadow: 0 10px 20px -5px rgba(217, 119, 6, 0.5); transition: transform 0.15s ease; }
+        .btn-amber:hover { transform: translateY(-1px); color: white; background: linear-gradient(135deg, #ea580c, #b45309); }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
     </style>
 </head>
 <body>
-    <div class="auth-card text-center">
-        <svg class="phoenix-svg mb-2" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M50 5 L60 30 L85 35 L65 52 L72 78 L50 63 L28 78 L35 52 L15 35 L40 30 Z" fill="#d97706" stroke="#fbbf24" stroke-width="2"/>
-            <circle cx="50" cy="45" r="12" fill="#f59e0b"/>
-            <path d="M50 15 L53 25 L60 25 L55 30 L57 38 L50 33 L43 38 L45 30 L40 25 L47 25 Z" fill="#ffffff"/>
-        </svg>
-        <h2 class="fw-bold tracking-wide text-white mb-1">OLMIOS</h2>
-        <p class="small text-muted mb-4">Dedicated HVAC Customer Portal</p>
+    <div class="auth-card">
+        <img src="https://raw.githubusercontent.com/JOlvera-Coder/Olmios-app/main/static/phoenix.png" class="phoenix-logo" alt="Olmios Phoenix">
         
-        <ul class="nav nav-pills nav-justified mb-3 bg-dark rounded-3 p-1">
-            <li class="nav-item"><button class="nav-link active py-2 fw-bold" id="tab-login" onclick="toggleAuth('login')">Sign In</button></li>
-            <li class="nav-item"><button class="nav-link text-white py-2 fw-bold" id="tab-register" onclick="toggleAuth('register')">Register</button></li>
+        <div class="brand-title">OLMIOS</div>
+        <div class="hero-badge">⚡ On-Demand HVAC Techs at Your Door</div>
+
+        <ul class="nav nav-pills nav-justified mb-4">
+            <li class="nav-item"><button class="nav-link active py-2.5" id="tab-login" onclick="toggleAuth('login')">Sign In</button></li>
+            <li class="nav-item"><button class="nav-link py-2.5" id="tab-register" onclick="toggleAuth('register')">Register</button></li>
         </ul>
 
         <div id="form-login">
-            <div class="mb-3 text-start"><label class="small text-muted fw-bold">USERNAME / EMAIL</label><input type="text" class="form-control rounded-3" placeholder="john.doe@example.com"></div>
-            <div class="mb-3 text-start"><label class="small text-muted fw-bold">PASSWORD</label><input type="password" class="form-control rounded-3" placeholder="••••••••"></div>
-            <a href="/customer_home" class="btn btn-amber w-100 py-2 rounded-3 mb-2">Access Dashboard</a>
+            <div class="mb-3">
+                <label class="form-label">USERNAME / EMAIL</label>
+                <input type="text" class="form-control" placeholder="Enter username or email">
+            </div>
+            <div class="mb-4">
+                <label class="form-label">PASSWORD</label>
+                <input type="password" class="form-control" placeholder="Enter password">
+            </div>
+            <a href="/customer_home" class="btn btn-amber w-100 d-flex align-items-center justify-content-center">Access Dashboard</a>
         </div>
 
         <div id="form-register" style="display: none;">
-            <div class="mb-2 text-start"><label class="small text-muted fw-bold">FULL NAME</label><input type="text" class="form-control rounded-3" placeholder="John Doe"></div>
-            <div class="mb-2 text-start"><label class="small text-muted fw-bold">CREATE USERNAME</label><input type="text" class="form-control rounded-3" placeholder="johndoe_hvac"></div>
-            <div class="mb-2 text-start"><label class="small text-muted fw-bold">PASSWORD</label><input type="password" class="form-control rounded-3" placeholder="Create strong password"></div>
-            <div class="mb-3 text-start"><label class="small text-muted fw-bold">SERVICE ADDRESS</label><input type="text" class="form-control rounded-3" placeholder="1234 Main St, Houston, TX"></div>
-            <a href="/customer_home" class="btn btn-amber w-100 py-2 rounded-3">Create Account & Continue</a>
+            <div class="mb-2">
+                <label class="form-label">FULL NAME</label>
+                <input type="text" class="form-control" placeholder="Enter full name">
+            </div>
+            <div class="mb-2">
+                <label class="form-label">CREATE USERNAME</label>
+                <input type="text" class="form-control" placeholder="Enter desired username">
+            </div>
+            <div class="mb-2">
+                <label class="form-label">PASSWORD</label>
+                <input type="password" class="form-control" placeholder="Create strong password">
+            </div>
+            <div class="mb-4">
+                <label class="form-label">SERVICE ADDRESS</label>
+                <input type="text" class="form-control" placeholder="Enter street address, city, state">
+            </div>
+            <a href="/customer_home" class="btn btn-amber w-100 d-flex align-items-center justify-content-center">Create Account & Continue</a>
         </div>
     </div>
 
@@ -56,13 +81,13 @@ def index():
         if(mode === 'login') {
             document.getElementById('form-login').style.display = 'block';
             document.getElementById('form-register').style.display = 'none';
-            document.getElementById('tab-login').className = 'nav-link active py-2 fw-bold';
-            document.getElementById('tab-register').className = 'nav-link text-white py-2 fw-bold';
+            document.getElementById('tab-login').className = 'nav-link active py-2.5';
+            document.getElementById('tab-register').className = 'nav-link py-2.5';
         } else {
             document.getElementById('form-login').style.display = 'none';
             document.getElementById('form-register').style.display = 'block';
-            document.getElementById('tab-login').className = 'nav-link text-white py-2 fw-bold';
-            document.getElementById('tab-register').className = 'nav-link active py-2 fw-bold';
+            document.getElementById('tab-login').className = 'nav-link py-2.5';
+            document.getElementById('tab-register').className = 'nav-link active py-2.5';
         }
     }
     </script>
@@ -81,7 +106,7 @@ def customer_home():
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { background-color: #0f172a; color: white; font-family: system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        body { background-color: #0b1329; color: white; font-family: system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
         .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         #map { height: 260px; border-radius: 12px; margin-bottom: 15px; }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 700; }
@@ -95,12 +120,10 @@ def customer_home():
                 <img id="home_avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
                 <div>
                     <h6 class="fw-bold mb-0 text-dark">WELCOME BACK</h6>
-                    <span class="fw-bold text-primary">John Doe</span>
+                    <span class="fw-bold text-primary">Customer Account</span>
                 </div>
             </div>
-            <svg style="width:36px; height:36px;" viewBox="0 0 100 100" fill="none">
-                <path d="M50 5 L60 30 L85 35 L65 52 L72 78 L50 63 L28 78 L35 52 L15 35 L40 30 Z" fill="#d97706"/>
-            </svg>
+            <img src="https://raw.githubusercontent.com/JOlvera-Coder/Olmios-app/main/static/phoenix.png" style="width:36px; height:36px;" alt="Phoenix">
         </div>
 
         <div class="bg-light p-2 rounded-3 text-center mb-3 border">
@@ -142,9 +165,10 @@ def dispatch_request():
     <title>Olmios - Request Service</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #0f172a; color: white; font-family: system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        body { background-color: #0b1329; color: white; font-family: system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
         .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 700; }
+        .form-label { font-weight: 800; color: #334155 !important; font-size: 0.8rem; letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
@@ -152,20 +176,19 @@ def dispatch_request():
         <div class="text-center mb-3">
             <h4 class="fw-bold text-dark mb-1">Instant HVAC Dispatch Request</h4>
             <div class="bg-success-subtle text-success border border-success rounded-3 p-1 small fw-bold">
-                ✓ Profile Verified: John Doe (832) 388-4957
+                ✓ Account Verified & Ready for Service
             </div>
         </div>
 
         <div class="mb-3">
-            <label class="form-label fw-bold small text-muted">SELECT JOB SITE PROPERTY ADDRESS</label>
-            <select class="form-select rounded-3">
-                <option>📍 Primary Residential: 3217 Montrose Blvd, Suite 100, Houston, TX</option>
-            </select>
+            <label class="form-label">PURCHASE ORDER (PO) # (OPTIONAL)</label>
+            <input type="text" class="form-control rounded-3" placeholder="e.g. PO-88204">
         </div>
 
         <div class="mb-3">
-            <label class="form-label fw-bold small text-muted">EQUIPMENT TYPE</label>
+            <label class="form-label">EQUIPMENT TYPE</label>
             <select class="form-select rounded-3">
+                <option value="">Select HVAC Equipment...</option>
                 <option>A/C Condenser</option>
                 <option>Furnace / Air Handler</option>
                 <option>Complete Split System</option>
@@ -182,7 +205,7 @@ def dispatch_request():
             <p class="small text-muted mb-2">Describe symptoms, defect notes, or drag & drop equipment images:</p>
             
             <div id="drop_zone" style="border: 2px dashed #93c5fd; background: #ffffff; border-radius: 12px; padding: 10px;">
-                <textarea id="chat_assistant_input" class="form-control border-0 bg-transparent" rows="3" placeholder="e.g., Blower motor is making noise..."></textarea>
+                <textarea id="chat_assistant_input" class="form-control border-0 bg-transparent" rows="3" placeholder="Describe symptoms or drag & drop photos here..."></textarea>
                 
                 <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
                     <label class="btn btn-sm btn-light border text-primary fw-semibold mb-0" style="cursor: pointer;">
@@ -199,13 +222,14 @@ def dispatch_request():
         </div>
 
         <div class="mb-3">
-            <label class="form-label fw-bold small text-muted">ISSUE DESCRIPTION (FINAL DISPATCH SUMMARY)</label>
+            <label class="form-label">ISSUE DESCRIPTION (FINAL DISPATCH SUMMARY)</label>
             <textarea id="issue_description" class="form-control rounded-3" rows="3" placeholder="Describe requested HVAC issue or click Auto-Fill above..."></textarea>
         </div>
 
         <div class="mb-3">
-            <label class="form-label fw-bold small text-muted">SELECT SAVED PAYMENT CARD</label>
+            <label class="form-label">SELECT PAYMENT METHOD</label>
             <select class="form-select rounded-3">
+                <option value="">Select Saved Payment Card...</option>
                 <option>💳 Visa ending in 1004</option>
             </select>
         </div>
@@ -286,8 +310,9 @@ def profile():
     <title>Olmios - Profile</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #0f172a; color: white; font-family: system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        body { background-color: #0b1329; color: white; font-family: system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
         .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .form-label { font-weight: 800; color: #334155 !important; font-size: 0.8rem; letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
@@ -307,23 +332,22 @@ def profile():
         </div>
 
         <div class="mb-3">
-            <label class="form-label fw-bold small text-muted">FIRST NAME</label>
-            <input type="text" class="form-control rounded-3" value="John">
+            <label class="form-label">FIRST NAME</label>
+            <input type="text" class="form-control rounded-3" placeholder="Enter first name">
         </div>
         <div class="mb-3">
-            <label class="form-label fw-bold small text-muted">LAST NAME</label>
-            <input type="text" class="form-control rounded-3" value="Doe">
+            <label class="form-label">LAST NAME</label>
+            <input type="text" class="form-control rounded-3" placeholder="Enter last name">
         </div>
         <div class="mb-3">
-            <label class="form-label fw-bold small text-muted">PHONE NUMBER</label>
-            <input type="text" class="form-control rounded-3" value="(832) 388-4957">
+            <label class="form-label">PHONE NUMBER</label>
+            <input type="text" class="form-control rounded-3" placeholder="(832) 000-0000">
         </div>
 
         <div class="p-3 mb-3 border rounded-3 bg-light">
             <h6 class="fw-bold text-dark mb-2">📍 Manage Equipment by Property Location</h6>
             <select class="form-select rounded-3 mb-2">
-                <option>🏡 Main Residence - 3217 Montrose Blvd, Houston, TX</option>
-                <option>🏢 Commercial Property - 5678 Aldine Rd, Houston, TX</option>
+                <option value="">Select Property Address...</option>
             </select>
             <button class="btn btn-sm btn-outline-primary fw-bold rounded-3 w-100" onclick="alert('Form opened to register new equipment.')">➕ Add Additional Equipment</button>
         </div>
@@ -354,7 +378,7 @@ def invoices():
     <title>Olmios - Invoices</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #0f172a; color: white; font-family: system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        body { background-color: #0b1329; color: white; font-family: system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
         .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
     </style>
 </head>
