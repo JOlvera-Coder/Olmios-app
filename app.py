@@ -839,7 +839,17 @@ def customer_profile():
             </div>
 
             <div class="section-box">
-                <h3 style="margin-top:0; font-size:14px; color:#2563eb;">2. HVAC System Equipment & Data Plate Specs</h3>
+                <h3 style="margin-top:0; font-size:14px; color:#2563eb;">2. HVAC System Equipment & Data Plate Specs
+
+<div class="mb-4 p-3 border rounded-3 bg-light shadow-sm">
+    <label class="form-label fw-bold text-dark small">SELECT PROPERTY LOCATION</label>
+    <select class="form-select mb-3 fw-semibold" id="property_location_select">
+        <option value="loc1">🏡 Main Residence - 1234 Houston Ave, Houston, TX</option>
+        <option value="loc2">🏢 Commercial Property - 5678 Aldine Rd, Houston, TX</option>
+    </select>
+    <button type="button" class="btn btn-sm btn-outline-primary fw-bold" onclick="alert('Form opened to add new property address and register equipment specs.')">➕ Add Additional Property / Equipment</button>
+</div>
+</h3>
                 
                 <label>System Heating Type</label>
                 <select name="sys_type" id="sysTypeSelect" onchange="toggleSystemType()">
@@ -1071,6 +1081,7 @@ def customer_invoices():
 
                 <div style="display:flex; gap:8px; margin-top:12px;">
                     <button type="submit" class="btn btn-primary" style="flex:1; padding:8px; font-size:11px;">APPLY FILTERS</button>
+<button type="button" class="btn btn-outline-danger btn-sm mt-3 w-100 fw-bold" onclick="alert('Refund Request Submitted. Our billing department will review your invoice within 24 hours.')">↩️ Request Refund</button>
                     <a href="/customer_invoices" class="btn btn-nav" style="padding:8px 12px; font-size:11px;">RESET</a>
                 </div>
             </form>
