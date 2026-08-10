@@ -1,8 +1,92 @@
 import os
+import json
+import sqlite3
+import urllib.parse
+import urllib.request
+from datetime import datetime
 from flask import Flask, render_template_string, request, redirect, url_for, jsonify, session
 
 app = Flask(__name__)
 app.secret_key = 'olmios_secure_customer_session_key'
+
+# ==========================================
+# DATABASE INITIALIZATION
+# ==========================================
+def init_db():
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS service_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            first_name TEXT,
+            last_name TEXT,
+            customer_name TEXT,
+            phone TEXT NOT NULL,
+            email TEXT,
+            address TEXT,
+            city TEXT,
+            zip_code TEXT,
+            urgency TEXT,
+            equipment TEXT NOT NULL,
+            model_number TEXT,
+            serial_number TEXT,
+            issue_description TEXT NOT NULL,
+            assigned_tech TEXT DEFAULT 'Unassigned',
+            est_value REAL DEFAULT 150.00,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            status TEXT DEFAULT 'Pending'
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sms_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_type TEXT NOT NULL,
+            sender_name TEXT NOT NULL,
+            sender_phone TEXT NOT NULL,
+            message_text TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            is_new INTEGER DEFAULT 1
+        )
+    """)
+
+    text_cols = [
+        "model_number", "serial_number", "email", "first_name",
+        "last_name", "address", "city", "zip_code", "urgency", "assigned_tech"
+    ]
+    for col in text_cols:
+        try:
+            cursor.execute(f"ALTER TABLE service_requests ADD COLUMN {col} TEXT")
+        except sqlite3.OperationalError:
+            pass
+
+    try:
+        cursor.execute("ALTER TABLE service_requests ADD COLUMN est_value REAL DEFAULT 150.00")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE service_requests ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+    except sqlite3.OperationalError:
+        pass
+
+    cursor.execute("SELECT COUNT(*) FROM sms_messages")
+    if cursor.fetchone()[0] == 0:
+        sample_messages = [
+            ("Customer", "John Doe", "8323884957", "Hi, what time will the tech arrive today for #5?"),
+            ("Customer", "Ian Olvera", "3468043947", "I unlocked the side gate for the technician."),
+            ("Tech", "Tech A (Lead)", "8325550199", "Accepted job #4, heading to site now."),
+            ("Tech", "Tech B", "8325550144", "Need a replacement capacitor for unit #2.")
+        ]
+        cursor.executemany("""
+            INSERT INTO sms_messages (sender_type, sender_name, sender_phone, message_text, is_new)
+            VALUES (?, ?, ?, ?, 1)
+        """, sample_messages)
+
+    conn.commit()
+    conn.close()
+
+init_db()
 
 PHOENIX_SVG = """<svg width="120" height="120" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -16,7 +100,7 @@ PHOENIX_SVG = """<svg width="120" height="120" viewBox="0 0 100 100" fill="none"
     <path d="M50 22 C52 22 55 24 55 27 C55 30 52 32 50 34 C49 36 49 42 50 50 C51 58 53 68 50 78 C47 68 49 58 50 50 C51 42 51 36 50 34 C48 32 45 30 45 27 C45 24 48 22 50 22 Z" fill="url(#goldFeathers)" />
     <path d="M50 18 L53 23 L50 21 L47 23 Z" fill="#d97706"/>
     <path d="M53 26 L58 28 L54 30 Z" fill="#b45309"/>
-    <path d="M48 36 C38 30 26 28 16 34 C24 38 32 40 40 46 C28 46 18 50 14 58 C22 58 32 56 42 58 C32 62 24 68 22 74 C30 72 38 68 46 64 Z" fill="url(#goldFeathers)" />
+    <path d="M48 36 C38 30 26 28 16 34 C24 38 32 40 40 46 C28 46 18 50 14 58 C22 58 32 56 42 58 C32 62 24 68 46 64 Z" fill="url(#goldFeathers)" />
     <path d="M52 36 C62 30 74 28 84 34 C76 38 68 40 60 46 C72 46 82 50 86 58 C68 62 76 68 78 74 C70 72 62 68 54 64 Z" fill="url(#goldFeathers)"/>
     <path d="M50 70 L44 86 L50 82 L56 86 Z" fill="url(#goldFeathers)"/>
 </svg>"""
@@ -30,7 +114,93 @@ COMMON_HEADER = """
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 """
 
-# --- 1. SIGN IN / REGISTER GATEWAY ('/') ---
+COMMON_ADMIN_CSS = """
+    body {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: #f8fafc;
+        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+        margin: 0;
+        padding: 20px;
+        min-height: 100vh;
+        box-sizing: border-box;
+    }
+    .panel {
+        background: #ffffff;
+        color: #1e293b;
+        border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+        padding: 24px;
+    }
+    .brand-logo {
+        font-size: 26px;
+        font-weight: 900;
+        letter-spacing: 5px;
+        color: #0f172a;
+        text-transform: uppercase;
+    }
+    .btn-admin {
+        display: inline-block;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 13px;
+        border: none;
+        cursor: pointer;
+        text-align: center;
+    }
+    .btn-primary-admin { background-color: #2563eb; color: #ffffff; }
+    .btn-primary-admin:hover { background-color: #1d4ed8; color: white; }
+    .btn-accent-admin { background-color: #d97706; color: #ffffff; }
+    .btn-accent-admin:hover { background-color: #b45309; color: white; }
+    
+    .home-phoenix-btn {
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+        border-radius: 10px;
+        transition: transform 0.2s ease;
+    }
+    .home-phoenix-btn:hover { transform: scale(1.08); }
+"""
+
+def get_lat_lng(address_str):
+    if not address_str or len(address_str.strip()) < 3:
+        return 29.7604, -95.3698
+    try:
+        url = "https://nominatim.openstreetmap.org/search?format=json&q=" + urllib.parse.quote(address_str)
+        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosDispatchApp/1.0"})
+        with urllib.request.urlopen(req, timeout=3) as response:
+            data = json.loads(response.read().decode())
+            if data and len(data) > 0:
+                return float(data[0]["lat"]), float(data[0]["lon"])
+    except Exception:
+        pass
+    return 29.7604, -95.3698
+
+def calculate_age(created_at_str):
+    if not created_at_str:
+        return "Just now", False
+    try:
+        created_time = datetime.strptime(created_at_str, "%Y-%m-%d %H:%M:%S")
+        now = datetime.now()
+        diff = now - created_time
+        minutes = int(diff.total_seconds() / 60)
+        if minutes < 1:
+            return "Just now", False
+        elif minutes < 60:
+            return f"{minutes}m ago", minutes > 30
+        else:
+            hours = int(minutes / 60)
+            return f"{hours}h ago", True
+    except Exception:
+        return "Recent", False
+
+# ==========================================
+# CUSTOMER APP ROUTES (PRESERVED INTACT)
+# ==========================================
 @app.route('/')
 def index():
     html = """<!DOCTYPE html>
@@ -134,13 +304,11 @@ def index():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(130, 130))
 
-# --- LOGOFF ROUTE ---
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect('/')
 
-# --- 2. MAIN CUSTOMER DASHBOARD ('/customer_home') ---
 @app.route('/customer_home')
 def customer_home():
     html = """<!DOCTYPE html>
@@ -262,7 +430,6 @@ def customer_home():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(45, 45))
 
-# --- 3. INSTANT DISPATCH REQUEST ('/dispatch_request') ---
 @app.route('/dispatch_request')
 def dispatch_request():
     html = """<!DOCTYPE html>
@@ -614,846 +781,711 @@ def dispatch_request():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{PHOENIX_SMALL}}', get_phoenix_svg(28, 28))
 
-# --- 4. ADMIN & OFFICE DISPATCH PORTAL ('/admin') ---
+# ==========================================
+# RESTORED DISPATCH COMMAND CENTER (/admin)
+# ==========================================
 @app.route('/admin')
-def admin_portal():
-    html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olmios - Dispatch Office Admin</title>
-    {{HEADER}}
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
-        .admin-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 900px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        #admin_map { height: 320px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; }
-        .stat-badge { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; text-align: center; }
-        .dispatch-row { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
-    </style>
-</head>
-<body>
-    <div class="admin-card">
-        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-            <div class="d-flex align-items-center gap-2">
-                {{PHOENIX_SMALL}}
-                <div>
-                    <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-headset text-primary me-1"></i> Olmios Central Dispatch Office</h5>
-                    <span class="text-muted small">Live Real-Time Tech & Request Control Center</span>
-                </div>
+def admin():
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM service_requests")
+    total_count = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM service_requests WHERE status = 'Pending' OR status IS NULL")
+    pending_count = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM service_requests WHERE status = 'In Progress'")
+    progress_count = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM service_requests WHERE status = 'Completed'")
+    completed_count = cursor.fetchone()[0]
+
+    cursor.execute("SELECT SUM(est_value) FROM service_requests WHERE status != 'Completed'")
+    total_pipeline_val = cursor.fetchone()[0]
+    total_pipeline_val = total_pipeline_val if total_pipeline_val else 0.00
+
+    active_count = pending_count + progress_count
+
+    cursor.execute("SELECT COUNT(*) FROM sms_messages WHERE sender_type = 'Customer' AND is_new = 1")
+    new_customer_sms = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM sms_messages WHERE sender_type = 'Tech' AND is_new = 1")
+    new_tech_sms = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT id, first_name, last_name, customer_name, phone, email, 
+               address, city, zip_code, urgency, equipment, model_number, 
+               serial_number, issue_description, assigned_tech, status, est_value, created_at 
+        FROM service_requests ORDER BY id DESC
+    """)
+    rows = cursor.fetchall()
+
+    cursor.execute("SELECT id, sender_type, sender_name, sender_phone, message_text, timestamp, is_new FROM sms_messages ORDER BY id DESC")
+    sms_rows = cursor.fetchall()
+    conn.close()
+
+    map_markers = []
+    table_rows = ""
+
+    for idx, r in enumerate(rows):
+        (req_id, first_name, last_name, old_cust_name, phone, email,
+         address, city, zip_code, urgency, equip, model_no,
+         serial_no, desc, assigned_tech, status, est_value, created_at) = r
+        status = status if status else "Pending"
+        assigned_tech = assigned_tech if assigned_tech else "Unassigned"
+
+        age_text, is_urgent_age = calculate_age(created_at)
+
+        status_bg = "#fef3c7"
+        status_color = "#b45309"
+        if status == "In Progress":
+            status_bg = "#dbeafe"
+            status_color = "#1d4ed8"
+        elif status == "Completed":
+            status_bg = "#dcfce7"
+            status_color = "#15803d"
+
+        urgency = urgency if urgency else "Standard Service"
+
+        urgency_bg = "#e0f2fe"
+        urgency_color = "#0369a1"
+        circle_color = "#0284c7"
+        is_emergency = False
+
+        if "Emergency" in urgency:
+            urgency_bg = "#fee2e2"
+            urgency_color = "#dc2626"
+            circle_color = "#dc2626"
+            is_emergency = True
+        elif "Routine" in urgency:
+            urgency_bg = "#f0fdf4"
+            urgency_color = "#166534"
+            circle_color = "#16a34a"
+
+        full_name = f"{first_name} {last_name}".strip() if (first_name or last_name) else old_cust_name
+
+        contact_info = f"<a href='tel:{phone}' style='color: #0f172a; text-decoration: none; font-weight: 700; white-space: nowrap;' title='Click to Call/Text'>📞 {phone}</a>"
+        if email:
+            contact_info += f"<br><span style='font-size: 11px; color: #64748b; word-break: break-all;'>{email}</span>"
+
+        full_address = f"{address}, {city}, {zip_code}".strip(", ")
+
+        if status != "Completed" and address:
+            lat, lng = get_lat_lng(full_address)
+            map_markers.append({
+                "id": req_id,
+                "name": full_name,
+                "address": full_address,
+                "lat": lat,
+                "lng": lng,
+                "color": circle_color,
+                "urgency": urgency,
+                "equipment": equip,
+                "is_emergency": is_emergency
+            })
+
+        if address:
+            location_info = f"<a href='javascript:void(0);' onclick='focusMap({req_id})' style='color: #2563eb; text-decoration: none; font-weight: 600; line-height: 1.3; display: inline-block;' title='Focus on Map'>📍 {address}</a>"
+            if city or zip_code:
+                location_info += f"<br><span style='font-size: 11px; color: #64748b;'>{city}, {zip_code}</span>"
+        else:
+            location_info = "<em>No address provided</em>"
+
+        specs_info = f"<span style='background: #f1f5f9; color: #334155; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-block;'>{equip}</span>"
+        if model_no or serial_no:
+            specs_info += "<br><div style='font-size: 10px; color: #64748b; margin-top: 4px; line-height: 1.2;'>"
+            if model_no: specs_info += f"<strong>M/N:</strong> {model_no}<br>"
+            if serial_no: specs_info += f"<strong>S/N:</strong> {serial_no}"
+            specs_info += "</div>"
+
+        tech_options = ["Unassigned", "Tech A (Lead)", "Tech B", "Tech C"]
+        tech_select = f"<form action='/assign_tech/{req_id}' method='POST' style='margin:0;'><select name='tech' onchange='this.form.submit()' style='padding:4px; font-size:11px; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; font-weight:600; color:#334155; max-width: 100%;'>"
+        for t in tech_options:
+            selected = "selected" if t == assigned_tech else ""
+            tech_select += f"<option value='{t}' {selected}>{t}</option>"
+        tech_select += "</select></form>"
+
+        initial_display = "display: none;" if status == "Completed" else ""
+        age_badge_color = "background: #fee2e2; color: #dc2626;" if (is_urgent_age and status == "Pending") else "background: #f1f5f9; color: #64748b;"
+
+        table_rows += f"""
+        <tr class="data-row job-row" data-status="{status}" style="{initial_display}">
+            <td style="width: 35px;"><strong style="color: #64748b;">#{req_id}</strong></td>
+            <td style="min-width: 110px;">
+                <a href="javascript:void(0);" onclick="openDrawer({req_id}, '{full_name}', '{phone}', '{full_address}', '{equip}', '{desc}', '{assigned_tech}')" style="color: #0f172a; text-decoration: underline; font-weight: 700;">
+                    {full_name}
+                </a><br>
+                <span style="{age_badge_color} font-size: 9px; padding: 2px 5px; border-radius: 4px; font-weight: 700;">⏱️ {age_text}</span>
+            </td>
+            <td style="min-width: 120px;">{contact_info}</td>
+            <td style="min-width: 130px;">{location_info}</td>
+            <td style="min-width: 80px;">
+                <span style="background: {urgency_bg}; color: {urgency_color}; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; display: inline-block;">
+                    {urgency}
+                </span>
+            </td>
+            <td style="min-width: 110px;">{specs_info}</td>
+            <td style="min-width: 100px; font-size: 12px; color: #334155;">{desc}</td>
+            <td style="min-width: 95px;">{tech_select}</td>
+            <td style="min-width: 85px;">
+                <a href="/toggle_status/{req_id}" style="background: {status_bg}; color: {status_color}; padding: 4px 8px; border-radius: 20px; text-decoration: none; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; display: inline-block; white-space: nowrap;">
+                    {status.upper()} 🔄
+                </a>
+            </td>
+            <td style="width: 75px; white-space: nowrap;">
+                <a href="/work_order/{req_id}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: 700; font-size: 11px; margin-right: 6px;" title="Print Work Order">📄 Ticket</a>
+                <a href="/delete/{req_id}" onclick="return confirm('Delete record #{req_id}?');" style="color: #dc2626; text-decoration: none; font-weight: 600; font-size: 11px;">Delete</a>
+            </td>
+        </tr>
+        """
+
+    customer_sms_html = ""
+    tech_sms_html = ""
+
+    for msg in sms_rows:
+        msg_id, sender_type, name, phone, text, timestamp, is_new = msg
+        new_badge = "<span style='background:#fee2e2; color:#dc2626; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:800; margin-left:6px;'>NEW</span>" if is_new else ""
+
+        row_content = f"""
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-bottom: 4px;">
+                <span><strong>{name}</strong> ({phone}) {new_badge}</span>
+                <span>{timestamp}</span>
             </div>
-            <a href="/customer_home" class="btn btn-sm btn-outline-primary fw-bold"><i class="fa-solid fa-house me-1"></i> Dashboard</a>
+            <div style="font-size: 13px; color: #0f172a; font-weight: 600;">{text}</div>
+            <div style="margin-top: 8px; display: flex; gap: 8px;">
+                <a href="tel:{phone}" style="font-size: 11px; color: #2563eb; text-decoration: none; font-weight: 700;">📞 Call Back</a>
+                <a href="sms:{phone}" style="font-size: 11px; color: #d97706; text-decoration: none; font-weight: 700;">💬 Reply SMS</a>
+            </div>
         </div>
+        """
 
-        <div class="row g-2 mb-3">
-            <div class="col-3">
-                <div class="stat-badge">
-                    <span class="text-muted small fw-bold d-block">ACTIVE DISPATCHES</span>
-                    <span class="fs-4 fw-bold text-primary">12</span>
-                </div>
-            </div>
-            <div class="col-3">
-                <div class="stat-badge">
-                    <span class="text-muted small fw-bold d-block">OPEN WORLD TECHS</span>
-                    <span class="fs-4 fw-bold text-success">48</span>
-                </div>
-            </div>
-            <div class="col-3">
-                <div class="stat-badge">
-                    <span class="text-muted small fw-bold d-block">AVG RESPONSE</span>
-                    <span class="fs-4 fw-bold text-warning">22 sec</span>
-                </div>
-            </div>
-            <div class="col-3">
-                <div class="stat-badge">
-                    <span class="text-muted small fw-bold d-block">TODAY REVENUE</span>
-                    <span class="fs-4 fw-bold text-dark">$1,480</span>
-                </div>
-            </div>
-        </div>
+        if sender_type == "Customer": customer_sms_html += row_content
+        else: tech_sms_html += row_content
 
-        <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-map-location-dot text-primary me-1"></i> REAL-TIME ACTIVE FIELD MAP</h6>
-        <div id="admin_map"></div>
+    if not customer_sms_html: customer_sms_html = "<div style='color: #64748b; font-size: 13px; padding: 20px; text-align: center;'>No customer text messages.</div>"
+    if not tech_sms_html: tech_sms_html = "<div style='color: #64748b; font-size: 13px; padding: 20px; text-align: center;'>No technician/driver text messages.</div>"
 
-        <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-list-check text-primary me-1"></i> LIVE DISPATCH QUEUE</h6>
-        <div id="admin_dispatch_queue">
-            <div class="dispatch-row">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-primary">DISPATCH #88204 — John Doe</span>
-                    <span class="badge bg-success">Tech En-Route (18s Latency)</span>
-                </div>
-                <p class="small text-muted mb-1">📍 18510 Ranch View Trail Cir, Houston TX | System: Gas System (Trane 5TTR6048)</p>
-                <div class="p-2 bg-light rounded-2 border small font-monospace text-dark">
-                    Issue: Coil leaking water | Tech Specs: Trane | Gas System | 4.0 Tons | 16 SEER2 | R-454B
-                </div>
-            </div>
-        </div>
-    </div>
+    cust_alert_badge = f"<span style='background:#dc2626; color:#ffffff; padding:1px 6px; border-radius:10px; font-size:9px; font-weight:800;'>{new_customer_sms} NEW</span>" if new_customer_sms > 0 else ""
+    tech_alert_badge = f"<span style='background:#dc2626; color:#ffffff; padding:1px 6px; border-radius:10px; font-size:9px; font-weight:800;'>{new_tech_sms} NEW</span>" if new_tech_sms > 0 else ""
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        var adminMap = L.map('admin_map').setView([29.7604, -95.3698], 11);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(adminMap);
-
-        L.marker([29.7604, -95.3698]).addTo(adminMap).bindPopup("<b>Active Customer Request</b><br>18510 Ranch View Trail Cir");
-        L.circle([29.7800, -95.3800], { radius: 1200, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.4 }).addTo(adminMap).bindPopup("Tech #104 En-Route");
-    </script>
-</body>
-</html>"""
-    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX_SMALL}}', get_phoenix_svg(35, 35))
-
-# --- 5. CUSTOMER PROFILE & WALLET ('/profile') ---
-@app.route('/profile', methods=['GET', 'POST'])
-def profile():
-    saved_msg = ""
-    if request.method == 'POST':
-        saved_msg = '<div class="alert alert-success py-2 text-center small fw-bold mb-3"><i class="fa-solid fa-circle-check me-1"></i> Profile and Wallet specs updated successfully!</div>'
-
-    html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olmios - Profile & Wallet</title>
-    {{HEADER}}
-    <style>
-        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .form-label { font-weight: 800; color: #334155 !important; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase; }
-        .section-header { font-weight: 800; color: #0284c7; font-size: 0.92rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; margin-top: 18px; display: flex; justify-content: space-between; align-items: center; }
-        .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
-        .add-tab-btn { font-size: 0.75rem; padding: 2px 10px; border-radius: 20px; font-weight: 700; }
-        .add-on-box { display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
-        .card-box { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; margin-bottom: 10px; }
-        .uppercase-input { text-transform: uppercase !important; }
-    </style>
-</head>
-<body>
-    <div class="main-card">
-        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-id-card me-1 text-primary"></i> Customer Profile & Wallet</h5>
-            <a href="/customer_home" title="Home">{{PHOENIX}}</a>
-        </div>
-
-        {{SAVED_MSG}}
-
-        <form method="POST" id="profile_main_form" onsubmit="saveProfileToLocal(event)">
-            <div class="mb-3 text-center">
-                <img id="profile_avatar_preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 85px; height: 85px; object-fit: cover; border-radius: 50%; border: 3px solid #3b82f6;" class="mb-2">
-                <div>
-                    <label class="btn btn-sm btn-outline-primary fw-bold rounded-3">
-                        <i class="fa-solid fa-camera me-1"></i> Upload Profile Picture
-                        <input type="file" accept="image/*" capture="user" style="display: none;" onchange="previewProfilePic(event)">
-                    </label>
-                </div>
-            </div>
-
-            <!-- SECTION 1: Personal Info -->
-            <div class="section-header">
-                <span><i class="fa-solid fa-user me-1"></i> 1. Basic Personal Information & Residence</span>
-            </div>
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>OLMIOS | Dispatch Command Center</title>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <style>
+            {COMMON_ADMIN_CSS}
+            .container-admin {{ max-width: 100%; margin: 0 auto; padding: 10px; }}
+            .header-admin {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }}
             
-            <div class="row g-2 mb-2">
-                <div class="col-6">
-                    <label class="form-label">FIRST NAME</label>
-                    <input type="text" id="prof_fname" class="form-control rounded-3" placeholder="Enter first name">
-                </div>
-                <div class="col-6">
-                    <label class="form-label">LAST NAME</label>
-                    <input type="text" id="prof_lname" class="form-control rounded-3" placeholder="Enter last name">
-                </div>
-            </div>
+            .kpi-grid {{ display: flex; gap: 12px; margin-bottom: 20px; }}
+            .kpi-card {{ flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; }}
+            .kpi-title {{ font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }}
+            .kpi-val {{ font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 2px; }}
+
+            .split-container {{ display: flex; gap: 20px; align-items: flex-start; }}
+            .left-pane {{ flex: 3; min-width: 0; background: #ffffff; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0; color: #0f172a; }}
+            .right-pane {{ flex: 2; position: sticky; top: 20px; min-width: 340px; }}
+
+            .map-container {{
+                background: #ffffff;
+                border-radius: 12px;
+                overflow: hidden;
+                border: 1px solid #cbd5e1;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            }}
+            .map-header {{
+                background: #f8fafc;
+                padding: 10px 14px;
+                border-bottom: 1px solid #e2e8f0;
+                font-size: 11px;
+                font-weight: 700;
+                color: #475569;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            #leafletMap {{ height: 500px; width: 100%; }}
+
+            .controls-bar {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; flex-wrap: wrap; }}
+            .search-input {{ flex: 1; min-width: 180px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-family: inherit; }}
             
-            <div class="mb-2">
-                <label class="form-label">PHONE NUMBER</label>
-                <input type="text" id="prof_phone" class="form-control rounded-3" placeholder="Enter phone number">
-            </div>
+            .filter-tabs {{ display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }}
+            .tab-btn {{ padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: #f1f5f9; color: #475569; display: flex; align-items: center; gap: 4px; }}
+            .tab-btn.active {{ background: #2563eb; color: #ffffff; border-color: #2563eb; }}
+            .tab-sms-cust {{ border-color: #2563eb; color: #2563eb; background: #eff6ff; }}
+            .tab-sms-tech {{ border-color: #d97706; color: #b45309; background: #fffbe3; }}
+            .tab-btn.active.tab-sms-cust {{ background: #2563eb; color: #ffffff; }}
+            .tab-btn.active.tab-sms-tech {{ background: #d97706; color: #ffffff; }}
 
-            <div class="mb-2">
-                <label class="form-label">EMAIL ADDRESS</label>
-                <input type="email" id="prof_email" class="form-control rounded-3" placeholder="Enter email address">
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">PRIMARY RESIDENCE STREET ADDRESS</label>
-                <input type="text" id="primary_street_addr" class="form-control rounded-3" placeholder="Enter street address">
-            </div>
-
-            <!-- SECTION 2: Business & Commercial Information -->
-            <div class="section-header">
-                <span><i class="fa-solid fa-briefcase me-1"></i> 2. Business & Commercial Information</span>
-                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_biz_box')"><i class="fa-solid fa-plus me-1"></i> Add-On</button>
-            </div>
-
-            <div class="mb-2">
-                <label class="form-label">DRIVER'S LICENSE / STATE ID # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
-                <input type="text" id="prof_dl" class="form-control rounded-3 uppercase-input" placeholder="Enter Driver's License #" oninput="this.value = this.value.toUpperCase()">
-            </div>
+            .table-wrapper {{ overflow-x: auto; width: 100%; }}
+            table {{ width: 100%; border-collapse: collapse; table-layout: auto; }}
+            th, td {{ padding: 10px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 12px; vertical-align: top; box-sizing: border-box; color: #0f172a; }}
+            th {{ background: #f8fafc; color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; white-space: nowrap; }}
+            .nav-actions {{ display: flex; gap: 12px; align-items: center; }}
             
-            <div class="mb-2">
-                <label class="form-label">BUSINESS / COMPANY NAME</label>
-                <input type="text" id="prof_company" class="form-control rounded-3" placeholder="Enter company name">
-            </div>
-            <div class="row g-2 mb-3">
-                <div class="col-6">
-                    <label class="form-label">TAX ID / EIN #</label>
-                    <input type="text" id="prof_taxid" class="form-control rounded-3 uppercase-input" placeholder="XX-XXXXXXX" oninput="this.value = this.value.toUpperCase()">
-                </div>
-                <div class="col-6">
-                    <label class="form-label">ACCOUNTS PAYABLE EMAIL</label>
-                    <input type="email" id="prof_ap_email" class="form-control rounded-3" placeholder="ap@company.com">
-                </div>
-            </div>
-
-            <div id="add_biz_box" class="add-on-box">
-                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-building-circle-add me-1"></i> Add Commercial / Business Unit Specs</h6>
-                <div class="mb-2">
-                    <label class="form-label">COMMERCIAL SYSTEM TYPE</label>
-                    <select class="form-select rounded-3">
-                        <option value="">Select Equipment Category...</option>
-                        <option>Gas System</option>
-                        <option>Electric System</option>
-                    </select>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">VOLTAGE SPECIFICATION</label>
-                    <select class="form-select rounded-3">
-                        <option value="">Select Voltage...</option>
-                        <option>230/60/1</option>
-                        <option>230/60/3</option>
-                        <option>460/60/3</option>
-                    </select>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">SYSTEM TYPE</label>
-                    <select class="form-select rounded-3" onchange="toggleCommConfig(this.value)">
-                        <option value="">Select Configuration...</option>
-                        <option value="rtu">Rooftop Unit (Under 25 Tons)</option>
-                        <option value="split">Split System (Under 25 Tons)</option>
-                    </select>
-                </div>
-
-                <div id="rtu_fields" style="display:none;">
-                    <div class="row g-2 mb-2">
-                        <div class="col-6"><label class="form-label">RTU MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                        <div class="col-6"><label class="form-label">RTU SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                    </div>
-                </div>
-
-                <div id="split_fields" style="display:none;">
-                    <div class="row g-2 mb-2">
-                        <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                        <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                    </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                        <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                    </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-6"><label class="form-label">HEAT KIT MODEL # <span class="text-muted fw-normal">(OPTIONAL)</span></label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                        <div class="col-6"><label class="form-label">HEAT KIT SERIAL # <span class="text-muted fw-normal">(OPTIONAL)</span></label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                    </div>
-                </div>
-
-                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-2" onclick="toggleAddBox('add_biz_box')">Save Commercial Specs</button>
-            </div>
-
-            <!-- SECTION 3: HVAC System Specs -->
-            <div class="section-header">
-                <span><i class="fa-solid fa-sliders me-1"></i> 3. HVAC System Equipment & Data Plate Specs</span>
-                <div class="d-flex gap-1">
-                    <button type="button" class="btn btn-outline-secondary add-tab-btn" onclick="toggleAddBox('add_acc_box')"><i class="fa-solid fa-plus me-1"></i> Add Accessory</button>
-                    <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_hvac_box')"><i class="fa-solid fa-plus me-1"></i> Add-On</button>
-                </div>
-            </div>
+            .view-panel {{ display: none; }}
+            .view-panel.active {{ display: block; }}
             
-            <div class="mb-3">
-                <label class="form-label">SYSTEM HEATING TYPE</label>
-                <select class="form-select rounded-3 fw-bold text-primary" id="main_heating_type_select" onchange="renderDynamicHvacFields(this.value, 'dynamic_hvac_container')">
-                    <option value="">Select System Type...</option>
-                    <option value="gas_sys">Gas System</option>
-                    <option value="elec_sys">Electric System</option>
-                    <option value="gas_hp">Gas Heat Pump System</option>
-                    <option value="elec_hp">Electric Heat Pump System</option>
-                    <option value="res_pkg">Residential Package Unit</option>
-                    <option value="comm_pkg">Commercial Package Unit</option>
-                    <option value="comm_split">Commercial Split System</option>
-                    <option value="mini_single">Mini Splits - Single Zone</option>
-                    <option value="mini_multi">Mini Splits - Multi-Zone</option>
-                    <option value="comm_mini_single">Commercial Mini Splits - Single Zone</option>
-                    <option value="comm_mini_multi">Commercial Mini Splits - Multi-Zone</option>
-                </select>
-            </div>
+            .map-legend {{ display: flex; gap: 10px; font-size: 10px; font-weight: 700; }}
+            .legend-item {{ display: flex; align-items: center; gap: 4px; }}
+            .dot {{ width: 9px; height: 9px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,0.2); }}
 
-            <!-- DYNAMIC HVAC CONTAINER -->
-            <div id="dynamic_hvac_container"></div>
+            .drawer {{
+                position: fixed;
+                top: 0; right: -400px;
+                width: 380px; height: 100vh;
+                background: #ffffff;
+                color: #0f172a;
+                box-shadow: -10px 0 25px rgba(0,0,0,0.3);
+                transition: right 0.3s ease;
+                z-index: 9999;
+                padding: 25px;
+                box-sizing: border-box;
+                overflow-y: auto;
+            }}
+            .drawer.open {{ right: 0; }}
+            .drawer-close {{ font-size: 20px; font-weight: 800; cursor: pointer; color: #64748b; float: right; }}
+        </style>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script>
+            let map;
+            let markerStore = {{}};
+            const mapData = {json.dumps(map_markers)};
+            let currentJobId = null;
 
-            <div class="mb-3">
-                <label class="form-label"><i class="fa-solid fa-image me-1 text-primary"></i> UNIT RATING PLATE PHOTO URL / UPLOAD <span class="text-muted fw-normal">(OPTIONAL)</span></label>
-                <input type="text" id="prof_tag_url" class="form-control rounded-3" placeholder="Upload or paste image URL of equipment tag">
-            </div>
+            window.onload = function() {{
+                map = L.map('leafletMap').setView([29.7604, -95.3698], 10);
 
-            <!-- ACCESSORY ADD-ON BOX -->
-            <div id="add_acc_box" class="add-on-box">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-sliders me-1"></i> Add Additional Accessory</h6>
-                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="toggleAddBox('add_acc_box')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">ACCESSORY TYPE / NAME</label>
-                    <input type="text" class="form-control rounded-3" placeholder="e.g., Smart Thermostat, Surge Protector, Dehumidifier">
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_acc_box')">Save Accessory</button>
-            </div>
+                L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+                    maxZoom: 18,
+                    attribution: '© OpenStreetMap contributors'
+                }}).addTo(map);
 
-            <!-- ADDITIONAL HVAC TAG BOX -->
-            <div id="add_hvac_box" class="add-on-box">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-circle-plus me-1"></i> Add Additional HVAC System Tag</h6>
-                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="toggleAddBox('add_hvac_box')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">SYSTEM HEATING TYPE</label>
-                    <select class="form-select rounded-3 fw-bold text-primary" onchange="renderDynamicHvacFields(this.value, 'addon_hvac_container')">
-                        <option value="">Select System Type...</option>
-                        <option value="gas_sys">Gas System</option>
-                        <option value="elec_sys">Electric System</option>
-                        <option value="gas_hp">Gas Heat Pump System</option>
-                        <option value="elec_hp">Electric Heat Pump System</option>
-                        <option value="res_pkg">Residential Package Unit</option>
-                        <option value="comm_pkg">Commercial Package Unit</option>
-                        <option value="comm_split">Commercial Split System</option>
-                        <option value="mini_single">Mini Splits - Single Zone</option>
-                        <option value="mini_multi">Mini Splits - Multi-Zone</option>
-                        <option value="comm_mini_single">Commercial Mini Splits - Single Zone</option>
-                        <option value="comm_mini_multi">Commercial Mini Splits - Multi-Zone</option>
-                    </select>
-                </div>
-                <div id="addon_hvac_container" class="mb-2"></div>
-                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_hvac_box')">Save Additional HVAC Specs</button>
-            </div>
+                mapData.forEach(job => {{
+                    let circle = L.circleMarker([job.lat, job.lng], {{
+                        color: '#0f172a',
+                        fillColor: job.color,
+                        fillOpacity: 0.95,
+                        radius: job.is_emergency ? 12 : 9,
+                        weight: job.is_emergency ? 3 : 2
+                    }}).addTo(map);
 
-            <!-- SECTION 4: Saved Payment Cards & Wallet -->
-            <div class="section-header">
-                <span><i class="fa-solid fa-credit-card me-1"></i> 4. Saved Payment Cards & Wallet</span>
-                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_card_box')"><i class="fa-solid fa-plus me-1"></i> Add Additional Card</button>
-            </div>
-
-            <div id="card_list_container">
-                <div class="card-box" id="card_1004">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="fw-bold text-dark"><i class="fa-brands fa-cc-visa text-primary me-1 fs-5"></i> Visa ending in 1004</span>
-                            <span class="badge bg-primary me-1">Primary</span>
+                    let popupContent = `
+                        <div style="font-family: inherit; font-size: 12px; color: #0f172a;">
+                            <strong>Order #${{job.id}} - ${{job.name}}</strong><br>
+                            <span style="color: #64748b;">${{job.address}}</span><br>
+                            <strong>Urgency:</strong> ${{job.urgency}}<br>
+                            <strong>Type:</strong> ${{job.equipment}}<br><br>
+                            <a href="https://www.google.com/maps/search/?api=1&query=${{encodeURIComponent(job.address)}}" target="_blank" style="color: #2563eb; font-weight: 700;">🗺️ Open Directions</a>
                         </div>
-                        <div class="d-flex align-items-center gap-1">
-                            <button type="button" class="btn btn-sm btn-success py-0 px-2 fw-bold" onclick="alert('Card Saved Successfully!')"><i class="fa-solid fa-floppy-disk me-1"></i> Save</button>
-                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="deleteCard('card_1004')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                    `;
+
+                    circle.bindPopup(popupContent);
+                    markerStore[job.id] = {{ circle: circle, lat: job.lat, lng: job.lng }};
+                }});
+            }};
+
+            function focusMap(id) {{
+                if (markerStore[id]) {{
+                    map.setView([markerStore[id].lat, markerStore[id].lng], 14);
+                    markerStore[id].circle.openPopup();
+                }}
+            }}
+
+            function openDrawer(id, name, phone, address, equip, desc, tech) {{
+                currentJobId = id;
+                document.getElementById('drawerTitle').innerText = "Quick Dispatch #" + id;
+                document.getElementById('drawerName').innerText = name;
+                document.getElementById('drawerPhone').innerText = phone;
+                document.getElementById('drawerAddress').innerText = address;
+                document.getElementById('drawerEquip').innerText = equip;
+                document.getElementById('drawerDesc').innerText = desc;
+                
+                let techSelect = document.getElementById('drawerTechSelect');
+                if (techSelect) {{
+                    techSelect.value = tech && tech !== 'Unassigned' ? tech : 'Tech A (Lead)';
+                }}
+
+                updateSmsPayload(id, name, phone, address, equip, desc);
+                document.getElementById('quickDrawer').classList.add('open');
+            }}
+
+            function updateSmsPayload(id, name, phone, address, equip, desc) {{
+                let selectedTech = document.getElementById('drawerTechSelect').value;
+                let mapsUrl = "https://maps.google.com/?q=" + encodeURIComponent(address);
+                let smsBody = `OLMIOS DISPATCH%0AOrder #${{id}} Accepted by ${{selectedTech}}%0A%0AClient: ${{name}}%0APhone: ${{phone}}%0ALocation: ${{address}}%0AEquip: ${{equip}}%0ANotes: ${{desc}}%0ANavigate: ${{mapsUrl}}`;
+                
+                document.getElementById('drawerSmsBtn').href = "sms:?body=" + smsBody;
+            }}
+
+            function handleDispatchAccept() {{
+                if (!currentJobId) return;
+                let selectedTech = document.getElementById('drawerTechSelect').value;
+                
+                let form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/accept_and_dispatch/' + currentJobId;
+                
+                let inputTech = document.createElement('input');
+                inputTech.type = 'hidden';
+                inputTech.name = 'tech';
+                inputTech.value = selectedTech;
+                form.appendChild(inputTech);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }}
+
+            function closeDrawer() {{
+                document.getElementById('quickDrawer').classList.remove('open');
+            }}
+
+            function switchView(viewName, btn) {{
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+                
+                if (viewName === 'CustomerSMS') {{
+                    document.getElementById('customerSmsPanel').classList.add('active');
+                }} else if (viewName === 'TechSMS') {{
+                    document.getElementById('techSmsPanel').classList.add('active');
+                }} else {{
+                    document.getElementById('jobsTablePanel').classList.add('active');
+                    filterJobs(viewName);
+                }}
+            }}
+
+            function filterJobs(view) {{
+                let rows = document.querySelectorAll('.job-row');
+                rows.forEach(r => {{
+                    let status = r.getAttribute('data-status');
+                    if (view === 'Active') {{
+                        r.style.display = (status !== 'Completed') ? '' : 'none';
+                    }} else if (view === 'All') {{
+                        r.style.display = '';
+                    }} else {{
+                        r.style.display = (status === view) ? '' : 'none';
+                    }}
+                }});
+            }}
+
+            function searchTable() {{
+                let query = document.getElementById('searchInput').value.toLowerCase();
+                let rows = document.querySelectorAll('.job-row');
+                rows.forEach(r => {{
+                    let text = r.innerText.toLowerCase();
+                    r.style.display = text.includes(query) ? '' : 'none';
+                }});
+            }}
+        </script>
+    </head>
+    <body>
+        <div class="panel container-admin">
+            <div class="header-admin">
+                <div>
+                    <h1 class="brand-logo" style="margin: 0;">OLMIOS</h1>
+                    <span style="color: #64748b; font-size: 12px; letter-spacing: 0.5px; font-weight: 700;">DISPATCH COMMAND CENTER</span>
+                </div>
+                <div class="nav-actions">
+                    <a href="/customer_home" class="btn-admin btn-primary-admin">+ NEW ORDER</a>
+                    <a href="/customer_home" class="home-phoenix-btn" title="Return to Customer Home">
+                        {get_phoenix_svg(46, 46)}
+                    </a>
+                </div>
+            </div>
+
+            <!-- KPI SUMMARY CARDS -->
+            <div class="kpi-grid">
+                <div class="kpi-card" style="border-left: 4px solid #64748b;">
+                    <div class="kpi-title">Total Orders</div>
+                    <div class="kpi-val">{total_count}</div>
+                </div>
+                <div class="kpi-card" style="border-left: 4px solid #d97706;">
+                    <div class="kpi-title">Pending Dispatch</div>
+                    <div class="kpi-val" style="color: #b45309;">{pending_count}</div>
+                </div>
+                <div class="kpi-card" style="border-left: 4px solid #2563eb;">
+                    <div class="kpi-title">In Progress</div>
+                    <div class="kpi-val" style="color: #1d4ed8;">{progress_count}</div>
+                </div>
+                <div class="kpi-card" style="border-left: 4px solid #16a34a;">
+                    <div class="kpi-title">Active Pipeline Value</div>
+                    <div class="kpi-val" style="color: #16a34a;">${total_pipeline_val:,.2f}</div>
+                </div>
+            </div>
+
+            <!-- SPLIT SCREEN LAYOUT -->
+            <div class="split-container">
+                
+                <!-- LEFT PANE: PRIORITIZED TABS & VIEWS -->
+                <div class="left-pane">
+                    <div class="controls-bar">
+                        <input type="text" id="searchInput" class="search-input" onkeyup="searchTable()" placeholder="🔍 Search customer, phone, or site...">
+                        
+                        <div class="filter-tabs">
+                            <button class="tab-btn active" onclick="switchView('Active', this)">Active Jobs ({active_count})</button>
+                            <button class="tab-btn tab-sms-cust" onclick="switchView('CustomerSMS', this)">💬 Customer Texts {cust_alert_badge}</button>
+                            <button class="tab-btn tab-sms-tech" onclick="switchView('TechSMS', this)">📱 Tech/Driver Texts {tech_alert_badge}</button>
+                            
+                            <span style="color:#cbd5e1; margin:0 2px;">|</span>
+                            
+                            <button class="tab-btn" onclick="switchView('Pending', this)">Pending ({pending_count})</button>
+                            <button class="tab-btn" onclick="switchView('In Progress', this)">In Progress ({progress_count})</button>
+                            <button class="tab-btn" onclick="switchView('Completed', this)">Archive ({completed_count})</button>
+                            <button class="tab-btn" onclick="switchView('All', this)">All ({total_count})</button>
                         </div>
                     </div>
-                    <div class="row g-2 mt-1">
-                        <div class="col-12"><input type="text" class="form-control rounded-3 mb-1" placeholder="Cardholder Name" value="John Doe"></div>
-                        <div class="col-8"><input type="text" class="form-control rounded-3" placeholder="Card Number (XXXX-XXXX-XXXX-1004)" value="**** **** **** 1004"></div>
-                        <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY" value="12/28"></div>
+
+                    <!-- VIEW 1: DISPATCH JOBS TABLE -->
+                    <div id="jobsTablePanel" class="view-panel active">
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Customer & Age</th>
+                                        <th>Contact</th>
+                                        <th>Job Location</th>
+                                        <th>Urgency</th>
+                                        <th>Equipment</th>
+                                        <th>Details</th>
+                                        <th>Tech</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {table_rows if table_rows else '<tr><td colspan="10" style="text-align:center; color: #64748b; padding: 30px;">No active service requests.</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- VIEW 2: CUSTOMER SMS TAB -->
+                    <div id="customerSmsPanel" class="view-panel">
+                        <h3 style="margin: 0 0 15px; font-size: 15px; color: #0f172a;">💬 Customer Text Messages</h3>
+                        {customer_sms_html}
+                    </div>
+
+                    <!-- VIEW 3: TECH / DRIVER SMS TAB -->
+                    <div id="techSmsPanel" class="view-panel">
+                        <h3 style="margin: 0 0 15px; font-size: 15px; color: #0f172a;">📱 Field Tech & Driver Messages</h3>
+                        {tech_sms_html}
+                    </div>
+
+                </div>
+
+                <!-- RIGHT PANE: COLOR-CODED LIVE MAP -->
+                <div class="right-pane">
+                    <div class="map-container">
+                        <div class="map-header">
+                            <span>DISPATCH MAP PANE</span>
+                            <div class="map-legend">
+                                <span class="legend-item"><span class="dot" style="background:#dc2626;"></span> Emergency</span>
+                                <span class="legend-item"><span class="dot" style="background:#0284c7;"></span> Standard</span>
+                                <span class="legend-item"><span class="dot" style="background:#16a34a;"></span> Routine</span>
+                            </div>
+                        </div>
+                        <div id="leafletMap"></div>
                     </div>
                 </div>
-            </div>
 
-            <div id="add_card_box" class="add-on-box">
-                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-credit-card me-1"></i> Add New Payment Card</h6>
-                <input type="text" id="new_card_name" class="form-control rounded-3 mb-2" placeholder="Cardholder Name">
-                <div class="row g-2 mb-2">
-                    <div class="col-8"><input type="text" id="new_card_num" class="form-control rounded-3" placeholder="Card Number"></div>
-                    <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
-                </div>
-                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3" onclick="addNewCard()">Save Card to Wallet</button>
             </div>
+        </div>
 
-            <!-- SECTION 5: Additional Property Locations -->
-            <div class="section-header">
-                <span><i class="fa-solid fa-location-dot me-1"></i> 5. Manage Additional Property Locations</span>
-                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_location_box')"><i class="fa-solid fa-plus me-1"></i> Add Location Specs</button>
-            </div>
+        <!-- UBER-STYLE QUICK DISPATCH DRAWER -->
+        <div id="quickDrawer" class="drawer">
+            <span class="drawer-close" onclick="closeDrawer()">✕</span>
+            <h3 id="drawerTitle" style="margin-top: 0; color: #0f172a;">Quick Dispatch</h3>
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin-bottom: 20px;">
 
-            <div class="mb-3">
-                <select class="form-select rounded-3 mb-2">
-                    <option value="">Select Property Address...</option>
-                </select>
-            </div>
-
-            <div id="add_location_box" class="add-on-box">
-                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-house-chimney-medical me-1"></i> Add Additional Location Specs</h6>
-                <div class="mb-2">
-                    <label class="form-label">PROPERTY ADDRESS</label>
-                    <input type="text" class="form-control rounded-3" placeholder="Street Address, City, State">
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">SYSTEM TYPE</label>
-                    <select class="form-select rounded-3">
-                        <option value="">Select Gas or Electric...</option>
-                        <option>Gas System</option>
-                        <option>Electric System</option>
+            <div style="font-size: 13px; line-height: 1.8; color: #334155;">
+                <p><strong>Customer:</strong> <span id="drawerName"></span></p>
+                <p><strong>Phone:</strong> <span id="drawerPhone"></span></p>
+                <p><strong>Job Site:</strong> <span id="drawerAddress"></span></p>
+                <p><strong>Equipment:</strong> <span id="drawerEquip"></span></p>
+                <p><strong>Issue Notes:</strong> <span id="drawerDesc"></span></p>
+                
+                <div style="margin-top: 15px;">
+                    <label style="display: block; font-weight: 700; color: #0f172a; margin-bottom: 5px;">Select Active Tech / Driver:</label>
+                    <select id="drawerTechSelect" onchange="updateSmsPayload(currentJobId, document.getElementById('drawerName').innerText, document.getElementById('drawerPhone').innerText, document.getElementById('drawerAddress').innerText, document.getElementById('drawerEquip').innerText, document.getElementById('drawerDesc').innerText)" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; color: #0f172a;">
+                        <option value="Tech A (Lead)">Tech A (Lead Driver)</option>
+                        <option value="Tech B">Tech B (HVAC Tech)</option>
+                        <option value="Tech C">Tech C (Field Tech)</option>
                     </select>
                 </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3" onclick="toggleAddBox('add_location_box')">Save Location Specs</button>
             </div>
 
-            <div class="row g-2 mb-3 mt-4">
-                <div class="col-6">
-                    <button type="submit" class="btn btn-amber w-100 py-2.5 rounded-3 fw-bold shadow-sm">
-                        <i class="fa-solid fa-floppy-disk me-1"></i> Save Profile
-                    </button>
-                </div>
-                <div class="col-6">
-                    <button type="button" class="btn btn-outline-danger w-100 py-2.5 rounded-3 fw-bold" onclick="if(confirm('Are you sure you want to delete this profile?')) window.location.href='/';">
-                        <i class="fa-solid fa-trash me-1"></i> Delete Profile
-                    </button>
-                </div>
-            </div>
-        </form>
-
-        <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold"><i class="fa-solid fa-house me-1"></i> Home Page</a>
-    </div>
-
-    <script>
-    var multiZoneCount = 3;
-
-    function previewProfilePic(e) {
-        if(e.target.files && e.target.files[0]) {
-            let reader = new FileReader();
-            reader.onload = function(evt) { 
-                document.getElementById('profile_avatar_preview').src = evt.target.result;
-                localStorage.setItem('olmios_profile_pic', evt.target.result);
-            }
-            reader.readAsDataURL(e.target.files[0]);
-        }
-    }
-
-    function toggleAddBox(boxId) {
-        let box = document.getElementById(boxId);
-        box.style.display = (box.style.display === 'block') ? 'none' : 'block';
-    }
-
-    function toggleCommConfig(val) {
-        document.getElementById('rtu_fields').style.display = (val === 'rtu') ? 'block' : 'none';
-        document.getElementById('split_fields').style.display = (val === 'split') ? 'block' : 'none';
-    }
-
-    function addMoreIndoorUnit(targetContainerId) {
-        multiZoneCount++;
-        let container = document.getElementById(targetContainerId + '_indoor_units');
-        if(container) {
-            let unitHtml = `
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">INDOOR UNIT #${multiZoneCount} MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">INDOOR UNIT #${multiZoneCount} SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>`;
-            container.insertAdjacentHTML('beforeend', unitHtml);
-        }
-    }
-
-    function renderDynamicHvacFields(systemType, targetId) {
-        let container = document.getElementById(targetId);
-        if(!container) return;
-        let html = '';
-
-        if (systemType === 'gas_sys') {
-            html = `
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">EVAPORATOR COIL MODEL #</label><input type="text" id="m_coil_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">COIL SERIAL #</label><input type="text" id="m_coil_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">FURNACE MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">FURNACE SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>`;
-        } else if (systemType === 'elec_sys') {
-            html = `
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>`;
-        } else if (systemType === 'gas_hp') {
-            html = `
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">HP CONDENSER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">HP CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">EVAPORATOR COIL MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">COIL SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">FURNACE MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">FURNACE SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>`;
-        } else if (systemType === 'elec_hp') {
-            html = `
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">HP CONDENSER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">HP CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>`;
-        } else if (systemType === 'res_pkg' || systemType === 'comm_pkg') {
-            html = `
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">UNIT MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">UNIT SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>`;
-        } else if (systemType === 'comm_split') {
-            html = `
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">COMMERCIAL CONDENSER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">COMMERCIAL CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">HEAT KIT MODEL # <span class="text-muted fw-normal">(OPTIONAL)</span></label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL # <span class="text-muted fw-normal">(OPTIONAL)</span></label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>`;
-        } else if (systemType === 'mini_single' || systemType === 'comm_mini_single') {
-            html = `
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">OUTDOOR UNIT MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">OUTDOOR UNIT SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">INDOOR UNIT MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">INDOOR UNIT SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>`;
-        } else if (systemType === 'mini_multi' || systemType === 'comm_mini_multi') {
-            multiZoneCount = 3;
-            html = `
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">OUTDOOR CONDENSER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">OUTDOOR CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <div id="${targetId}_indoor_units">
-                    <div class="row g-2 mb-2">
-                        <div class="col-6"><label class="form-label">INDOOR UNIT #1 MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                        <div class="col-6"><label class="form-label">INDOOR UNIT #1 SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                    </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-6"><label class="form-label">INDOOR UNIT #2 MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                        <div class="col-6"><label class="form-label">INDOOR UNIT #2 SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                    </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-6"><label class="form-label">INDOOR UNIT #3 MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                        <div class="col-6"><label class="form-label">INDOOR UNIT #3 SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                    </div>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-primary fw-bold w-100 mb-2 rounded-3" onclick="addMoreIndoorUnit('${targetId}')"><i class="fa-solid fa-plus me-1"></i> Add Indoor Unit</button>`;
-        }
-
-        container.innerHTML = html;
-        restoreFormValues();
-    }
-
-    function deleteCard(cardId) {
-        let cardEl = document.getElementById(cardId);
-        if(cardEl && confirm('Are you sure you want to delete this payment card?')) {
-            cardEl.remove();
-        }
-    }
-
-    function addNewCard() {
-        let name = document.getElementById('new_card_name').value || 'New Card';
-        let num = document.getElementById('new_card_num').value || '4000';
-        let last4 = num.slice(-4) || '4000';
-        let newId = 'card_' + Date.now();
-
-        let newCardHtml = `
-            <div class="card-box" id="${newId}">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="fw-bold text-dark"><i class="fa-solid fa-credit-card text-success me-1 fs-5"></i> Card ending in ${last4}</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-1">
-                        <button type="button" class="btn btn-sm btn-success py-0 px-2 fw-bold" onclick="alert('Card Saved Successfully!')"><i class="fa-solid fa-floppy-disk me-1"></i> Save</button>
-                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="deleteCard('${newId}')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
-                    </div>
-                </div>
-                <div class="row g-2 mt-1">
-                    <div class="col-12"><input type="text" class="form-control rounded-3 mb-1" value="${name}"></div>
-                    <div class="col-8"><input type="text" class="form-control rounded-3" value="**** **** **** ${last4}"></div>
-                    <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
-                </div>
-            </div>`;
-        document.getElementById('card_list_container').insertAdjacentHTML('beforeend', newCardHtml);
-        toggleAddBox('add_card_box');
-    }
-
-    function saveProfileToLocal(e) {
-        let fname = document.getElementById('prof_fname').value.trim();
-        let lname = document.getElementById('prof_lname').value.trim();
-        let phone = document.getElementById('prof_phone').value.trim();
-        let email = document.getElementById('prof_email').value.trim();
-        let addr = document.getElementById('primary_street_addr').value.trim();
-        let dl = document.getElementById('prof_dl').value.trim();
-        let comp = document.getElementById('prof_company').value.trim();
-        let tax = document.getElementById('prof_taxid').value.trim();
-        let ap = document.getElementById('prof_ap_email').value.trim();
-        let tag = document.getElementById('prof_tag_url').value.trim();
-
-        if(fname || lname) localStorage.setItem('olmios_fullname', (fname + ' ' + lname).trim());
-        if(phone) localStorage.setItem('olmios_phone', phone);
-        if(email) localStorage.setItem('olmios_email', email);
-        if(addr) localStorage.setItem('olmios_saved_address', addr);
-        if(dl) localStorage.setItem('olmios_dl', dl);
-        if(comp) localStorage.setItem('olmios_company', comp);
-        if(tax) localStorage.setItem('olmios_taxid', tax);
-        if(ap) localStorage.setItem('olmios_ap_email', ap);
-        if(tag) localStorage.setItem('olmios_tag_url', tag);
-
-        let hvacType = document.getElementById('main_heating_type_select').value;
-        if(hvacType) localStorage.setItem('olmios_hvac_type', hvacType);
-
-        if(document.getElementById('m_cond_mod')) localStorage.setItem('olmios_cond_mod', document.getElementById('m_cond_mod').value);
-        if(document.getElementById('m_cond_ser')) localStorage.setItem('olmios_cond_ser', document.getElementById('m_cond_ser').value);
-        if(document.getElementById('m_coil_mod')) localStorage.setItem('olmios_coil_mod', document.getElementById('m_coil_mod').value);
-        if(document.getElementById('m_coil_ser')) localStorage.setItem('olmios_coil_ser', document.getElementById('m_coil_ser').value);
-        if(document.getElementById('m_furn_mod')) localStorage.setItem('olmios_furn_mod', document.getElementById('m_furn_mod').value);
-        if(document.getElementById('m_furn_ser')) localStorage.setItem('olmios_furn_ser', document.getElementById('m_furn_ser').value);
-    }
-
-    function restoreFormValues() {
-        if(document.getElementById('m_cond_mod') && localStorage.getItem('olmios_cond_mod')) document.getElementById('m_cond_mod').value = localStorage.getItem('olmios_cond_mod');
-        if(document.getElementById('m_cond_ser') && localStorage.getItem('olmios_cond_ser')) document.getElementById('m_cond_ser').value = localStorage.getItem('olmios_cond_ser');
-        if(document.getElementById('m_coil_mod') && localStorage.getItem('olmios_coil_mod')) document.getElementById('m_coil_mod').value = localStorage.getItem('olmios_coil_mod');
-        if(document.getElementById('m_coil_ser') && localStorage.getItem('olmios_coil_ser')) document.getElementById('m_coil_ser').value = localStorage.getItem('olmios_coil_ser');
-        if(document.getElementById('m_furn_mod') && localStorage.getItem('olmios_furn_mod')) document.getElementById('m_furn_mod').value = localStorage.getItem('olmios_furn_mod');
-        if(document.getElementById('m_furn_ser') && localStorage.getItem('olmios_furn_ser')) document.getElementById('m_furn_ser').value = localStorage.getItem('olmios_furn_ser');
-    }
-
-    window.onload = function() {
-        let savedName = localStorage.getItem('olmios_fullname') || '';
-        let parts = savedName.split(' ');
-        if(parts.length > 0) document.getElementById('prof_fname').value = parts[0] || '';
-        if(parts.length > 1) document.getElementById('prof_lname').value = parts.slice(1).join(' ') || '';
-        
-        if(localStorage.getItem('olmios_phone')) document.getElementById('prof_phone').value = localStorage.getItem('olmios_phone');
-        if(localStorage.getItem('olmios_email')) document.getElementById('prof_email').value = localStorage.getItem('olmios_email');
-        if(localStorage.getItem('olmios_saved_address')) document.getElementById('primary_street_addr').value = localStorage.getItem('olmios_saved_address');
-        if(localStorage.getItem('olmios_dl')) document.getElementById('prof_dl').value = localStorage.getItem('olmios_dl');
-        if(localStorage.getItem('olmios_company')) document.getElementById('prof_company').value = localStorage.getItem('olmios_company');
-        if(localStorage.getItem('olmios_taxid')) document.getElementById('prof_taxid').value = localStorage.getItem('olmios_taxid');
-        if(localStorage.getItem('olmios_ap_email')) document.getElementById('prof_ap_email').value = localStorage.getItem('olmios_ap_email');
-        if(localStorage.getItem('olmios_tag_url')) document.getElementById('prof_tag_url').value = localStorage.getItem('olmios_tag_url');
-
-        let savedPic = localStorage.getItem('olmios_profile_pic');
-        if(savedPic) document.getElementById('profile_avatar_preview').src = savedPic;
-
-        let savedType = localStorage.getItem('olmios_hvac_type') || 'gas_sys';
-        document.getElementById('main_heating_type_select').value = savedType;
-        renderDynamicHvacFields(savedType, 'dynamic_hvac_container');
-    }
-    </script>
-</body>
-</html>"""
-    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{SAVED_MSG}}', saved_msg)
-
-# --- 6. INVOICES & REFUND REQUESTS ('/invoices') ---
-@app.route('/invoices')
-def invoices():
-    html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olmios - Invoices</title>
-    {{HEADER}}
-    <style>
-        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .form-label { font-weight: 800; color: #475569 !important; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase; }
-        .invoice-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; background: #f8fafc; margin-bottom: 12px; }
-    </style>
-</head>
-<body>
-    <div class="main-card">
-        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-receipt me-1 text-primary"></i> Service Invoices</h5>
-            <a href="/customer_home" title="Home">{{PHOENIX}}</a>
-        </div>
-
-        <div class="bg-light p-3 rounded-3 border mb-3">
-            <h6 class="fw-bold text-dark mb-2 small"><i class="fa-solid fa-filter me-1 text-primary"></i> FILTER INVOICES</h6>
-            <div class="row g-2">
-                <div class="col-6">
-                    <label class="form-label">LAST 4 CARD DIGITS</label>
-                    <input type="text" id="filter_card" class="form-control form-control-sm rounded-2" placeholder="e.g. 1004" onkeyup="filterInvoices()">
-                </div>
-                <div class="col-6">
-                    <label class="form-label">SERVICE DATE</label>
-                    <input type="date" id="filter_date" class="form-control form-control-sm rounded-2" onchange="filterInvoices()">
-                </div>
-                <div class="col-6">
-                    <label class="form-label">PO NUMBER</label>
-                    <input type="text" id="filter_po" class="form-control form-control-sm rounded-2" placeholder="PO #" onkeyup="filterInvoices()">
-                </div>
-                <div class="col-6">
-                    <label class="form-label">AMOUNT ($)</label>
-                    <input type="text" id="filter_amount" class="form-control form-control-sm rounded-2" placeholder="e.g. 185" onkeyup="filterInvoices()">
-                </div>
+            <div style="margin-top: 30px; display: flex; flex-direction: column; gap: 10px;">
+                <a id="drawerSmsBtn" href="#" onclick="handleDispatchAccept()" class="btn-admin btn-accent-admin" style="box-sizing: border-box; display: block; font-size: 13px;">
+                    📱 DISPATCH & SMS TO TECH
+                </a>
             </div>
         </div>
-        
-        <div id="invoice_list">
-            <div class="invoice-card" data-card="1004" data-po="88204" data-amount="185.00" data-date="2026-08-01">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-dark">INV-1002 (Capacitor Replacement)</span>
-                    <span class="badge bg-success">Paid</span>
-                </div>
-                <div class="small text-muted mb-2">Date: 08/01/2026 | Card: **** 1004 | PO: 88204 | Amount: $185.00</div>
-                <div class="row g-2">
-                    <div class="col-6">
-                        <button class="btn btn-outline-danger btn-sm w-100 fw-bold rounded-2" onclick="alert('Refund Request Submitted.')">
-                            <i class="fa-solid fa-rotate-left me-1"></i> Request Refund
-                        </button>
-                    </div>
-                    <div class="col-6">
-                        <button class="btn btn-outline-primary btn-sm w-100 fw-bold rounded-2" onclick="window.print()">
-                            <i class="fa-solid fa-print me-1"></i> Print Invoice
-                        </button>
+    </body>
+    </html>
+    """
+
+# ==========================================
+# ADMIN ACTION ENDPOINTS
+# ==========================================
+@app.route("/accept_and_dispatch/<int:req_id>", methods=["POST"])
+def accept_and_dispatch(req_id):
+    tech = request.form.get("tech", "Tech A (Lead)")
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE service_requests SET assigned_tech = ?, status = 'In Progress' WHERE id = ?", (tech, req_id))
+    cursor.execute("""
+        INSERT INTO sms_messages (sender_type, sender_name, sender_phone, message_text, is_new)
+        VALUES ('Tech', ?, '8325550199', ?, 1)
+    """, (tech, f"Accepted Order #{req_id} & En Route to Job Site"))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin"))
+
+@app.route("/assign_tech/<int:req_id>", methods=["POST"])
+def assign_tech(req_id):
+    tech = request.form.get("tech")
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE service_requests SET assigned_tech = ? WHERE id = ?", (tech, req_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin"))
+
+@app.route("/toggle_status/<int:req_id>")
+def toggle_status(req_id):
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT status FROM service_requests WHERE id = ?", (req_id,))
+    row = cursor.fetchone()
+
+    if row:
+        current_status = row[0] if row[0] else "Pending"
+        next_status = "Pending"
+        if current_status == "Pending":
+            next_status = "In Progress"
+        elif current_status == "In Progress":
+            next_status = "Completed"
+
+        cursor.execute("UPDATE service_requests SET status = ? WHERE id = ?", (next_status, req_id))
+        conn.commit()
+
+    conn.close()
+    return redirect(url_for("admin"))
+
+@app.route("/delete/<int:req_id>")
+def delete_request(req_id):
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM service_requests WHERE id = ?", (req_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin"))
+
+@app.route("/work_order/<int:req_id>")
+def work_order(req_id):
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT first_name, last_name, customer_name, phone, email, address, city, zip_code, urgency, equipment, model_number, serial_number, issue_description, assigned_tech, status, est_value, created_at 
+        FROM service_requests WHERE id = ?
+    """, (req_id,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return redirect(url_for("admin"))
+
+    (first_name, last_name, old_cust, phone, email, address, city, zip_code,
+     urgency, equip, model_no, serial_no, desc, tech, status, est_val, created_at) = row
+    full_name = f"{first_name} {last_name}".strip() if (first_name or last_name) else old_cust
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>WORK ORDER #{req_id} | OLMIOS</title>
+        <style>
+            body {{ font-family: 'Outfit', sans-serif; padding: 40px; color: #0f172a; max-width: 800px; margin: 0 auto; background: #fff; }}
+            .header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 15px; }}
+            .brand {{ font-size: 26px; font-weight: 800; letter-spacing: 4px; }}
+            .wo-title {{ text-align: right; }}
+            .grid {{ display: flex; gap: 20px; margin: 25px 0; }}
+            .box {{ flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; font-size: 13px; line-height: 1.6; }}
+            .box-title {{ font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }}
+            .tech-notes {{ border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; min-height: 120px; margin-bottom: 30px; font-size: 13px; color: #94a3b8; }}
+            .signatures {{ display: flex; justify-content: space-between; margin-top: 50px; font-size: 12px; font-weight: 600; color: #475569; }}
+            .sig-line {{ border-top: 1px solid #0f172a; width: 220px; text-align: center; padding-top: 5px; margin-top: 40px; }}
+            .no-print {{ margin-bottom: 20px; text-align: right; }}
+        </style>
+    </head>
+    <body>
+        <div class="no-print">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">🖨️ PRINT WORK ORDER</button>
+        </div>
+        <div class="header">
+            <div>
+                <div style="display:flex; align-items:center; gap: 10px;">
+                    {get_phoenix_svg(48, 48)}
+                    <div>
+                        <div class="brand">OLMIOS</div>
+                        <div style="font-size: 11px; color: #64748b; font-weight: 700;">SERVICE & DISPATCH MANAGEMENT</div>
                     </div>
                 </div>
             </div>
+            <div class="wo-title">
+                <h2 style="margin: 0; color: #2563eb;">FIELD WORK ORDER</h2>
+                <div style="font-size: 13px; font-weight: 700;">TICKET #{req_id}</div>
+                <div style="font-size: 11px; color: #64748b;">Issued: {created_at}</div>
+            </div>
         </div>
 
-        <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold mt-2"><i class="fa-solid fa-house me-1"></i> Home Page</a>
-    </div>
-
-    <script>
-    function filterInvoices() {
-        let card = document.getElementById('filter_card').value.toLowerCase();
-        let po = document.getElementById('filter_po').value.toLowerCase();
-        let amount = document.getElementById('filter_amount').value.toLowerCase();
-        let date = document.getElementById('filter_date').value;
-
-        document.querySelectorAll('.invoice-card').forEach(cardEl => {
-            let cCard = cardEl.getAttribute('data-card').toLowerCase();
-            let cPo = cardEl.getAttribute('data-po').toLowerCase();
-            let cAmt = cardEl.getAttribute('data-amount').toLowerCase();
-            let cDate = cardEl.getAttribute('data-date');
-
-            let match = true;
-            if (card && !cCard.includes(card)) match = false;
-            if (po && !cPo.includes(po)) match = false;
-            if (amount && !cAmt.includes(amount)) match = false;
-            if (date && cDate !== date) match = false;
-
-            cardEl.style.display = match ? 'block' : 'none';
-        });
-    }
-    </script>
-</body>
-</html>"""
-    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42))
-
-# --- 7. DOWNLOAD PHOENIX LOGO PAGE ('/download_logo') ---
-@app.route('/download_logo')
-def download_logo():
-    html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olmios - Download Phoenix Logo (.JPG)</title>
-    {{HEADER}}
-    <style>
-        body { background-color: #0b1329; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 20px; }
-        .logo-card { background: #ffffff; padding: 40px; border-radius: 24px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5); max-width: 480px; width: 100%; color: #0f172a; }
-    </style>
-</head>
-<body>
-    <div class="logo-card">
-        <h4 class="fw-bold text-dark mb-1">Olmios Phoenix Symbol</h4>
-        <p class="text-muted small mb-3">High-Resolution .JPG Format</p>
-        
-        <div id="svg_container" style="display:none;">
-            {{PHOENIX_BIG}}
+        <div class="grid">
+            <div class="box">
+                <div class="box-title">Customer & Job Location</div>
+                <strong>{full_name}</strong><br>
+                📞 {phone}<br>
+                ✉️ {email if email else 'N/A'}<br><br>
+                📍 <strong>{address}</strong><br>
+                {city}, {zip_code}
+            </div>
+            <div class="box">
+                <div class="box-title">Equipment & Service Details</div>
+                <strong>System:</strong> {equip}<br>
+                <strong>Model:</strong> {model_no if model_no else 'N/A'}<br>
+                <strong>Serial:</strong> {serial_no if serial_no else 'N/A'}<br>
+                <strong>Urgency:</strong> {urgency}<br>
+                <strong>Assigned Tech:</strong> {tech}
+            </div>
         </div>
 
-        <div class="p-3 mb-3 border rounded-3 bg-light d-flex justify-content-center align-items-center" style="min-height: 260px;">
-            <img id="jpg_preview" style="max-width: 220px; height: auto;" alt="Olmios Phoenix Logo JPG">
+        <div class="box" style="margin-bottom: 20px;">
+            <div class="box-title">Reported Issue Description</div>
+            {desc}
         </div>
 
-        <canvas id="jpg_canvas" width="1200" height="1200" style="display:none;"></canvas>
+        <div class="box-title" style="margin-top: 20px;">Technician Diagnostic & Resolution Notes</div>
+        <div class="tech-notes">
+            [ Tech Write-up, Installed Parts, and Recommendations ]
+        </div>
 
-        <button class="btn btn-warning btn-lg w-100 fw-bold rounded-3 shadow-sm mb-2 text-dark" onclick="downloadJPG()">
-            <i class="fa-solid fa-file-image me-1"></i> Download .JPG Logo File
-        </button>
-        <a href="/customer_home" class="btn btn-outline-secondary w-100 fw-bold rounded-3">Return to Dashboard</a>
-    </div>
-
-    <script>
-    function renderJPG() {
-        let svgElement = document.querySelector('#svg_container svg');
-        let svgData = new XMLSerializer().serializeToString(svgElement);
-        let svgBlob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
-        let URLObj = window.URL || window.webkitURL || window;
-        let blobURL = URLObj.createObjectURL(svgBlob);
-        
-        let img = new Image();
-        img.onload = function() {
-            let canvas = document.getElementById('jpg_canvas');
-            let ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            let jpgDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-            document.getElementById('jpg_preview').src = jpgDataUrl;
-        };
-        img.src = blobURL;
-    }
-
-    function downloadJPG() {
-        let canvas = document.getElementById('jpg_canvas');
-        let jpgUrl = canvas.toDataURL('image/jpeg', 0.95);
-        let downloadLink = document.createElement("a");
-        downloadLink.href = jpgUrl;
-        downloadLink.download = "olmios_phoenix_logo.jpg";
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-    }
-
-    window.onload = renderJPG;
-    </script>
-</body>
-</html>"""
-    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX_BIG}}', get_phoenix_svg(600, 600))
+        <div class="signatures">
+            <div>
+                <div class="sig-line">Technician Signature</div>
+            </div>
+            <div>
+                <div class="sig-line">Customer Acceptance Signature</div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
