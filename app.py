@@ -82,6 +82,14 @@ def init_db():
 
 init_db()
 
+# HELPER FUNCTION FOR 2-LETTER + 6-DIGIT DOCUMENT ID FORMATTING
+def format_doc_id(prefix, num):
+    try:
+        val = int(num)
+    except Exception:
+        val = 1
+    return f"{prefix}{val:06d}"
+
 PHOENIX_SVG = """<svg width="120" height="120" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
         <linearGradient id="goldFeathers" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -269,6 +277,7 @@ def customer_home():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(45, 45))
 
+# SHOT #4 & SHOT #1/2/3: CUSTOMER SERVICES PARENT CONTAINER WITH MULTI-FACTOR SEARCH & STANDARDIZED IDs
 @app.route('/customer_services')
 def customer_services():
     html = """<!DOCTYPE html>
@@ -279,39 +288,57 @@ def customer_services():
     {{HEADER}}
     <style>
         body { background-color: #0b1329; color: white; font-family: 'Outfit', sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .nav-pills .nav-link { color: #475569; font-weight: 800; font-size: 0.85rem; border-radius: 12px; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 550px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .nav-pills .nav-link { color: #475569; font-weight: 800; font-size: 0.8rem; border-radius: 10px; padding: 6px 4px; }
         .nav-pills .nav-link.active { background: #2563eb; color: white; }
+        .search-box-container { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 10px; margin-bottom: 12px; }
     </style>
 </head>
 <body>
     <div class="main-card">
-        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+        <div class="d-flex align-items-center justify-content-between mb-2 border-bottom pb-2">
             <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-layer-group text-primary me-1"></i> My Services & Orders</h5>
             <a href="/customer_home">{{PHOENIX}}</a>
+        </div>
+
+        <!-- SHOT #4 MULTI-FACTOR LOOKUP / FILTER SECTION -->
+        <div class="search-box-container">
+            <label class="form-label text-muted small fw-bold mb-1"><i class="fa-solid fa-magnifying-glass me-1 text-primary"></i> MULTI-FACTOR DOCUMENT LOOKUP</label>
+            <input type="text" id="doc_search_input" class="form-control form-control-sm rounded-2 mb-2" onkeyup="filterCustomerDocs()" placeholder="Look up by Ref ID (QT000001, SO000001), date, amount, model/serial #...">
+            <div class="d-flex gap-1 flex-wrap">
+                <span class="badge bg-secondary cursor-pointer" onclick="quickFilterDoc('QT')">Quotes</span>
+                <span class="badge bg-primary cursor-pointer" onclick="quickFilterDoc('SO')">Work Orders</span>
+                <span class="badge bg-success cursor-pointer" onclick="quickFilterDoc('IN')">Invoices</span>
+                <span class="badge bg-danger cursor-pointer" onclick="quickFilterDoc('CR')">Refunds</span>
+                <span class="badge bg-warning text-dark cursor-pointer" onclick="quickFilterDoc('WR')">Warranties</span>
+                <span class="badge bg-dark cursor-pointer" onclick="quickFilterDoc('')">Clear All</span>
+            </div>
         </div>
 
         <ul class="nav nav-pills nav-justified mb-3 bg-light p-1 rounded-3 border">
             <li class="nav-item"><button class="nav-link active" id="tab_btn_quote" onclick="switchServiceTab('quote')"><i class="fa-solid fa-calculator me-1"></i> Quote</button></li>
             <li class="nav-item"><button class="nav-link" id="tab_btn_order" onclick="switchServiceTab('order')"><i class="fa-solid fa-clock-rotate-left me-1"></i> Open Order</button></li>
             <li class="nav-item"><button class="nav-link" id="tab_btn_invoice" onclick="switchServiceTab('invoice')"><i class="fa-solid fa-file-invoice-dollar me-1"></i> Invoice</button></li>
+            <li class="nav-item"><button class="nav-link" id="tab_btn_refund" onclick="switchServiceTab('refund')"><i class="fa-solid fa-rotate-left me-1"></i> Refund/Warranty</button></li>
         </ul>
 
-        <div id="service_sec_quote" class="service-sec">
+        <!-- QUOTE CONTAINER (SHOT #1 FORMAT: QT000001) -->
+        <div id="service_sec_quote" class="service-sec doc-card" data-ref="QT000001" data-search="QT000001 evaporator coil replacement trane 5ttr6048 1850.00 08/10/2026">
             <div class="card p-3 mb-2 bg-light border">
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-dark">EST-88204 (Evaporator Coil Replacement)</span>
+                    <span class="fw-bold text-dark">QT000001 (Evaporator Coil Replacement)</span>
                     <span class="badge bg-warning text-dark">Pending Sign-off</span>
                 </div>
-                <p class="small text-muted mb-2">Trane 4.0 Ton Coil + R-454B Refrigerant Charge | Total: <strong>$1,850.00</strong></p>
-                <button type="button" class="btn btn-sm btn-success fw-bold w-100" onclick="alert('Quote Approved & Converted to Work Order!')"><i class="fa-solid fa-signature me-1"></i> Approve & Sign Work Order</button>
+                <p class="small text-muted mb-2">Trane 4.0 Ton Coil + R-454B Refrigerant | Total: <strong>$1,850.00</strong> | Date: 08/10/2026</p>
+                <button type="button" class="btn btn-sm btn-success fw-bold w-100" onclick="alert('Quote Approved & Converted to Work Order SO000001!')"><i class="fa-solid fa-signature me-1"></i> Approve & Sign Work Order</button>
             </div>
         </div>
 
-        <div id="service_sec_order" class="service-sec" style="display:none;">
+        <!-- OPEN WORK ORDER CONTAINER (SHOT #2 FORMAT: SO000001) -->
+        <div id="service_sec_order" class="service-sec doc-card" data-ref="SO000001" data-search="SO000001 ian olvera tech a lead 18510 ranch view trail cir" style="display:none;">
             <div class="card p-3 mb-2 bg-light border">
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-dark">WO-88204 — Ian Olvera</span>
+                    <span class="fw-bold text-dark">SO000001 — Ian Olvera</span>
                     <span class="badge bg-primary">In Progress (Tech En Route)</span>
                 </div>
                 <p class="small text-muted mb-1">Assigned Tech: <strong>Tech A (Lead)</strong></p>
@@ -319,14 +346,33 @@ def customer_services():
             </div>
         </div>
 
-        <div id="service_sec_invoice" class="service-sec" style="display:none;">
+        <!-- INVOICE CONTAINER (SHOT #3 FORMAT: IN000001) -->
+        <div id="service_sec_invoice" class="service-sec doc-card" data-ref="IN000001" data-search="IN000001 capacitor replacement paid 185.00 08/01/2026 1004" style="display:none;">
             <div class="card p-3 mb-2 bg-light border">
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-dark">INV-1002 (Capacitor Replacement)</span>
+                    <span class="fw-bold text-dark">IN000001 (Capacitor Replacement)</span>
                     <span class="badge bg-success">Paid</span>
                 </div>
                 <p class="small text-muted mb-2">Date: 08/01/2026 | Card: **** 1004 | Amount: $185.00</p>
                 <button class="btn btn-outline-primary btn-sm w-100 fw-bold" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> Print Invoice</button>
+            </div>
+        </div>
+
+        <!-- REFUND / WARRANTY CONTAINER (CR000001 & WR000001) -->
+        <div id="service_sec_refund" class="service-sec doc-card" data-ref="CR000001" data-search="CR000001 WR000001 warranty refund pending 99.00" style="display:none;">
+            <div class="card p-3 mb-2 bg-light border mb-2">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-dark">CR000001 (Credit / Refund Request)</span>
+                    <span class="badge bg-danger">Pending Manager Approval</span>
+                </div>
+                <p class="small text-muted mb-0">Diagnostic Fee Credit Request | Amount: $99.00</p>
+            </div>
+            <div class="card p-3 mb-2 bg-light border">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-dark">WR000001 (Compressor Warranty Claim)</span>
+                    <span class="badge bg-info text-dark">Manufacturer Verified</span>
+                </div>
+                <p class="small text-muted mb-0">Trane Factory Warranty Registered | Coverage Active</p>
             </div>
         </div>
 
@@ -339,6 +385,23 @@ def customer_services():
             document.querySelectorAll('.nav-pills .nav-link').forEach(b => b.classList.remove('active'));
             document.getElementById('service_sec_' + sec).style.display = 'block';
             document.getElementById('tab_btn_' + sec).classList.add('active');
+        }
+
+        function filterCustomerDocs() {
+            let q = document.getElementById('doc_search_input').value.toLowerCase().trim();
+            document.querySelectorAll('.doc-card').forEach(card => {
+                let searchData = card.getAttribute('data-search').toLowerCase();
+                if(q === "" || searchData.includes(q)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function quickFilterDoc(prefix) {
+            document.getElementById('doc_search_input').value = prefix;
+            filterCustomerDocs();
         }
     </script>
 </body>
@@ -733,11 +796,12 @@ def submit_dispatch():
     """, ('Ian', 'Olvera', cust_name, '8323884957', address, 'Houston', '77073', urgency, equipment, issue_description))
     
     req_id = cursor.lastrowid
+    doc_id = format_doc_id('SO', req_id)
 
     cursor.execute("""
         INSERT INTO sms_messages (sender_type, sender_name, sender_phone, message_text, is_new)
         VALUES ('Customer', ?, '8323884957', ?, 1)
-    """, (cust_name, f"New $99 Order #{req_id}: {equipment} - {urgency}"))
+    """, (cust_name, f"New $99 Order #{doc_id}: {equipment} - {urgency}"))
 
     conn.commit()
     conn.close()
@@ -759,6 +823,7 @@ def confirmation(req_id):
         return redirect(url_for('customer_home'))
 
     (cust_name, phone, address, city, zip_code, urgency, equip, status, desc) = row
+    doc_id = format_doc_id('SO', req_id)
 
     return f"""
     <!DOCTYPE html>
@@ -782,7 +847,7 @@ def confirmation(req_id):
             <p class="text-muted small">Your $99.00 diagnostic request is active in the Olmios network.</p>
 
             <div class="summary-box">
-                <div class="summary-row"><span class="text-muted fw-bold">Ticket #:</span><span class="fw-bold text-primary">#{req_id}</span></div>
+                <div class="summary-row"><span class="text-muted fw-bold">Order Ref #:</span><span class="fw-bold text-primary">{doc_id}</span></div>
                 <div class="summary-row"><span class="text-muted fw-bold">Amount Paid:</span><span class="fw-bold text-success">$99.00</span></div>
                 <div class="summary-row"><span class="text-muted fw-bold">Status:</span><span><span class="status-badge">{status.upper()}</span></span></div>
                 <div class="summary-row"><span class="text-muted fw-bold">Equipment:</span><span class="fw-bold">{equip}</span></div>
@@ -1232,7 +1297,6 @@ def invoices():
     <style>
         body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
         .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .form-label { font-weight: 800; color: #475569 !important; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase; }
         .invoice-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; background: #f8fafc; margin-bottom: 12px; }
     </style>
 </head>
@@ -1246,7 +1310,7 @@ def invoices():
         <div id="invoice_list">
             <div class="invoice-card">
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-dark">INV-1002 (Capacitor Replacement)</span>
+                    <span class="fw-bold text-dark">IN000001 (Capacitor Replacement)</span>
                     <span class="badge bg-success">Paid</span>
                 </div>
                 <div class="small text-muted mb-2">Date: 08/01/2026 | Card: **** 1004 | Amount: $185.00</div>
@@ -1364,6 +1428,7 @@ def admin():
         status = status if status else "Pending"
         assigned_tech = assigned_tech if assigned_tech else "Unassigned"
 
+        doc_id = format_doc_id('SO', req_id)
         age_text, is_urgent_age = calculate_age(created_at)
 
         status_bg = "#fef3c7"
@@ -1446,7 +1511,7 @@ def admin():
 
         table_rows += f"""
         <tr class="data-row job-row" data-status="{status}" data-backorder="{is_backorder}" style="{initial_display}">
-            <td style="width: 35px;"><strong style="color: #64748b;">#{req_id}</strong></td>
+            <td style="width: 35px;"><strong style="color: #2563eb;">{doc_id}</strong></td>
             <td style="min-width: 110px;">
                 <a href="javascript:void(0);" onclick="openDrawer({req_id}, '{full_name_clean}', '{phone_clean}', '{full_address_clean}', '{equip_clean}', '{desc_clean}', '{assigned_tech_clean}')" style="color: #0f172a; text-decoration: underline; font-weight: 700;">
                     {full_name}
@@ -1470,7 +1535,7 @@ def admin():
             </td>
             <td style="width: 75px; white-space: nowrap;">
                 <a href="/work_order/{req_id}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: 700; font-size: 11px; margin-right: 6px;" title="Print Work Order">📄 Ticket</a>
-                <a href="/delete/{req_id}" onclick="return confirm('Delete record #{req_id}?');" style="color: #dc2626; text-decoration: none; font-weight: 600; font-size: 11px;">Delete</a>
+                <a href="/delete/{req_id}" onclick="return confirm('Delete record #{doc_id}?');" style="color: #dc2626; text-decoration: none; font-weight: 600; font-size: 11px;">Delete</a>
             </td>
         </tr>
         """
@@ -1603,7 +1668,7 @@ def admin():
 
                     let popupContent = `
                         <div style="font-family: inherit; font-size: 12px; color: #0f172a;">
-                            <strong>Order #${{job.id}} - ${{job.name}}</strong><br>
+                            <strong>Order Ref - ${{job.name}}</strong><br>
                             <span style="color: #64748b;">${{job.address}}</span><br>
                             <strong>Urgency:</strong> ${{job.urgency}}<br>
                             <strong>Type:</strong> ${{job.equipment}}<br><br>
@@ -1625,7 +1690,7 @@ def admin():
 
             function openDrawer(id, name, phone, address, equip, desc, tech) {{
                 currentJobId = id;
-                document.getElementById('drawerTitle').innerText = "Quick Dispatch #" + id;
+                document.getElementById('drawerTitle').innerText = "Quick Dispatch Order";
                 document.getElementById('drawerName').innerText = name;
                 document.getElementById('drawerPhone').innerText = phone;
                 document.getElementById('drawerAddress').innerText = address;
@@ -1644,7 +1709,7 @@ def admin():
             function updateSmsPayload(id, name, phone, address, equip, desc) {{
                 let selectedTech = document.getElementById('drawerTechSelect').value;
                 let mapsUrl = "https://maps.google.com/?q=" + encodeURIComponent(address);
-                let smsBody = `OLMIOS DISPATCH%0AOrder #${{id}} Accepted by ${{selectedTech}}%0A%0AClient: ${{name}}%0APhone: ${{phone}}%0ALocation: ${{address}}%0AEquip: ${{equip}}%0ANotes: ${{desc}}%0ANavigate: ${{mapsUrl}}`;
+                let smsBody = `OLMIOS DISPATCH%0AOrder Accepted by ${{selectedTech}}%0A%0AClient: ${{name}}%0APhone: ${{phone}}%0ALocation: ${{address}}%0AEquip: ${{equip}}%0ANotes: ${{desc}}%0ANavigate: ${{mapsUrl}}`;
                 
                 document.getElementById('drawerSmsBtn').href = "sms:?body=" + smsBody;
             }}
@@ -1785,7 +1850,7 @@ def admin():
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
+                                        <th>Ref ID</th>
                                         <th>Customer & Age</th>
                                         <th>Contact</th>
                                         <th>Job Location</th>
@@ -1862,6 +1927,7 @@ def admin():
             </div>
         </div>
 
+        <!-- EXISTING CUSTOMER HISTORY MODAL -->
         <div class="modal fade" id="existingCustomerModal" tabindex="-1">
             <div class="modal-dialog modal-xl modal-dialog-centered">
                 <div class="modal-content rounded-4 border-0">
@@ -1901,6 +1967,7 @@ def admin():
             </div>
         </div>
 
+        <!-- REFUNDS & WARRANTY MANAGER APPROVAL MODAL -->
         <div class="modal fade" id="refundsModal" tabindex="-1">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content rounded-4 border-0">
@@ -1912,16 +1979,24 @@ def admin():
                         <div class="alert alert-warning small fw-bold">
                             <i class="fa-solid fa-lock me-1"></i> Manager sign-off is required before finalizing any refund or processing card reversals.
                         </div>
-                        <div class="card p-3 border shadow-sm">
+                        <div class="card p-3 border shadow-sm mb-2">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="fw-bold text-dark">REFUND REQUEST #1002 — Ian Olvera</span>
+                                <span class="fw-bold text-dark">CR000001 — Ian Olvera</span>
                                 <span class="badge bg-danger">Pending Manager Approval</span>
                             </div>
-                            <p class="small text-muted mb-2">Requested Amount: <strong>$99.00</strong> | Diagnostic Fee Adjustment</p>
+                            <p class="small text-muted mb-2">Requested Amount: <strong>$99.00</strong> | Diagnostic Fee Credit Adjustment</p>
                             <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-success fw-bold w-50" onclick="alert('Refund Approved by Manager & Processed to Card ending 1004.')"><i class="fa-solid fa-check me-1"></i> Manager Approve & Issue Refund</button>
+                                <button type="button" class="btn btn-sm btn-success fw-bold w-50" onclick="alert('Refund CR000001 Approved by Manager & Processed to Card ending 1004.')"><i class="fa-solid fa-check me-1"></i> Manager Approve & Issue Refund</button>
                                 <button type="button" class="btn btn-sm btn-outline-danger fw-bold w-50" onclick="alert('Refund Request Declined.')"><i class="fa-solid fa-xmark me-1"></i> Decline Request</button>
                             </div>
+                        </div>
+                        <div class="card p-3 border shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-dark">WR000001 — Trane Compressor Claim</span>
+                                <span class="badge bg-info text-dark">Warranty Processing</span>
+                            </div>
+                            <p class="small text-muted mb-2">Equipment Serial: <strong>21045XY892</strong> | Parts Replacement</p>
+                            <button type="button" class="btn btn-sm btn-primary fw-bold w-100" onclick="alert('Warranty Claim WR000001 Approved.')"><i class="fa-solid fa-shield-halved me-1"></i> Process Factory Claim</button>
                         </div>
                     </div>
                 </div>
@@ -1934,62 +2009,8 @@ def admin():
     """
 
 # ==========================================
-# ADMIN ACTIONS & ENDPOINTS
+# WORK ORDER TICKET PRINT ROUTE (SO000001 FORMAT)
 # ==========================================
-@app.route("/accept_and_dispatch/<int:req_id>", methods=["POST"])
-def accept_and_dispatch(req_id):
-    tech = request.form.get("tech", "Tech A (Lead)")
-    conn = sqlite3.connect("requests.db")
-    cursor = conn.cursor()
-    cursor.execute("UPDATE service_requests SET assigned_tech = ?, status = 'In Progress' WHERE id = ?", (tech, req_id))
-    cursor.execute("""
-        INSERT INTO sms_messages (sender_type, sender_name, sender_phone, message_text, is_new)
-        VALUES ('Tech', ?, '8325550199', ?, 1)
-    """, (tech, f"Accepted Order #{req_id} & En Route to Job Site"))
-    conn.commit()
-    conn.close()
-    return redirect(url_for("admin"))
-
-@app.route("/assign_tech/<int:req_id>", methods=["POST"])
-def assign_tech(req_id):
-    tech = request.form.get("tech")
-    conn = sqlite3.connect("requests.db")
-    cursor = conn.cursor()
-    cursor.execute("UPDATE service_requests SET assigned_tech = ? WHERE id = ?", (tech, req_id))
-    conn.commit()
-    conn.close()
-    return redirect(url_for("admin"))
-
-@app.route("/toggle_status/<int:req_id>")
-def toggle_status(req_id):
-    conn = sqlite3.connect("requests.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT status FROM service_requests WHERE id = ?", (req_id,))
-    row = cursor.fetchone()
-
-    if row:
-        current_status = row[0] if row[0] else "Pending"
-        next_status = "Pending"
-        if current_status == "Pending":
-            next_status = "In Progress"
-        elif current_status == "In Progress":
-            next_status = "Completed"
-
-        cursor.execute("UPDATE service_requests SET status = ? WHERE id = ?", (next_status, req_id))
-        conn.commit()
-
-    conn.close()
-    return redirect(url_for("admin"))
-
-@app.route("/delete/<int:req_id>")
-def delete_request(req_id):
-    conn = sqlite3.connect("requests.db")
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM service_requests WHERE id = ?", (req_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for("admin"))
-
 @app.route("/work_order/<int:req_id>")
 def work_order(req_id):
     conn = sqlite3.connect("requests.db")
@@ -2007,12 +2028,13 @@ def work_order(req_id):
     (first_name, last_name, old_cust, phone, email, address, city, zip_code,
      urgency, equip, model_no, serial_no, desc, tech, status, est_val, created_at) = row
     full_name = f"{first_name} {last_name}".strip() if (first_name or last_name) else old_cust
+    doc_id = format_doc_id('SO', req_id)
 
     return f"""
     <!DOCTYPE html>
     <html>
     <head>
-        <title>WORK ORDER #{req_id} | OLMIOS</title>
+        <title>WORK ORDER {doc_id} | OLMIOS</title>
         <style>
             body {{ font-family: 'Outfit', sans-serif; padding: 40px; color: #0f172a; max-width: 800px; margin: 0 auto; background: #fff; }}
             .header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 15px; }}
@@ -2043,7 +2065,7 @@ def work_order(req_id):
             </div>
             <div class="wo-title">
                 <h2 style="margin: 0; color: #2563eb;">FIELD WORK ORDER</h2>
-                <div style="font-size: 13px; font-weight: 700;">TICKET #{req_id}</div>
+                <div style="font-size: 13px; font-weight: 700;">TICKET #{doc_id}</div>
                 <div style="font-size: 11px; color: #64748b;">Issued: {created_at}</div>
             </div>
         </div>
@@ -2088,6 +2110,57 @@ def work_order(req_id):
     </body>
     </html>
     """
+
+# OTHER ENDPOINTS
+@app.route("/accept_and_dispatch/<int:req_id>", methods=["POST"])
+def accept_and_dispatch(req_id):
+    tech = request.form.get("tech", "Tech A (Lead)")
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE service_requests SET assigned_tech = ?, status = 'In Progress' WHERE id = ?", (tech, req_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin"))
+
+@app.route("/assign_tech/<int:req_id>", methods=["POST"])
+def assign_tech(req_id):
+    tech = request.form.get("tech")
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE service_requests SET assigned_tech = ? WHERE id = ?", (tech, req_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin"))
+
+@app.route("/toggle_status/<int:req_id>")
+def toggle_status(req_id):
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT status FROM service_requests WHERE id = ?", (req_id,))
+    row = cursor.fetchone()
+
+    if row:
+        current_status = row[0] if row[0] else "Pending"
+        next_status = "Pending"
+        if current_status == "Pending":
+            next_status = "In Progress"
+        elif current_status == "In Progress":
+            next_status = "Completed"
+
+        cursor.execute("UPDATE service_requests SET status = ? WHERE id = ?", (next_status, req_id))
+        conn.commit()
+
+    conn.close()
+    return redirect(url_for("admin"))
+
+@app.route("/delete/<int:req_id>")
+def delete_request(req_id):
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM service_requests WHERE id = ?", (req_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin"))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
