@@ -196,6 +196,11 @@ def calculate_age(created_at_str):
     except Exception:
         return "Recent", False
 
+def clean_str(val):
+    if not val:
+        return ""
+    return str(val).replace('"', '').replace("'", '').replace('\n', ' ').strip()
+
 # ==========================================
 # CUSTOMER APP ROUTES (UNTOUCHED)
 # ==========================================
@@ -781,9 +786,6 @@ def dispatch_request():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{PHOENIX_SMALL}}', get_phoenix_svg(28, 28))
 
-# ==========================================
-# SUBMIT DISPATCH ACTION (WRITE TO DATABASE)
-# ==========================================
 @app.route('/submit_dispatch', methods=['POST'])
 def submit_dispatch():
     cust_name = request.form.get('customer_name_hidden') or 'Ian Olvera'
@@ -864,9 +866,6 @@ def confirmation(req_id):
     </html>
     """
 
-# ==========================================
-# PROFILE & INVOICES (UNTOUCHED)
-# ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
     saved_msg = ""
@@ -1628,8 +1627,11 @@ def admin():
     cursor.execute("SELECT COUNT(*) FROM service_requests WHERE status = 'Completed'")
     completed_count = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM service_requests WHERE is_backorder = 1")
-    backorder_count = cursor.fetchone()[0]
+    try:
+        cursor.execute("SELECT COUNT(*) FROM service_requests WHERE is_backorder = 1")
+        backorder_count = cursor.fetchone()[0]
+    except Exception:
+        backorder_count = 0
 
     cursor.execute("SELECT SUM(est_value) FROM service_requests WHERE status != 'Completed'")
     total_pipeline_val = cursor.fetchone()[0]
@@ -1643,13 +1645,23 @@ def admin():
     cursor.execute("SELECT COUNT(*) FROM sms_messages WHERE sender_type = 'Tech' AND is_new = 1")
     new_tech_sms = cursor.fetchone()[0]
 
-    cursor.execute("""
-        SELECT id, first_name, last_name, customer_name, phone, email, 
-               address, city, zip_code, urgency, equipment, model_number, 
-               serial_number, issue_description, assigned_tech, status, est_value, created_at, is_backorder, backorder_notes 
-        FROM service_requests ORDER BY id DESC
-    """)
-    rows = cursor.fetchall()
+    try:
+        cursor.execute("""
+            SELECT id, first_name, last_name, customer_name, phone, email, 
+                   address, city, zip_code, urgency, equipment, model_number, 
+                   serial_number, issue_description, assigned_tech, status, est_value, created_at, is_backorder, backorder_notes 
+            FROM service_requests ORDER BY id DESC
+        """)
+        rows = cursor.fetchall()
+    except Exception:
+        cursor.execute("""
+            SELECT id, first_name, last_name, customer_name, phone, email, 
+                   address, city, zip_code, urgency, equipment, model_number, 
+                   serial_number, issue_description, assigned_tech, status, est_value, created_at 
+            FROM service_requests ORDER BY id DESC
+        """)
+        raw_rows = cursor.fetchall()
+        rows = [r + (0, '') for r in raw_rows]
 
     cursor.execute("SELECT id, sender_type, sender_name, sender_phone, message_text, timestamp, is_new FROM sms_messages ORDER BY id DESC")
     sms_rows = cursor.fetchall()
@@ -1694,12 +1706,17 @@ def admin():
             circle_color = "#16a34a"
 
         full_name = f"{first_name} {last_name}".strip() if (first_name or last_name) else old_cust_name
+        full_name_clean = clean_str(full_name)
+        phone_clean = clean_str(phone)
+        full_address = f"{address}, {city}, {zip_code}".strip(", ")
+        full_address_clean = clean_str(full_address)
+        equip_clean = clean_str(equip)
+        desc_clean = clean_str(desc)
+        assigned_tech_clean = clean_str(assigned_tech)
 
         contact_info = f"<a href='tel:{phone}' style='color: #0f172a; text-decoration: none; font-weight: 700; white-space: nowrap;' title='Click to Call/Text'>📞 {phone}</a>"
         if email:
             contact_info += f"<br><span style='font-size: 11px; color: #64748b; word-break: break-all;'>{email}</span>"
-
-        full_address = f"{address}, {city}, {zip_code}".strip(", ")
 
         if status != "Completed" and address:
             lat, lng = get_lat_lng(full_address)
@@ -1738,14 +1755,13 @@ def admin():
 
         initial_display = "display: none;" if status == "Completed" else ""
         age_badge_color = "background: #fee2e2; color: #dc2626;" if (is_urgent_age and status == "Pending") else "background: #f1f5f9; color: #64748b;"
-
         bo_badge = "<span class='badge bg-warning text-dark ms-1'>Backorder</span>" if is_backorder else ""
 
         table_rows += f"""
         <tr class="data-row job-row" data-status="{status}" data-backorder="{is_backorder}" style="{initial_display}">
             <td style="width: 35px;"><strong style="color: #64748b;">#{req_id}</strong></td>
             <td style="min-width: 110px;">
-                <a href="javascript:void(0);" onclick="openDrawer({req_id}, '{full_name}', '{phone}', '{full_address}', '{equip}', '{desc}', '{assigned_tech}')" style="color: #0f172a; text-decoration: underline; font-weight: 700;">
+                <a href="javascript:void(0);" onclick="openDrawer({req_id}, '{full_name_clean}', '{phone_clean}', '{full_address_clean}', '{equip_clean}', '{desc_clean}', '{assigned_tech_clean}')" style="color: #0f172a; text-decoration: underline; font-weight: 700;">
                     {full_name}
                 </a>{bo_badge}<br>
                 <span style="{age_badge_color} font-size: 9px; padding: 2px 5px; border-radius: 4px; font-weight: 700;">⏱️ {age_text}</span>
@@ -1844,10 +1860,8 @@ def admin():
             #leafletMap {{ height: 500px; width: 100%; }}
 
             .controls-bar {{ display: flex; justify-content: flex-start; align-items: center; margin-bottom: 15px; gap: 10px; flex-wrap: wrap; }}
-            /* SHOT #2 ADJUSTMENT: HALF SIZE SEARCH BAR */
             .search-input {{ width: 220px; max-width: 220px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-family: inherit; }}
             
-            /* SHOT #2 ADJUSTMENT: SHIFTED LEFT TABS */
             .filter-tabs {{ display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }}
             .tab-btn {{ padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: #f1f5f9; color: #475569; display: flex; align-items: center; gap: 4px; }}
             .tab-btn.active {{ background: #2563eb; color: #ffffff; border-color: #2563eb; }}
@@ -1875,7 +1889,6 @@ def admin():
             }}
             .drawer.open {{ right: 0; }}
             .drawer-close {{ font-size: 20px; font-weight: 800; cursor: pointer; color: #64748b; float: right; }}
-            .modal-dark { background: rgba(15, 23, 42, 0.85); }
         </style>
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script>
@@ -1973,7 +1986,7 @@ def admin():
 
             function switchView(viewName, btn) {{
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                if (btn) btn.classList.add('active');
                 
                 document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
                 
@@ -2018,7 +2031,6 @@ def admin():
     <body>
         <div class="panel container-admin">
             
-            <!-- SHOT #1 ADJUSTMENT: MOVED NEW CUSTOMER & DISPATCH CONTROLS TO TOP LEFT -->
             <div class="header-admin">
                 <div class="d-flex align-items-center gap-3">
                     <h1 class="brand-logo mb-0">OLMIOS</h1>
@@ -2064,7 +2076,6 @@ def admin():
                 <!-- LEFT PANE: PRIORITIZED TABS & VIEWS -->
                 <div class="left-pane">
                     
-                    <!-- SHOT #2 ADJUSTMENT: HALF SIZE SEARCH BAR & LEFT ALIGNED TABS -->
                     <div class="controls-bar">
                         <input type="text" id="searchInput" class="search-input" onkeyup="searchTable()" placeholder="🔍 Search customer, phone...">
                         
@@ -2155,7 +2166,7 @@ def admin():
                 
                 <div style="margin-top: 15px;">
                     <label style="display: block; font-weight: 700; color: #0f172a; margin-bottom: 5px;">Select Active Tech / Driver:</label>
-                    <select id="drawerTechSelect" onchange="updateSmsPayload(currentJobId, document.getElementById('drawerName').innerText, document.getElementById('drawerPhone').innerText, document.getElementById('drawerAddress').innerText, document.getElementById('drawerEquip').innerText, document.getElementById('drawerDesc').innerText)" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; color: #0f172a;">
+                    <select id="drawerTechSelect" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; color: #0f172a;">
                         <option value="Tech A (Lead)">Tech A (Lead Driver)</option>
                         <option value="Tech B">Tech B (HVAC Tech)</option>
                         <option value="Tech C">Tech C (Field Tech)</option>
