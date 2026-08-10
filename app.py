@@ -110,8 +110,8 @@ COMMON_HEADER = """
 
 COMMON_ADMIN_CSS = """
     body {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        color: #f8fafc;
+        background: #f1f5f9;
+        color: #0f172a;
         font-family: 'Outfit', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
         margin: 0;
         padding: 20px;
@@ -122,7 +122,7 @@ COMMON_ADMIN_CSS = """
         background: #ffffff;
         color: #1e293b;
         border-radius: 16px;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
         padding: 20px;
     }
     .brand-logo {
@@ -196,6 +196,12 @@ def clean_str(val):
 def index():
     return redirect('/customer_home')
 
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/')
+
+# SHOT #4: LIGHT GRAY COLOR PALETTE BACKGROUND
 @app.route('/customer_home')
 def customer_home():
     html = """<!DOCTYPE html>
@@ -207,9 +213,9 @@ def customer_home():
     {{HEADER}}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        #map { height: 260px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        body { background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+        #map { height: 260px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
         .btn-amber:hover { background: #b45309; color: white; }
         .btn-nav-thin { border: 1px solid #cbd5e1; background: #ffffff; color: #1e293b; font-weight: 700; border-radius: 10px; transition: all 0.2s; }
@@ -230,24 +236,26 @@ def customer_home():
             <a href="/customer_home" title="Home">{{PHOENIX}}</a>
         </div>
 
-        <div class="row g-2 mb-3">
+        <div id="map"></div>
+
+        <a href="/dispatch_request" class="btn btn-amber w-100 py-3 rounded-3 fw-bold fs-6 mb-3 shadow-sm">
+            ⚡ REQUEST INSTANT HVAC SERVICE ($99.00)
+        </a>
+        
+        <!-- SHOT #1: MOVED QUOTE, OPEN ORDER, AND INVOICE TABS DOWN INTO THIS LOWER SECTION -->
+        <div class="row g-2 mb-2">
             <div class="col-4"><a href="/customer_quotes" class="btn btn-outline-primary w-100 py-2 fw-bold small"><i class="fa-solid fa-calculator me-1"></i> Quote</a></div>
             <div class="col-4"><a href="/customer_work_orders" class="btn btn-outline-warning text-dark w-100 py-2 fw-bold small"><i class="fa-solid fa-clock-rotate-left me-1"></i> Open Order</a></div>
             <div class="col-4"><a href="/invoices" class="btn btn-outline-success w-100 py-2 fw-bold small"><i class="fa-solid fa-file-invoice-dollar me-1"></i> Invoice</a></div>
         </div>
 
-        <div id="map"></div>
-
-        <a href="/dispatch_request" class="btn btn-amber w-100 py-3 rounded-3 fw-bold fs-6 mb-3 shadow-sm">
-            <i class="fa-solid fa-bolt me-1"></i> REQUEST INSTANT HVAC SERVICE ($99.00)
-        </a>
-        
+        <!-- SHOT #2: PROPERLY LINKED PROFILE & WALLET AND VIEW INVOICES BUTTONS -->
         <div class="row g-2 mb-3">
             <div class="col-6"><a href="/profile" class="btn btn-nav-thin w-100 py-2.5 small"><i class="fa-solid fa-user-gear me-1 text-primary"></i> Profile & Wallet</a></div>
             <div class="col-6"><a href="/invoices" class="btn btn-nav-thin w-100 py-2.5 small"><i class="fa-solid fa-receipt me-1 text-primary"></i> View Invoices</a></div>
         </div>
 
-        <div class="guarantee-box shadow-sm mb-3">
+        <div class="guarantee-box shadow-sm mb-1">
             <i class="fa-solid fa-shield-halved me-1"></i> VERIFIED OLMIOS GUARANTEE - 100% Licensed & Background-Checked
         </div>
     </div>
@@ -262,245 +270,752 @@ def customer_home():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(45, 45))
 
-# ==========================================
-# SHOT #5 & SHOT #4: TECHNICIAN MOBILE APP (/tech_home)
-# NO "YOU'RE OFFLINE" TEXT - ONLY DISPLAY CUSTOMER NAME WHEN OFFLINE
-# ==========================================
-@app.route('/tech_home')
-def tech_home():
+@app.route('/customer_quotes')
+def customer_quotes():
     html = """<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olmios Field Tech Portal</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios - Estimates & Quotes</title>
     {{HEADER}}
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 10px; min-height: 100vh; }
-        .tech-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 18px; max-width: 450px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.4); position: relative; }
-        #tech_map { height: 280px; border-radius: 14px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
-        
-        .open-world-go-btn {
-            width: 75px; height: 75px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: white; font-weight: 900; font-size: 1.2rem; border: 3px solid #ffffff; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.5);
-            display: flex; align-items: center; justify-content: center; margin: -40px auto 12px auto; z-index: 1000; position: relative; cursor: pointer;
-        }
-
-        .ping-banner { background: #fef3c7; border: 2px solid #f59e0b; border-radius: 14px; padding: 12px; margin-bottom: 12px; display: none; }
-        .drawer-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; }
-        .tech-menu-drawer { position: fixed; top: 0; left: -280px; width: 270px; height: 100%; background: #ffffff; color: #0f172a; z-index: 2100; transition: left 0.3s ease; padding: 20px; box-sizing: border-box; }
-        .tech-menu-drawer.open { left: 0; }
+        body { background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', sans-serif; padding: 15px; min-height: 100vh; }
+        .main-card { background: #ffffff; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
     </style>
 </head>
 <body>
-    <div class="tech-card">
-        <!-- HEADER WITH OFFLINE ASSIGNED CUSTOMER NAME (NO "YOU'RE OFFLINE" TEXT) -->
-        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-light btn-sm rounded-circle shadow-sm" onclick="toggleTechMenu()"><i class="fa-solid fa-bars fs-5"></i></button>
-                <div>
-                    <!-- ASSIGNED CUSTOMER'S NAME DISPLAYED DIRECTLY -->
-                    <h6 class="fw-bold mb-0 text-dark" id="assigned_cust_heading">👤 Assigned Client: Ian Olvera</h6>
-                    <span class="text-muted small" id="online_status_sub">18510 Ranch View Trail Cir, Houston TX</span>
-                </div>
-            </div>
-            <span class="badge bg-success py-1.5 px-2.5 rounded-pill fs-7">$0.00 Today</span>
+    <div class="main-card">
+        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-calculator text-primary me-1"></i> Diagnostic Estimates & Quotes</h5>
+            <a href="/customer_home">{{PHOENIX}}</a>
         </div>
-
-        <div id="tech_map"></div>
-
-        <!-- SHOT #5 OPEN WORLD TOGGLE BUTTON -->
-        <div class="open-world-go-btn" id="open_world_btn" onclick="toggleOpenWorld()">
-            GO
-        </div>
-
-        <!-- 30-SECOND DISPATCH RADAR PING (SHOT #4) -->
-        <div id="dispatch_ping_banner" class="ping-banner">
+        <div class="card p-3 mb-2 bg-light border">
             <div class="d-flex justify-content-between align-items-center mb-1">
-                <span class="fw-bold text-dark"><i class="fa-solid fa-bolt text-warning me-1"></i> INSTANT DISPATCH PING!</span>
-                <span class="badge bg-danger fs-6" id="ping_timer">30s</span>
+                <span class="fw-bold text-dark">EST-88204 (Evaporator Coil Replacement)</span>
+                <span class="badge bg-warning text-dark">Pending Sign-off</span>
             </div>
-            <p class="small text-muted mb-2">📍 18510 Ranch View Trail Cir — A/C Condenser Diagnostic</p>
-            <button class="btn btn-sm btn-success w-100 fw-bold py-2 rounded-3" onclick="acceptDispatchPing()"><i class="fa-solid fa-circle-check me-1"></i> Accept Dispatch & Launch Route</button>
+            <p class="small text-muted mb-2">Trane 4.0 Ton Coil + R-454B Refrigerant Charge | Total: <strong>$1,850.00</strong></p>
+            <button type="button" class="btn btn-sm btn-success fw-bold w-100" onclick="alert('Quote Approved & Converted to Work Order!')"><i class="fa-solid fa-signature me-1"></i> Approve & Sign Work Order</button>
         </div>
-
-        <!-- 45-MINUTE DIAGNOSTIC TIMER ENGINE (SHOT #4) -->
-        <div id="diagnostic_timer_box" class="p-3 bg-light border rounded-3 text-center mb-2" style="display: none;">
-            <span class="text-muted fw-bold small d-block mb-1">ON-SITE DIAGNOSTIC TIMEFRAME</span>
-            <h3 class="fw-bold text-primary mb-2" id="diag_countdown">45:00</h3>
-            <div class="row g-2">
-                <div class="col-6"><button class="btn btn-sm btn-outline-warning w-100 fw-bold" onclick="alert('Requested 15m Extension from Dispatch')">+15m Extension</button></div>
-                <div class="col-6"><button class="btn btn-sm btn-primary w-100 fw-bold" onclick="alert('Quote Form Launched')">Submit Quote</button></div>
-            </div>
-        </div>
-
-        <div class="bg-light p-2.5 rounded-3 border">
-            <span class="fw-bold text-dark small d-block mb-1"><i class="fa-solid fa-user-graduate me-1 text-primary"></i> Apprentice Field Hours Log</span>
-            <div class="progress mb-1" style="height: 10px;">
-                <div class="progress-bar bg-warning" style="width: 65%;">650 / 1,000 Hrs</div>
-            </div>
-            <span class="text-muted style-small" style="font-size: 0.72rem;">Working under Licensed Contractor: Olmios Local Mentorship</span>
-        </div>
+        <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold mt-2"><i class="fa-solid fa-house me-1"></i> Return Home</a>
     </div>
-
-    <!-- SHOT #5 CLEANED MENU DRAWER -->
-    <div class="drawer-overlay" id="drawer_overlay" onclick="toggleTechMenu()"></div>
-    <div class="tech-menu-drawer" id="tech_drawer">
-        <div class="d-flex align-items-center gap-2 mb-4 border-bottom pb-3">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
-            <div>
-                <h6 class="fw-bold mb-0">Jose (Field Tech)</h6>
-                <span class="text-warning small fw-bold">★ 4.99 Rating</span>
-            </div>
-        </div>
-        <ul class="list-unstyled d-flex flex-column gap-3 fw-bold text-dark">
-            <li><a href="#" class="text-dark text-decoration-none"><i class="fa-solid fa-inbox me-2 text-primary"></i> Inbox <span class="badge bg-primary rounded-pill float-end">4</span></a></li>
-            <li><a href="#" class="text-dark text-decoration-none"><i class="fa-solid fa-chart-line me-2 text-success"></i> Earnings</a></li>
-            <li><a href="#" class="text-dark text-decoration-none"><i class="fa-solid fa-wallet me-2 text-warning"></i> Wallet / Instant Payout</a></li>
-            <li><a href="#" class="text-dark text-decoration-none"><i class="fa-solid fa-user me-2 text-info"></i> Account Settings</a></li>
-            <li><a href="#" class="text-dark text-decoration-none"><i class="fa-solid fa-circle-question me-2 text-secondary"></i> Help Center</a></li>
-            <li><a href="#" class="text-dark text-decoration-none"><i class="fa-solid fa-graduation-cap me-2 text-danger"></i> Apprentice Learning Center</a></li>
-        </ul>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        var techMap = L.map('tech_map').setView([29.7604, -95.3698], 11);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(techMap);
-        L.marker([29.7604, -95.3698]).addTo(techMap).bindPopup("<b>Ian Olvera Residence</b><br>18510 Ranch View Trail Cir");
-
-        var isOnline = false;
-
-        function toggleOpenWorld() {
-            isOnline = !isOnline;
-            let btn = document.getElementById('open_world_btn');
-            let heading = document.getElementById('assigned_cust_heading');
-            let sub = document.getElementById('online_status_sub');
-            let ping = document.getElementById('dispatch_ping_banner');
-
-            if(isOnline) {
-                btn.innerText = "OFF";
-                btn.style.background = "linear-gradient(135deg, #dc2626, #991b1b)";
-                heading.innerText = "⚡ You're Online — Open World Radar Active";
-                sub.innerText = "Scanning 15 mile radius for instant dispatches...";
-                ping.style.display = "block";
-            } else {
-                btn.innerText = "GO";
-                btn.style.background = "linear-gradient(135deg, #2563eb, #1d4ed8)";
-                heading.innerText = "👤 Assigned Client: Ian Olvera";
-                sub.innerText = "18510 Ranch View Trail Cir, Houston TX";
-                ping.style.display = "none";
-            }
-        }
-
-        function acceptDispatchPing() {
-            document.getElementById('dispatch_ping_banner').style.display = "none";
-            document.getElementById('diagnostic_timer_box').style.display = "block";
-            alert("Route Loaded! Navigating to customer location. Dispatch & Customer notified of your arrival.");
-        }
-
-        function toggleTechMenu() {
-            document.getElementById('tech_drawer').classList.toggle('open');
-            let overlay = document.getElementById('drawer_overlay');
-            overlay.style.display = (overlay.style.display === 'block') ? 'none' : 'block';
-        }
-    </script>
 </body>
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42))
 
-# ==========================================
-# SHOT #6: ENTERPRISE BACKOFFICE ERP ENGINE (/backoffice)
-# ==========================================
-@app.route('/backoffice')
-def backoffice():
+@app.route('/customer_work_orders')
+def customer_work_orders():
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios - Open Work Orders</title>
+    {{HEADER}}
+    <style>
+        body { background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', sans-serif; padding: 15px; min-height: 100vh; }
+        .main-card { background: #ffffff; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div class="main-card">
+        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-clock-rotate-left text-warning me-1"></i> Open Service Orders</h5>
+            <a href="/customer_home">{{PHOENIX}}</a>
+        </div>
+        <div class="card p-3 mb-2 bg-light border">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-bold text-dark">WO-88204 — Ian Olvera</span>
+                <span class="badge bg-primary">In Progress (Tech En Route)</span>
+            </div>
+            <p class="small text-muted mb-1">Assigned Tech: <strong>Tech A (Lead)</strong></p>
+            <p class="small text-muted mb-0">Location: 18510 Ranch View Trail Cir, Houston TX</p>
+        </div>
+        <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold mt-2"><i class="fa-solid fa-house me-1"></i> Return Home</a>
+    </div>
+</body>
+</html>"""
+    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42))
+
+@app.route('/dispatch_request')
+def dispatch_request():
+    is_dispatch_mode = request.args.get('mode') == 'dispatch'
+    dispatch_header = """
+        <div class="mb-3 p-2 rounded-3 bg-dark text-white d-flex justify-content-between align-items-center border border-primary">
+            <span class="small fw-bold text-warning"><i class="fa-solid fa-headset me-1"></i> DISPATCHER SERVICE ENTRY MODE</span>
+            <a href="/admin" class="btn btn-sm btn-primary fw-bold"><i class="fa-solid fa-house-laptop me-1"></i> Return to Dispatch Center</a>
+        </div>
+    """ if is_dispatch_mode else ""
+
     html = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olmios Enterprise Backoffice ERP</title>
+    <title>Olmios - Request Service</title>
     {{HEADER}}
     <style>
-        body { background-color: #0f172a; color: white; font-family: 'Outfit', sans-serif; padding: 20px; min-height: 100vh; }
-        .erp-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 25px; max-width: 1100px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        .nav-pills .nav-link { color: #475569; font-weight: 700; border-radius: 10px; font-size: 0.85rem; }
-        .nav-pills .nav-link.active { background: #2563eb; color: white; }
+        body { background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+        .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
+        .form-label { font-weight: 800; color: #475569 !important; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase; }
+        .btn-service-type { border: 2px solid #3b82f6; background: #ffffff; color: #1e3a8a; font-weight: 800; border-radius: 14px; padding: 14px 10px; font-size: 0.95rem; width: 100%; transition: all 0.2s; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); }
+        .btn-service-type:hover { background: #f0f7ff; border-color: #1d4ed8; }
+        .btn-category { border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; border-radius: 12px; padding: 12px 6px; font-size: 0.85rem; width: 100%; transition: all 0.2s; cursor: pointer; }
+        .btn-category.active { background: #f0f9ff; border-color: #0284c7; color: #0284c7; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2); }
+        .ai-followup-box { background: #e0f2fe; border: 1.5px solid #0284c7; border-radius: 14px; padding: 14px; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
-    <div class="erp-card">
-        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
-            <div class="d-flex align-items-center gap-2">
-                {{PHOENIX}}
-                <div>
-                    <h4 class="fw-bold mb-0 text-dark">OLMIOS Enterprise Backoffice ERP</h4>
-                    <span class="text-muted small">Offline Operations, Payroll, Inventory, CPQ & Supplier Sync</span>
+    <div class="main-card">
+        {{DISPATCH_HEADER}}
+        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+            <div>
+                <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-truck-fast me-1 text-primary"></i> Instant HVAC Dispatch Request</h5>
+            </div>
+            <a href="/customer_home" title="Home">{{PHOENIX}}</a>
+        </div>
+
+        <div class="p-2 mb-3 rounded-3 bg-success-subtle border border-success-subtle text-success small fw-bold d-flex align-items-center gap-2">
+            <i class="fa-solid fa-circle-check fs-6"></i>
+            <span id="verified_status_line">Profile Verified & Ready</span>
+        </div>
+
+        <form method="POST" action="/submit_dispatch">
+            <input type="hidden" name="customer_name_hidden" id="customer_name_hidden">
+            <input type="hidden" name="address_hidden" id="address_hidden">
+
+            <div id="service_mode_container" class="mb-3">
+                <label class="form-label text-center d-block text-primary fw-bold fs-6 mb-2"><i class="fa-solid fa-list-check me-1"></i> SELECT SERVICE NEED</label>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button type="button" class="btn-service-type" onclick="chooseServiceMode('repair')">
+                            <i class="fa-solid fa-screwdriver-wrench text-warning mb-1 d-block fs-4"></i> System Repair
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn-service-type" onclick="chooseServiceMode('replacement')">
+                            <i class="fa-solid fa-arrows-rotate text-success mb-1 d-block fs-4"></i> System Replacement
+                        </button>
+                    </div>
                 </div>
             </div>
-            <a href="/admin" class="btn btn-sm btn-outline-primary fw-bold"><i class="fa-solid fa-headset me-1"></i> Dispatch Center</a>
-        </div>
 
-        <ul class="nav nav-pills nav-justified mb-4 bg-light p-1.5 rounded-3 border">
-            <li class="nav-item"><button class="nav-link active" onclick="switchErpTab('payroll')"><i class="fa-solid fa-money-check-dollar me-1"></i> Payroll & Timecards</button></li>
-            <li class="nav-item"><button class="nav-link" onclick="switchErpTab('personnel')"><i class="fa-solid fa-users-gear me-1"></i> Onboarding / Subcontractors</button></li>
-            <li class="nav-item"><button class="nav-link" onclick="switchErpTab('inventory')"><i class="fa-solid fa-boxes-packing me-1"></i> Inventory & CPQ</button></li>
-            <li class="nav-item"><button class="nav-link" onclick="switchErpTab('financials')"><i class="fa-solid fa-chart-pie me-1"></i> Financials & Supplier API</button></li>
-        </ul>
-
-        <!-- TAB 1: PAYROLL & TIMECARDS -->
-        <div id="erp_payroll" class="erp-section">
-            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-clock me-1"></i> Apprentice & Technician Timecard Management (Tax-Ready)</h6>
-            <table class="table table-bordered align-middle small">
-                <thead class="table-light">
-                    <tr><th>Tech / Apprentice</th><th>Clock In</th><th>Clock Out</th><th>Logged Hours</th><th>Hourly Rate</th><th>Instant Payout</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>Jose (Apprentice)</td><td>08:00 AM</td><td>04:30 PM</td><td>8.5 hrs</td><td>$28.00 / hr</td><td><button class="btn btn-sm btn-success py-0 px-2 fw-bold" onclick="alert('Instant Payout Released!')">⚡ 1-Click Payout</button></td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- TAB 2: PERSONNEL ONBOARDING -->
-        <div id="erp_personnel" class="erp-section" style="display:none;">
-            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-id-card-clip me-1"></i> Employee & Subcontractor Onboarding / Offboarding</h6>
-            <div class="row g-2">
-                <div class="col-6"><input type="text" class="form-control form-control-sm" placeholder="Full Name"></div>
-                <div class="col-6"><select class="form-select form-select-sm"><option>W-2 Employee</option><option>1099 Subcontractor</option></select></div>
-                <div class="col-12"><button class="btn btn-sm btn-primary fw-bold w-100" onclick="alert('Onboarding Packet Issued!')">Issue Onboarding Documents</button></div>
+            <div id="repair_tabs_container" class="row g-2 mb-3" style="display: none;">
+                <div class="col-4">
+                    <button type="button" class="btn-category active" id="cat_cooling" onclick="selectRepairCategory('cooling')">
+                        <i class="fa-solid fa-snowflake text-info mb-1 d-block fs-5"></i> Cooling
+                    </button>
+                </div>
+                <div class="col-4">
+                    <button type="button" class="btn-category" id="cat_heating" onclick="selectRepairCategory('heating')">
+                        <i class="fa-solid fa-fire text-danger mb-1 d-block fs-5"></i> Heating
+                    </button>
+                </div>
+                <div class="col-4">
+                    <button type="button" class="btn-category" id="cat_thermostat" onclick="selectRepairCategory('thermostat')">
+                        <i class="fa-solid fa-sliders text-primary mb-1 d-block fs-5"></i> Thermostat
+                    </button>
+                </div>
             </div>
-        </div>
 
-        <!-- TAB 3: INVENTORY & CPQ -->
-        <div id="erp_inventory" class="erp-section" style="display:none;">
-            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-box-open me-1"></i> Parts CPQ Catalog & Supplier Data Sync (Johnstone / Carrier API)</h6>
-            <div class="p-3 bg-light rounded-3 border mb-3">
-                <span class="fw-bold text-dark small">Live Supplier API Sync Status: <span class="text-success">Connected</span></span>
+            <div id="replacement_tabs_container" class="mb-3" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="form-label small text-muted mb-0">SELECT SAVED EQUIPMENT TO REPLACE:</label>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="resetToServiceMode()"><i class="fa-solid fa-arrow-left me-1"></i> Back</button>
+                </div>
+                <div id="dynamic_replacement_tabs" class="d-flex flex-column gap-2"></div>
             </div>
-        </div>
 
-        <!-- TAB 4: FINANCIALS -->
-        <div id="erp_financials" class="erp-section" style="display:none;">
-            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-file-invoice-dollar me-1"></i> Real-Time Profit & Loss (P&L) Ledger</h6>
-            <div class="p-3 bg-light rounded-3 border">
-                <div class="d-flex justify-content-between mb-1"><span class="fw-bold">Gross Revenue ($99 Dispatches + Repairs):</span><span class="text-success fw-bold">$12,450.00</span></div>
-                <div class="d-flex justify-content-between mb-1"><span class="fw-bold">Vendor Parts Costs:</span><span class="text-danger fw-bold">-$4,200.00</span></div>
-                <hr>
-                <div class="d-flex justify-content-between"><span class="fw-bold fs-6">Net Operating Margin:</span><span class="text-primary fw-bold fs-6">$8,250.00</span></div>
+            <div class="mb-3">
+                <label class="form-label">SELECT JOB SITE PROPERTY ADDRESS</label>
+                <select class="form-select rounded-3" id="dispatch_address_select" name="address">
+                    <option value="primary">📍 Primary Residential Address</option>
+                </select>
             </div>
-        </div>
+
+            <div class="mb-3">
+                <label class="form-label">PURCHASE ORDER (PO) # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
+                <input type="text" name="po_number" class="form-control rounded-3" placeholder="e.g. PO-88204">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">SERVICE URGENCY</label>
+                <select class="form-select rounded-3 fw-bold" id="urgency_select" name="urgency" onchange="toggleUrgencySchedule(this.value)">
+                    <option value="Dispatch Now" selected>⚡ Dispatch Now</option>
+                    <option value="Scheduled">📅 Other (Select Date & Time)</option>
+                </select>
+            </div>
+
+            <div id="urgency_schedule_box" class="row g-2 mb-3 p-2 bg-light border rounded-3" style="display: none;">
+                <div class="col-6">
+                    <label class="form-label small mb-1">SELECT DATE</label>
+                    <input type="date" id="scheduled_date" class="form-control rounded-2">
+                </div>
+                <div class="col-6">
+                    <label class="form-label small mb-1">SELECT TIME</label>
+                    <input type="time" id="scheduled_time" class="form-control rounded-2">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">EQUIPMENT TYPE (INCLUDES RESIDENTIAL & COMMERCIAL)</label>
+                <select class="form-select rounded-3" id="equipment_type_select" name="equipment">
+                    <option value="General HVAC Issue">Select HVAC Equipment...</option>
+                    <option value="Cooling Issue">Cooling Issue</option>
+                    <option value="Heating Issue">Heating Issue</option>
+                    <option value="Control / Thermostat Issue">Control / Thermostat Issue</option>
+                    <option value="A/C Condenser">A/C Condenser</option>
+                    <option value="Furnace / Air Handler">Furnace / Air Handler</option>
+                    <option value="Complete Split System">Complete Split System</option>
+                    <option value="Commercial RTU">Commercial RTU</option>
+                </select>
+            </div>
+
+            <div class="p-3 mb-3 rounded-4" style="background: #f0f7ff; border: 1.5px solid #3b82f6;">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    {{PHOENIX_SMALL}}
+                    <h6 class="fw-bold mb-0 text-primary">OLMIOS Diagnostic Chat Assistant</h6>
+                </div>
+                <p class="small text-muted mb-2">Tell us what's going on! Mention symptoms, specific defective part notes, or paste image URLs:</p>
+                
+                <textarea id="chat_assistant_input" class="form-control mb-2" rows="3" placeholder="e.g., Coil leaking water near furnace..."></textarea>
+                
+                <button type="button" class="btn btn-primary w-100 py-2 fw-bold rounded-3 shadow-sm" onclick="autoFillDescription()">
+                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AUTO-FILL ISSUE DESCRIPTION
+                </button>
+
+                <div id="ai_followup_box" class="ai-followup-box">
+                    <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-info-subtle">
+                        {{PHOENIX_SMALL}}
+                        <span class="fw-bold text-primary small"><i class="fa-solid fa-robot me-1"></i> Olmios AI Diagnostic Follow-Up:</span>
+                    </div>
+                    <p class="small text-dark fw-semibold mb-2" id="ai_followup_question">Is the leak on the outdoor condenser coil or the indoor evaporator coil/air handler?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold w-50" onclick="answerAiLeak('Outdoor Condenser Coil')">Outdoor Condenser Coil</button>
+                        <button type="button" class="btn btn-sm btn-primary fw-bold w-50" onclick="answerAiLeak('Indoor Evaporator Coil')">Indoor Evaporator Coil</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">ISSUE DESCRIPTION (FINAL DISPATCH SUMMARY)</label>
+                <textarea id="issue_description" name="issue_description" class="form-control rounded-3" rows="3" placeholder="Describe requested HVAC issue or click Auto-Fill above..."></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">SELECT SAVED PAYMENT CARD</label>
+                <select class="form-select rounded-3">
+                    <option value="">Select Payment Method...</option>
+                    <option selected>💳 Visa ending in 1004</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-amber w-100 py-3 rounded-3 fw-bold mb-2 shadow-sm fs-6">
+                💳 Request Service & Dispatch - $99.00
+            </button>
+        </form>
+
+        <a href="/customer_home" class="btn btn-outline-secondary w-100 py-2 rounded-3 fw-bold small"><i class="fa-solid fa-house me-1"></i> Home Page</a>
     </div>
 
     <script>
-        function switchErpTab(tabName) {
-            document.querySelectorAll('.erp-section').forEach(s => s.style.display = 'none');
-            document.getElementById('erp_' + tabName).style.display = 'block';
+    var currentCoilSelection = "";
+    var currentServiceMode = "";
+    var selectedReplacementTabs = [];
+
+    function chooseServiceMode(mode) {
+        currentServiceMode = mode;
+        document.getElementById('service_mode_container').style.display = 'none';
+
+        if(mode === 'repair') {
+            document.getElementById('repair_tabs_container').style.display = 'flex';
+            document.getElementById('replacement_tabs_container').style.display = 'none';
+        } else if(mode === 'replacement') {
+            document.getElementById('repair_tabs_container').style.display = 'none';
+            document.getElementById('replacement_tabs_container').style.display = 'block';
+            loadProfileEquipmentTabs();
         }
+    }
+
+    function resetToServiceMode() {
+        document.getElementById('service_mode_container').style.display = 'block';
+        document.getElementById('repair_tabs_container').style.display = 'none';
+        document.getElementById('replacement_tabs_container').style.display = 'none';
+        selectedReplacementTabs = [];
+    }
+
+    function toggleUrgencySchedule(val) {
+        let scheduleBox = document.getElementById('urgency_schedule_box');
+        scheduleBox.style.display = (val === 'Scheduled') ? 'flex' : 'none';
+    }
+
+    function selectRepairCategory(catName) {
+        document.querySelectorAll('#repair_tabs_container .btn-category').forEach(b => b.classList.remove('active'));
+        let targetBtn = document.getElementById('cat_' + catName);
+        if(targetBtn) targetBtn.classList.add('active');
+
+        let eqSelect = document.getElementById('equipment_type_select');
+        if(catName === 'cooling') eqSelect.value = 'Cooling Issue';
+        else if(catName === 'heating') eqSelect.value = 'Heating Issue';
+        else if(catName === 'thermostat') eqSelect.value = 'Control / Thermostat Issue';
+
+        autoFillDescription();
+    }
+
+    function loadProfileEquipmentTabs() {
+        let savedType = localStorage.getItem('olmios_hvac_type') || 'gas_sys';
+        let condModel = localStorage.getItem('olmios_cond_mod') || '5TTR6048';
+        let coilModel = localStorage.getItem('olmios_coil_mod') || '5TXCC007';
+        let furnModel = localStorage.getItem('olmios_furn_mod') || 'S8X1C080';
+
+        let typeLabel = "Gas System";
+        if(savedType === 'elec_sys') typeLabel = "Electric System";
+        else if(savedType === 'gas_hp') typeLabel = "Gas Heat Pump System";
+        else if(savedType === 'elec_hp') typeLabel = "Electric Heat Pump System";
+        else if(savedType === 'comm_pkg') typeLabel = "Commercial Package Unit";
+        else if(savedType === 'comm_split') typeLabel = "Commercial Split System";
+        else if(savedType.includes('mini')) typeLabel = "Mini Split System";
+
+        let container = document.getElementById('dynamic_replacement_tabs');
+        container.innerHTML = `
+            <button type="button" class="btn-category text-start px-3 py-2.5" onclick="toggleMultiReplacementTab(this, 'Complete ${typeLabel} (${condModel})')">
+                <i class="fa-solid fa-arrows-rotate text-success me-2"></i> Replace Complete ${typeLabel} (Condenser: ${condModel})
+            </button>
+            <button type="button" class="btn-category text-start px-3 py-2.5" onclick="toggleMultiReplacementTab(this, 'Evaporator Coil (${coilModel})')">
+                <i class="fa-solid fa-box text-info me-2"></i> Replace Evaporator Coil (${coilModel})
+            </button>
+            <button type="button" class="btn-category text-start px-3 py-2.5" onclick="toggleMultiReplacementTab(this, 'Furnace / Heating Unit (${furnModel})')">
+                <i class="fa-solid fa-fire text-danger me-2"></i> Replace Furnace / Heating Unit (${furnModel})
+            </button>`;
+    }
+
+    function toggleMultiReplacementTab(element, tabName) {
+        element.classList.toggle('active');
+        let index = selectedReplacementTabs.indexOf(tabName);
+        if(index > -1) {
+            selectedReplacementTabs.splice(index, 1);
+        } else {
+            selectedReplacementTabs.push(tabName);
+        }
+
+        let issueBox = document.getElementById('issue_description');
+        if(selectedReplacementTabs.length > 0) {
+            issueBox.value = "Customer requested SYSTEM REPLACEMENT evaluation for: " + selectedReplacementTabs.join(" + ");
+        } else {
+            issueBox.value = "Customer requested SYSTEM REPLACEMENT evaluation.";
+        }
+    }
+
+    function parseModelNumberDetails(modelStr) {
+        let m = modelStr ? modelStr.toUpperCase().trim() : '';
+        let result = { brand: 'Trane', tonnage: '3.0 Tons', SEER: '16 SEER2', refrig: 'R-410A' };
+
+        if(m.includes('5TTR') || m.includes('4TTR') || m.includes('S8X') || m.includes('5TXC')) result.brand = 'Trane';
+        else if(m.includes('24AA') || m.includes('59SC')) result.brand = 'Carrier';
+        else if(m.includes('GSX') || m.includes('GM9')) result.brand = 'Goodman';
+        else if(m.includes('XC') || m.includes('EL19')) result.brand = 'Lennox';
+
+        if(m.startsWith('5')) {
+            result.refrig = 'R-454B';
+        } else if(m.startsWith('4')) {
+            result.refrig = 'R-410A';
+        } else if(m.startsWith('2')) {
+            result.refrig = 'R-22';
+        }
+
+        if(m.includes('048')) result.tonnage = '4.0 Tons';
+        else if(m.includes('036')) result.tonnage = '3.0 Tons';
+        else if(m.includes('024')) result.tonnage = '2.0 Tons';
+        else if(m.includes('060')) result.tonnage = '5.0 Tons';
+        else if(m.includes('018')) result.tonnage = '1.5 Tons';
+
+        return result;
+    }
+
+    function autoFillDescription() {
+        let chatInput = document.getElementById('chat_assistant_input').value.trim();
+        let issueBox = document.getElementById('issue_description');
+        let followupBox = document.getElementById('ai_followup_box');
+        let eqSelectVal = document.getElementById('equipment_type_select').value;
+
+        let condModel = localStorage.getItem('olmios_cond_mod') || '5TTR6048';
+        let coilModel = localStorage.getItem('olmios_coil_mod') || '5TXCC007';
+        let furnModel = localStorage.getItem('olmios_furn_mod') || 'S8X1C080';
+        let sysType = localStorage.getItem('olmios_hvac_type') || 'gas_sys';
+        let parsed = parseModelNumberDetails(condModel);
+
+        let isGas = sysType.includes('gas');
+        let sysEnergyLabel = isGas ? 'Gas System' : 'Electric System';
+
+        let lowerChat = chatInput.toLowerCase();
+        if(lowerChat.includes('leak') || lowerChat.includes('coil')) {
+            followupBox.style.display = 'block';
+        } else {
+            followupBox.style.display = 'none';
+        }
+
+        let componentDetails = "Condenser " + condModel + ", Evaporator Coil " + coilModel + ", Furnace " + furnModel;
+        if(currentCoilSelection === 'Indoor Evaporator Coil') {
+            componentDetails = "Evaporator Coil " + coilModel + " (Indoor Evaporator Coil Specified)";
+        } else if(currentCoilSelection === 'Outdoor Condenser Coil') {
+            componentDetails = "Condenser " + condModel + " (Outdoor Condenser Coil Specified)";
+        }
+
+        let issueContextStr = eqSelectVal ? " | [ISSUE CATEGORY]: " + eqSelectVal : "";
+
+        let prioritizedSpecs = issueContextStr + " | [TECH SPECS SUMMARY]: " +
+            "1. Manufacturer: " + parsed.brand + " " +
+            "| 2. System Energy: " + sysEnergyLabel + " " +
+            "| 3. Tonnage: " + parsed.tonnage + " " +
+            "| 4. SEER Rating: " + parsed.SEER + " " +
+            "| 5. Refrigerant Type: " + parsed.refrig + " " +
+            "| 6. Line Size: 3/8' Liquid x 7/8' Suction " +
+            "| 7. Model/Serial Specs: " + componentDetails;
+
+        if (chatInput !== "") {
+            issueBox.value = chatInput + prioritizedSpecs;
+        } else {
+            issueBox.value = "Customer requested diagnostic service." + prioritizedSpecs;
+        }
+    }
+
+    function answerAiLeak(coilType) {
+        currentCoilSelection = coilType;
+        document.getElementById('ai_followup_box').style.display = 'none';
+        autoFillDescription();
+    }
+
+    window.onload = function() {
+        let name = localStorage.getItem('olmios_fullname') || 'John Doe';
+        let addr = localStorage.getItem('olmios_saved_address') || '18510 Ranch View Trail Cir, Houston, TX';
+        document.getElementById('verified_status_line').innerText = "Profile Verified: " + name;
+        document.getElementById('dispatch_address_select').options[0].text = "📍 " + addr;
+        document.getElementById('customer_name_hidden').value = name;
+        document.getElementById('address_hidden').value = addr;
+    }
     </script>
 </body>
 </html>"""
-    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(35, 35))
+    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{PHOENIX_SMALL}}', get_phoenix_svg(28, 28)).replace('{{DISPATCH_HEADER}}', dispatch_header)
+
+@app.route('/submit_dispatch', methods=['POST'])
+def submit_dispatch():
+    cust_name = request.form.get('customer_name_hidden') or 'Ian Olvera'
+    address = request.form.get('address_hidden') or '18510 Ranch View Trail Cir, Houston, TX 77073'
+    urgency = request.form.get('urgency', 'Dispatch Now')
+    equipment = request.form.get('equipment') or 'A/C Condenser'
+    issue_description = request.form.get('issue_description') or 'Customer requested diagnostic service.'
+
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO service_requests (
+            first_name, last_name, customer_name, phone, address, city, zip_code,
+            urgency, equipment, issue_description, assigned_tech, est_value, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Unassigned', 99.00, 'Pending')
+    """, ('Ian', 'Olvera', cust_name, '8323884957', address, 'Houston', '77073', urgency, equipment, issue_description))
+    
+    req_id = cursor.lastrowid
+
+    cursor.execute("""
+        INSERT INTO sms_messages (sender_type, sender_name, sender_phone, message_text, is_new)
+        VALUES ('Customer', ?, '8323884957', ?, 1)
+    """, (cust_name, f"New $99 Order #{req_id}: {equipment} - {urgency}"))
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('confirmation', req_id=req_id))
+
+@app.route("/confirmation/<int:req_id>")
+def confirmation(req_id):
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT customer_name, phone, address, city, zip_code, urgency, equipment, status, issue_description 
+        FROM service_requests WHERE id = ?
+    """, (req_id,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return redirect(url_for('customer_home'))
+
+    (cust_name, phone, address, city, zip_code, urgency, equip, status, desc) = row
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>OLMIOS | Request Received</title>
+        {COMMON_HEADER}
+        <style>
+            body {{ background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', sans-serif; padding: 20px; min-height: 100vh; display: flex; align-items: center; justify-content: center; }}
+            .card {{ background: #ffffff; color: #0f172a; padding: 35px; max-width: 480px; width: 100%; border-radius: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }}
+            .success-icon {{ width: 64px; height: 64px; background: #dcfce7; color: #166534; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 15px; }}
+            .summary-box {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; text-align: left; margin: 20px 0; font-size: 13px; }}
+            .summary-row {{ display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; }}
+            .status-badge {{ background: #fef3c7; color: #b45309; padding: 3px 10px; border-radius: 12px; font-weight: 800; font-size: 11px; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="success-icon">✓</div>
+            <h3 class="fw-bold text-dark mb-1">Service Dispatched!</h3>
+            <p class="text-muted small">Your $99.00 diagnostic request is active in the Olmios network.</p>
+
+            <div class="summary-box">
+                <div class="summary-row"><span class="text-muted fw-bold">Ticket #:</span><span class="fw-bold text-primary">#{req_id}</span></div>
+                <div class="summary-row"><span class="text-muted fw-bold">Amount Paid:</span><span class="fw-bold text-success">$99.00</span></div>
+                <div class="summary-row"><span class="text-muted fw-bold">Status:</span><span><span class="status-badge">{status.upper()}</span></span></div>
+                <div class="summary-row"><span class="text-muted fw-bold">Equipment:</span><span class="fw-bold">{equip}</span></div>
+                <div class="summary-row"><span class="text-muted fw-bold">Location:</span><span class="fw-bold">{address}</span></div>
+            </div>
+
+            <a href="/customer_home" class="btn btn-primary w-100 py-2.5 rounded-3 fw-bold"><i class="fa-solid fa-house me-1"></i> Return to Home Dashboard</a>
+        </div>
+    </body>
+    </html>
+    """
+
+# SHOT #2: PROPERLY LINKED PROFILE ROUTE AT TOP LEVEL OF FLASK APP
+@app.route('/profile', methods=['GET', 'POST'])
+def profile():
+    is_dispatch_mode = request.args.get('mode') == 'dispatch'
+    dispatch_header = """
+        <div class="mb-3 p-2 rounded-3 bg-dark text-white d-flex justify-content-between align-items-center border border-primary">
+            <span class="small fw-bold text-warning"><i class="fa-solid fa-user-plus me-1"></i> DISPATCHER CUSTOMER ENTRY MODE</span>
+            <a href="/admin" class="btn btn-sm btn-primary fw-bold"><i class="fa-solid fa-house-laptop me-1"></i> Return to Dispatch Center</a>
+        </div>
+    """ if is_dispatch_mode else ""
+
+    saved_msg = ""
+    if request.method == 'POST':
+        saved_msg = '<div class="alert alert-success py-2 text-center small fw-bold mb-3"><i class="fa-solid fa-circle-check me-1"></i> Profile and Wallet specs updated successfully!</div>'
+
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios - Profile & Wallet</title>
+    {{HEADER}}
+    <style>
+        body { background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+        .form-label { font-weight: 800; color: #334155 !important; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase; }
+        .section-header { font-weight: 800; color: #0284c7; font-size: 0.92rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; margin-top: 18px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
+        .add-tab-btn { font-size: 0.75rem; padding: 2px 10px; border-radius: 20px; font-weight: 700; }
+        .add-on-box { display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+        .card-box { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; margin-bottom: 10px; }
+        .uppercase-input { text-transform: uppercase !important; }
+    </style>
+</head>
+<body>
+    <div class="main-card">
+        {{DISPATCH_HEADER}}
+        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-id-card me-1 text-primary"></i> Customer Profile & Wallet</h5>
+            <a href="/customer_home" title="Home">{{PHOENIX}}</a>
+        </div>
+
+        {{SAVED_MSG}}
+
+        <form method="POST" id="profile_main_form" onsubmit="saveProfileToLocal(event)">
+            <div class="mb-3 text-center">
+                <img id="profile_avatar_preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 85px; height: 85px; object-fit: cover; border-radius: 50%; border: 3px solid #3b82f6;" class="mb-2">
+                <div>
+                    <label class="btn btn-sm btn-outline-primary fw-bold rounded-3">
+                        <i class="fa-solid fa-camera me-1"></i> Upload Profile Picture
+                        <input type="file" accept="image/*" capture="user" style="display: none;" onchange="previewProfilePic(event)">
+                    </label>
+                </div>
+            </div>
+
+            <div class="section-header">
+                <span><i class="fa-solid fa-user me-1"></i> 1. Basic Personal Information & Residence</span>
+            </div>
+            
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label class="form-label">FIRST NAME</label>
+                    <input type="text" id="prof_fname" class="form-control rounded-3" placeholder="Enter first name">
+                </div>
+                <div class="col-6">
+                    <label class="form-label">LAST NAME</label>
+                    <input type="text" id="prof_lname" class="form-control rounded-3" placeholder="Enter last name">
+                </div>
+            </div>
+            
+            <div class="mb-2">
+                <label class="form-label">PHONE NUMBER</label>
+                <input type="text" id="prof_phone" class="form-control rounded-3" placeholder="Enter phone number">
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">EMAIL ADDRESS</label>
+                <input type="email" id="prof_email" class="form-control rounded-3" placeholder="Enter email address">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">PRIMARY RESIDENCE STREET ADDRESS</label>
+                <input type="text" id="primary_street_addr" class="form-control rounded-3" placeholder="Enter street address">
+            </div>
+
+            <div class="section-header">
+                <span><i class="fa-solid fa-credit-card me-1"></i> 4. Saved Payment Cards & Wallet</span>
+                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_card_box')"><i class="fa-solid fa-plus me-1"></i> Add Card</button>
+            </div>
+
+            <div id="card_list_container">
+                <div class="card-box" id="card_1004">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold text-dark"><i class="fa-brands fa-cc-visa text-primary me-1 fs-5"></i> Visa ending in 1004</span>
+                            <span class="badge bg-primary me-1">Primary</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-2 mb-3 mt-4">
+                <div class="col-6">
+                    <button type="submit" class="btn btn-amber w-100 py-2.5 rounded-3 fw-bold shadow-sm">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Save Profile
+                    </button>
+                </div>
+                <div class="col-6">
+                    <a href="/customer_home" class="btn btn-outline-secondary w-100 py-2.5 rounded-3 fw-bold">Cancel</a>
+                </div>
+            </div>
+        </form>
+
+        <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold"><i class="fa-solid fa-house me-1"></i> Home Page</a>
+    </div>
+
+    <script>
+    function previewProfilePic(e) {
+        if(e.target.files && e.target.files[0]) {
+            let reader = new FileReader();
+            reader.onload = function(evt) { 
+                document.getElementById('profile_avatar_preview').src = evt.target.result;
+                localStorage.setItem('olmios_profile_pic', evt.target.result);
+            }
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    }
+
+    function toggleAddBox(boxId) {
+        let box = document.getElementById(boxId);
+        box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function saveProfileToLocal(e) {
+        let fname = document.getElementById('prof_fname').value.trim();
+        let lname = document.getElementById('prof_lname').value.trim();
+        let phone = document.getElementById('prof_phone').value.trim();
+        let email = document.getElementById('prof_email').value.trim();
+        let addr = document.getElementById('primary_street_addr').value.trim();
+
+        if(fname || lname) localStorage.setItem('olmios_fullname', (fname + ' ' + lname).trim());
+        if(phone) localStorage.setItem('olmios_phone', phone);
+        if(email) localStorage.setItem('olmios_email', email);
+        if(addr) localStorage.setItem('olmios_saved_address', addr);
+    }
+
+    window.onload = function() {
+        let savedName = localStorage.getItem('olmios_fullname') || '';
+        let parts = savedName.split(' ');
+        if(parts.length > 0) document.getElementById('prof_fname').value = parts[0] || '';
+        if(parts.length > 1) document.getElementById('prof_lname').value = parts.slice(1).join(' ') || '';
+        
+        if(localStorage.getItem('olmios_phone')) document.getElementById('prof_phone').value = localStorage.getItem('olmios_phone');
+        if(localStorage.getItem('olmios_email')) document.getElementById('prof_email').value = localStorage.getItem('olmios_email');
+        if(localStorage.getItem('olmios_saved_address')) document.getElementById('primary_street_addr').value = localStorage.getItem('olmios_saved_address');
+
+        let savedPic = localStorage.getItem('olmios_profile_pic');
+        if(savedPic) document.getElementById('profile_avatar_preview').src = savedPic;
+    }
+    </script>
+</body>
+</html>"""
+    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{SAVED_MSG}}', saved_msg).replace('{{DISPATCH_HEADER}}', dispatch_header)
+
+# SHOT #2: PROPERLY LINKED INVOICES ROUTE AT TOP LEVEL OF FLASK APP
+@app.route('/invoices')
+def invoices():
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios - Invoices</title>
+    {{HEADER}}
+    <style>
+        body { background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+        .form-label { font-weight: 800; color: #475569 !important; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase; }
+        .invoice-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; background: #f8fafc; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+    <div class="main-card">
+        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-receipt me-1 text-primary"></i> Service Invoices</h5>
+            <a href="/customer_home" title="Home">{{PHOENIX}}</a>
+        </div>
+
+        <div id="invoice_list">
+            <div class="invoice-card">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-dark">INV-1002 (Capacitor Replacement)</span>
+                    <span class="badge bg-success">Paid</span>
+                </div>
+                <div class="small text-muted mb-2">Date: 08/01/2026 | Card: **** 1004 | Amount: $185.00</div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button class="btn btn-outline-danger btn-sm w-100 fw-bold rounded-2" onclick="alert('Refund Request Submitted.')">
+                            <i class="fa-solid fa-rotate-left me-1"></i> Request Refund
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-outline-primary btn-sm w-100 fw-bold rounded-2" onclick="window.print()">
+                            <i class="fa-solid fa-print me-1"></i> Print Invoice
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold mt-2"><i class="fa-solid fa-house me-1"></i> Return Home</a>
+    </div>
+</body>
+</html>"""
+    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42))
+
+@app.route('/download_logo')
+def download_logo():
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios - Download Phoenix Logo (.JPG)</title>
+    {{HEADER}}
+    <style>
+        body { background-color: #f1f5f9; color: #0f172a; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; padding: 20px; }
+        .logo-card { background: #ffffff; padding: 40px; border-radius: 24px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.08); max-width: 480px; width: 100%; color: #0f172a; border: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div class="logo-card">
+        <h4 class="fw-bold text-dark mb-1">Olmios Phoenix Symbol</h4>
+        <a href="/customer_home" class="btn btn-outline-secondary w-100 fw-bold rounded-3 mt-3">Return to Dashboard</a>
+    </div>
+</body>
+</html>"""
+    return html.replace('{{HEADER}}', COMMON_HEADER)
 
 # ==========================================
 # DISPATCH COMMAND CENTER (/admin)
@@ -726,12 +1241,12 @@ def admin():
             .header-admin {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }}
             
             .kpi-grid {{ display: flex; gap: 12px; margin-bottom: 20px; }}
-            .kpi-card {{ flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; }}
+            .kpi-card {{ flex: 1; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }}
             .kpi-title {{ font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }}
             .kpi-val {{ font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 2px; }}
 
             .split-container {{ display: flex; gap: 20px; align-items: flex-start; }}
-            .left-pane {{ flex: 3; min-width: 0; background: #ffffff; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0; color: #0f172a; }}
+            .left-pane {{ flex: 3; min-width: 0; background: #ffffff; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0; color: #0f172a; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }}
             .right-pane {{ flex: 2; position: sticky; top: 20px; min-width: 340px; }}
 
             .map-container {{
@@ -926,17 +1441,15 @@ def admin():
     <body>
         <div class="panel container-admin">
             
-            <!-- SHOT #1: BRAND LOGO WITH SUBTITLE & ACTION GROUP -->
             <div class="header-admin">
                 <div class="d-flex align-items-center gap-3">
                     <div>
                         <h1 class="brand-logo mb-0">OLMIOS</h1>
-                        <!-- SHOT #1 SUBTITLE REQUIREMENT -->
                         <span class="fw-bold text-primary" style="font-size: 0.72rem; letter-spacing: 1px;">Dispatch Command Center</span>
                     </div>
                     <div class="d-flex align-items-center gap-1 ms-2">
-                        <a href="/admin/new_customer" class="btn-admin btn-primary-admin"><i class="fa-solid fa-user-plus me-1"></i> + New Customer</a>
-                        <a href="/admin/new_request" class="btn-admin btn-accent-admin"><i class="fa-solid fa-bolt me-1"></i> Service Request</a>
+                        <a href="/profile?mode=dispatch" class="btn-admin btn-primary-admin"><i class="fa-solid fa-user-plus me-1"></i> + New Customer</a>
+                        <a href="/dispatch_request?mode=dispatch" class="btn-admin btn-accent-admin"><i class="fa-solid fa-bolt me-1"></i> Service Request</a>
                         <button type="button" class="btn-admin btn-outline-admin" data-bs-toggle="modal" data-bs-target="#existingCustomerModal"><i class="fa-solid fa-address-book me-1"></i> Existing Customer</button>
                         <button type="button" class="btn-admin btn-outline-admin" onclick="switchView('Active', document.querySelector('.filter-tabs .tab-btn'))"><i class="fa-solid fa-ticket me-1"></i> Open Service Ticket</button>
                         <button type="button" class="btn-admin btn-outline-admin text-danger border-danger-subtle" data-bs-toggle="modal" data-bs-target="#refundsModal"><i class="fa-solid fa-shield-cat me-1"></i> Refunds/Warranty Pending</button>
@@ -971,9 +1484,7 @@ def admin():
             <!-- SPLIT SCREEN LAYOUT -->
             <div class="split-container">
                 
-                <!-- LEFT PANE: PRIORITIZED TABS & VIEWS -->
                 <div class="left-pane">
-                    
                     <div class="controls-bar">
                         <input type="text" id="searchInput" class="search-input" onkeyup="searchTable()" placeholder="🔍 Search customer, phone...">
                         
@@ -992,7 +1503,6 @@ def admin():
                         </div>
                     </div>
 
-                    <!-- VIEW 1: DISPATCH JOBS TABLE -->
                     <div id="jobsTablePanel" class="view-panel active">
                         <div class="table-wrapper">
                             <table>
@@ -1017,13 +1527,11 @@ def admin():
                         </div>
                     </div>
 
-                    <!-- VIEW 2: CUSTOMER SMS TAB -->
                     <div id="customerSmsPanel" class="view-panel">
                         <h3 style="margin: 0 0 15px; font-size: 15px; color: #0f172a;">💬 Customer Text Messages</h3>
                         {customer_sms_html}
                     </div>
 
-                    <!-- VIEW 3: TECH / DRIVER SMS TAB -->
                     <div id="techSmsPanel" class="view-panel">
                         <h3 style="margin: 0 0 15px; font-size: 15px; color: #0f172a;">📱 Field Tech & Driver Messages</h3>
                         {tech_sms_html}
@@ -1031,7 +1539,6 @@ def admin():
 
                 </div>
 
-                <!-- RIGHT PANE: COLOR-CODED LIVE MAP -->
                 <div class="right-pane">
                     <div class="map-container">
                         <div class="map-header">
@@ -1049,7 +1556,6 @@ def admin():
             </div>
         </div>
 
-        <!-- UBER-STYLE QUICK DISPATCH DRAWER -->
         <div id="quickDrawer" class="drawer">
             <span class="drawer-close" onclick="closeDrawer()">✕</span>
             <h3 id="drawerTitle" style="margin-top: 0; color: #0f172a;">Quick Dispatch</h3>
@@ -1079,7 +1585,6 @@ def admin():
             </div>
         </div>
 
-        <!-- EXISTING CUSTOMER HISTORY MODAL -->
         <div class="modal fade" id="existingCustomerModal" tabindex="-1">
             <div class="modal-dialog modal-xl modal-dialog-centered">
                 <div class="modal-content rounded-4 border-0">
@@ -1119,7 +1624,6 @@ def admin():
             </div>
         </div>
 
-        <!-- REFUNDS & WARRANTY MANAGER APPROVAL MODAL -->
         <div class="modal fade" id="refundsModal" tabindex="-1">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content rounded-4 border-0">
@@ -1152,9 +1656,6 @@ def admin():
     </html>
     """
 
-# ==========================================
-# ADMIN ACTIONS & ENDPOINTS
-# ==========================================
 @app.route("/accept_and_dispatch/<int:req_id>", methods=["POST"])
 def accept_and_dispatch(req_id):
     tech = request.form.get("tech", "Tech A (Lead)")
