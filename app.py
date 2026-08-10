@@ -110,8 +110,8 @@ COMMON_HEADER = """
 
 COMMON_ADMIN_CSS = """
     body {
-        background: #f1f5f9;
-        color: #0f172a;
+        background: #0b1329;
+        color: #f8fafc;
         font-family: 'Outfit', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
         margin: 0;
         padding: 20px;
@@ -122,7 +122,7 @@ COMMON_ADMIN_CSS = """
         background: #ffffff;
         color: #1e293b;
         border-radius: 16px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
         padding: 20px;
     }
     .brand-logo {
@@ -201,7 +201,7 @@ def logout():
     session.clear()
     return redirect('/')
 
-# SHOT #4: LIGHT GRAY COLOR PALETTE BACKGROUND
+# REVERTED BODY BACKGROUND TO DEEP NAVY BLUE (#0b1329) & LIGHT GRAY BUTTONS
 @app.route('/customer_home')
 def customer_home():
     html = """<!DOCTYPE html>
@@ -213,13 +213,13 @@ def customer_home():
     {{HEADER}}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         #map { height: 260px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
         .btn-amber:hover { background: #b45309; color: white; }
-        .btn-nav-thin { border: 1px solid #cbd5e1; background: #ffffff; color: #1e293b; font-weight: 700; border-radius: 10px; transition: all 0.2s; }
-        .btn-nav-thin:hover { background: #f8fafc; color: #0284c7; border-color: #38bdf8; }
+        .btn-light-gray { background: #f1f5f9; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 800; border-radius: 12px; transition: all 0.2s; text-decoration: none; }
+        .btn-light-gray:hover { background: #e2e8f0; color: #2563eb; border-color: #3b82f6; }
         .guarantee-box { background: #059669; color: white; padding: 10px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; text-align: center; }
     </style>
 </head>
@@ -241,18 +241,19 @@ def customer_home():
         <a href="/dispatch_request" class="btn btn-amber w-100 py-3 rounded-3 fw-bold fs-6 mb-3 shadow-sm">
             ⚡ REQUEST INSTANT HVAC SERVICE ($99.00)
         </a>
-        
-        <!-- SHOT #1: MOVED QUOTE, OPEN ORDER, AND INVOICE TABS DOWN INTO THIS LOWER SECTION -->
-        <div class="row g-2 mb-2">
-            <div class="col-4"><a href="/customer_quotes" class="btn btn-outline-primary w-100 py-2 fw-bold small"><i class="fa-solid fa-calculator me-1"></i> Quote</a></div>
-            <div class="col-4"><a href="/customer_work_orders" class="btn btn-outline-warning text-dark w-100 py-2 fw-bold small"><i class="fa-solid fa-clock-rotate-left me-1"></i> Open Order</a></div>
-            <div class="col-4"><a href="/invoices" class="btn btn-outline-success w-100 py-2 fw-bold small"><i class="fa-solid fa-file-invoice-dollar me-1"></i> Invoice</a></div>
-        </div>
 
-        <!-- SHOT #2: PROPERLY LINKED PROFILE & WALLET AND VIEW INVOICES BUTTONS -->
+        <!-- LIGHT GRAY BUTTONS WITH PARENT CONTAINER "MY SERVICES & ORDERS" -->
         <div class="row g-2 mb-3">
-            <div class="col-6"><a href="/profile" class="btn btn-nav-thin w-100 py-2.5 small"><i class="fa-solid fa-user-gear me-1 text-primary"></i> Profile & Wallet</a></div>
-            <div class="col-6"><a href="/invoices" class="btn btn-nav-thin w-100 py-2.5 small"><i class="fa-solid fa-receipt me-1 text-primary"></i> View Invoices</a></div>
+            <div class="col-6">
+                <a href="/profile" class="btn btn-light-gray w-100 py-2.5 small d-flex align-items-center justify-content-center gap-1">
+                    <i class="fa-solid fa-user-gear text-primary"></i> Profile & Wallet
+                </a>
+            </div>
+            <div class="col-6">
+                <a href="/customer_services" class="btn btn-light-gray w-100 py-2.5 small d-flex align-items-center justify-content-center gap-1">
+                    <i class="fa-solid fa-layer-group text-primary"></i> My Services & Orders
+                </a>
+            </div>
         </div>
 
         <div class="guarantee-box shadow-sm mb-1">
@@ -270,71 +271,93 @@ def customer_home():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(45, 45))
 
-@app.route('/customer_quotes')
-def customer_quotes():
+# NEW PARENT CONTAINER ROUTE FOR MY SERVICES & ORDERS (HOUSES QUOTE, OPEN ORDER, AND INVOICE)
+@app.route('/customer_services')
+def customer_services():
     html = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olmios - Estimates & Quotes</title>
+    <title>Olmios - My Services & Orders</title>
     {{HEADER}}
     <style>
-        body { background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', sans-serif; padding: 15px; min-height: 100vh; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .nav-pills .nav-link { color: #475569; font-weight: 800; font-size: 0.85rem; border-radius: 12px; }
+        .nav-pills .nav-link.active { background: #2563eb; color: white; }
     </style>
 </head>
 <body>
     <div class="main-card">
         <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-calculator text-primary me-1"></i> Diagnostic Estimates & Quotes</h5>
+            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-layer-group text-primary me-1"></i> My Services & Orders</h5>
             <a href="/customer_home">{{PHOENIX}}</a>
         </div>
-        <div class="card p-3 mb-2 bg-light border">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-                <span class="fw-bold text-dark">EST-88204 (Evaporator Coil Replacement)</span>
-                <span class="badge bg-warning text-dark">Pending Sign-off</span>
+
+        <ul class="nav nav-pills nav-justified mb-3 bg-light p-1 rounded-3 border">
+            <li class="nav-item"><button class="nav-link active" id="tab_btn_quote" onclick="switchServiceTab('quote')"><i class="fa-solid fa-calculator me-1"></i> Quote</button></li>
+            <li class="nav-item"><button class="nav-link" id="tab_btn_order" onclick="switchServiceTab('order')"><i class="fa-solid fa-clock-rotate-left me-1"></i> Open Order</button></li>
+            <li class="nav-item"><button class="nav-link" id="tab_btn_invoice" onclick="switchServiceTab('invoice')"><i class="fa-solid fa-file-invoice-dollar me-1"></i> Invoice</button></li>
+        </ul>
+
+        <!-- QUOTE CONTAINER -->
+        <div id="service_sec_quote" class="service-sec">
+            <div class="card p-3 mb-2 bg-light border">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-dark">EST-88204 (Evaporator Coil Replacement)</span>
+                    <span class="badge bg-warning text-dark">Pending Sign-off</span>
+                </div>
+                <p class="small text-muted mb-2">Trane 4.0 Ton Coil + R-454B Refrigerant Charge | Total: <strong>$1,850.00</strong></p>
+                <button type="button" class="btn btn-sm btn-success fw-bold w-100" onclick="alert('Quote Approved & Converted to Work Order!')"><i class="fa-solid fa-signature me-1"></i> Approve & Sign Work Order</button>
             </div>
-            <p class="small text-muted mb-2">Trane 4.0 Ton Coil + R-454B Refrigerant Charge | Total: <strong>$1,850.00</strong></p>
-            <button type="button" class="btn btn-sm btn-success fw-bold w-100" onclick="alert('Quote Approved & Converted to Work Order!')"><i class="fa-solid fa-signature me-1"></i> Approve & Sign Work Order</button>
         </div>
-        <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold mt-2"><i class="fa-solid fa-house me-1"></i> Return Home</a>
+
+        <!-- OPEN ORDER CONTAINER -->
+        <div id="service_sec_order" class="service-sec" style="display:none;">
+            <div class="card p-3 mb-2 bg-light border">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-dark">WO-88204 — Ian Olvera</span>
+                    <span class="badge bg-primary">In Progress (Tech En Route)</span>
+                </div>
+                <p class="small text-muted mb-1">Assigned Tech: <strong>Tech A (Lead)</strong></p>
+                <p class="small text-muted mb-0">Location: 18510 Ranch View Trail Cir, Houston TX</p>
+            </div>
+        </div>
+
+        <!-- INVOICE CONTAINER -->
+        <div id="service_sec_invoice" class="service-sec" style="display:none;">
+            <div class="card p-3 mb-2 bg-light border">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-dark">INV-1002 (Capacitor Replacement)</span>
+                    <span class="badge bg-success">Paid</span>
+                </div>
+                <p class="small text-muted mb-2">Date: 08/01/2026 | Card: **** 1004 | Amount: $185.00</p>
+                <button class="btn btn-outline-primary btn-sm w-100 fw-bold" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> Print Invoice</button>
+            </div>
+        </div>
+
+        <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold mt-3"><i class="fa-solid fa-house me-1"></i> Return Home</a>
     </div>
+
+    <script>
+        function switchServiceTab(sec) {
+            document.querySelectorAll('.service-sec').forEach(s => s.style.display = 'none');
+            document.querySelectorAll('.nav-pills .nav-link').forEach(b => b.classList.remove('active'));
+            document.getElementById('service_sec_' + sec).style.display = 'block';
+            document.getElementById('tab_btn_' + sec).classList.add('active');
+        }
+    </script>
 </body>
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42))
 
+@app.route('/customer_quotes')
+def customer_quotes():
+    return redirect('/customer_services')
+
 @app.route('/customer_work_orders')
 def customer_work_orders():
-    html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olmios - Open Work Orders</title>
-    {{HEADER}}
-    <style>
-        body { background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
-    </style>
-</head>
-<body>
-    <div class="main-card">
-        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-clock-rotate-left text-warning me-1"></i> Open Service Orders</h5>
-            <a href="/customer_home">{{PHOENIX}}</a>
-        </div>
-        <div class="card p-3 mb-2 bg-light border">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-                <span class="fw-bold text-dark">WO-88204 — Ian Olvera</span>
-                <span class="badge bg-primary">In Progress (Tech En Route)</span>
-            </div>
-            <p class="small text-muted mb-1">Assigned Tech: <strong>Tech A (Lead)</strong></p>
-            <p class="small text-muted mb-0">Location: 18510 Ranch View Trail Cir, Houston TX</p>
-        </div>
-        <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold mt-2"><i class="fa-solid fa-house me-1"></i> Return Home</a>
-    </div>
-</body>
-</html>"""
-    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42))
+    return redirect('/customer_services')
 
 @app.route('/dispatch_request')
 def dispatch_request():
@@ -354,8 +377,8 @@ def dispatch_request():
     <title>Olmios - Request Service</title>
     {{HEADER}}
     <style>
-        body { background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
         .form-label { font-weight: 800; color: #475569 !important; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase; }
         .btn-service-type { border: 2px solid #3b82f6; background: #ffffff; color: #1e3a8a; font-weight: 800; border-radius: 14px; padding: 14px 10px; font-size: 0.95rem; width: 100%; transition: all 0.2s; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); }
@@ -750,8 +773,8 @@ def confirmation(req_id):
         <title>OLMIOS | Request Received</title>
         {COMMON_HEADER}
         <style>
-            body {{ background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', sans-serif; padding: 20px; min-height: 100vh; display: flex; align-items: center; justify-content: center; }}
-            .card {{ background: #ffffff; color: #0f172a; padding: 35px; max-width: 480px; width: 100%; border-radius: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }}
+            body {{ background-color: #0b1329; color: white; font-family: 'Outfit', sans-serif; padding: 20px; min-height: 100vh; display: flex; align-items: center; justify-content: center; }}
+            .card {{ background: #ffffff; color: #0f172a; padding: 35px; max-width: 480px; width: 100%; border-radius: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }}
             .success-icon {{ width: 64px; height: 64px; background: #dcfce7; color: #166534; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 15px; }}
             .summary-box {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; text-align: left; margin: 20px 0; font-size: 13px; }}
             .summary-row {{ display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; }}
@@ -778,7 +801,7 @@ def confirmation(req_id):
     </html>
     """
 
-# SHOT #2: PROPERLY LINKED PROFILE ROUTE AT TOP LEVEL OF FLASK APP
+# PROPERLY REGISTERED PROFILE ROUTE
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
     is_dispatch_mode = request.args.get('mode') == 'dispatch'
@@ -801,8 +824,8 @@ def profile():
     <title>Olmios - Profile & Wallet</title>
     {{HEADER}}
     <style>
-        body { background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .form-label { font-weight: 800; color: #334155 !important; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase; }
         .section-header { font-weight: 800; color: #0284c7; font-size: 0.92rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; margin-top: 18px; display: flex; justify-content: space-between; align-items: center; }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
@@ -942,7 +965,7 @@ def profile():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{SAVED_MSG}}', saved_msg).replace('{{DISPATCH_HEADER}}', dispatch_header)
 
-# SHOT #2: PROPERLY LINKED INVOICES ROUTE AT TOP LEVEL OF FLASK APP
+# PROPERLY REGISTERED INVOICES ROUTE
 @app.route('/invoices')
 def invoices():
     html = """<!DOCTYPE html>
@@ -953,8 +976,8 @@ def invoices():
     <title>Olmios - Invoices</title>
     {{HEADER}}
     <style>
-        body { background-color: #f1f5f9; color: #0f172a; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .form-label { font-weight: 800; color: #475569 !important; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase; }
         .invoice-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; background: #f8fafc; margin-bottom: 12px; }
     </style>
@@ -1004,8 +1027,8 @@ def download_logo():
     <title>Olmios - Download Phoenix Logo (.JPG)</title>
     {{HEADER}}
     <style>
-        body { background-color: #f1f5f9; color: #0f172a; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; padding: 20px; }
-        .logo-card { background: #ffffff; padding: 40px; border-radius: 24px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.08); max-width: 480px; width: 100%; color: #0f172a; border: 1px solid #e2e8f0; }
+        body { background-color: #0b1329; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; padding: 20px; }
+        .logo-card { background: #ffffff; padding: 40px; border-radius: 24px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); max-width: 480px; width: 100%; color: #0f172a; }
     </style>
 </head>
 <body>
@@ -1656,6 +1679,9 @@ def admin():
     </html>
     """
 
+# ==========================================
+# ADMIN ACTIONS & ENDPOINTS
+# ==========================================
 @app.route("/accept_and_dispatch/<int:req_id>", methods=["POST"])
 def accept_and_dispatch(req_id):
     tech = request.form.get("tech", "Tech A (Lead)")
