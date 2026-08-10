@@ -199,7 +199,7 @@ def calculate_age(created_at_str):
         return "Recent", False
 
 # ==========================================
-# CUSTOMER APP ROUTES (PRESERVED INTACT)
+# CUSTOMER APP ROUTES
 # ==========================================
 @app.route('/')
 def index():
@@ -465,7 +465,6 @@ def dispatch_request():
             <span id="verified_status_line">Profile Verified & Ready</span>
         </div>
 
-        <!-- INITIAL SERVICE MODE CHOICE: SYSTEM REPAIR VS SYSTEM REPLACEMENT -->
         <div id="service_mode_container" class="mb-3">
             <label class="form-label text-center d-block text-primary fw-bold fs-6 mb-2"><i class="fa-solid fa-list-check me-1"></i> SELECT SERVICE NEED</label>
             <div class="row g-2">
@@ -482,7 +481,6 @@ def dispatch_request():
             </div>
         </div>
 
-        <!-- REPAIR OPTION TABS: COOLING, HEATING, THERMOSTAT -->
         <div id="repair_tabs_container" class="row g-2 mb-3" style="display: none;">
             <div class="col-4">
                 <button type="button" class="btn-category active" id="cat_cooling" onclick="selectRepairCategory('cooling')">
@@ -501,7 +499,6 @@ def dispatch_request():
             </div>
         </div>
 
-        <!-- REPLACEMENT EQUIPMENT TABS -->
         <div id="replacement_tabs_container" class="mb-3" style="display: none;">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <label class="form-label small text-muted mb-0">SELECT SAVED EQUIPMENT TO REPLACE:</label>
@@ -522,7 +519,6 @@ def dispatch_request():
             <input type="text" class="form-control rounded-3" placeholder="e.g. PO-88204">
         </div>
 
-        <!-- SERVICE URGENCY -->
         <div class="mb-3">
             <label class="form-label">SERVICE URGENCY</label>
             <select class="form-select rounded-3 fw-bold" id="urgency_select" onchange="toggleUrgencySchedule(this.value)">
@@ -569,7 +565,6 @@ def dispatch_request():
                 <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AUTO-FILL ISSUE DESCRIPTION
             </button>
 
-            <!-- INTERACTIVE AI FOLLOW-UP PROMPT -->
             <div id="ai_followup_box" class="ai-followup-box">
                 <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-info-subtle">
                     {{PHOENIX_SMALL}}
@@ -781,8 +776,749 @@ def dispatch_request():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{PHOENIX_SMALL}}', get_phoenix_svg(28, 28))
 
+@app.route('/profile', methods=['GET', 'POST'])
+def profile():
+    saved_msg = ""
+    if request.method == 'POST':
+        saved_msg = '<div class="alert alert-success py-2 text-center small fw-bold mb-3"><i class="fa-solid fa-circle-check me-1"></i> Profile and Wallet specs updated successfully!</div>'
+
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios - Profile & Wallet</title>
+    {{HEADER}}
+    <style>
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .form-label { font-weight: 800; color: #334155 !important; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase; }
+        .section-header { font-weight: 800; color: #0284c7; font-size: 0.92rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; margin-top: 18px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
+        .add-tab-btn { font-size: 0.75rem; padding: 2px 10px; border-radius: 20px; font-weight: 700; }
+        .add-on-box { display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+        .card-box { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; margin-bottom: 10px; }
+        .uppercase-input { text-transform: uppercase !important; }
+    </style>
+</head>
+<body>
+    <div class="main-card">
+        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-id-card me-1 text-primary"></i> Customer Profile & Wallet</h5>
+            <a href="/customer_home" title="Home">{{PHOENIX}}</a>
+        </div>
+
+        {{SAVED_MSG}}
+
+        <form method="POST" id="profile_main_form" onsubmit="saveProfileToLocal(event)">
+            <div class="mb-3 text-center">
+                <img id="profile_avatar_preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 85px; height: 85px; object-fit: cover; border-radius: 50%; border: 3px solid #3b82f6;" class="mb-2">
+                <div>
+                    <label class="btn btn-sm btn-outline-primary fw-bold rounded-3">
+                        <i class="fa-solid fa-camera me-1"></i> Upload Profile Picture
+                        <input type="file" accept="image/*" capture="user" style="display: none;" onchange="previewProfilePic(event)">
+                    </label>
+                </div>
+            </div>
+
+            <div class="section-header">
+                <span><i class="fa-solid fa-user me-1"></i> 1. Basic Personal Information & Residence</span>
+            </div>
+            
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label class="form-label">FIRST NAME</label>
+                    <input type="text" id="prof_fname" class="form-control rounded-3" placeholder="Enter first name">
+                </div>
+                <div class="col-6">
+                    <label class="form-label">LAST NAME</label>
+                    <input type="text" id="prof_lname" class="form-control rounded-3" placeholder="Enter last name">
+                </div>
+            </div>
+            
+            <div class="mb-2">
+                <label class="form-label">PHONE NUMBER</label>
+                <input type="text" id="prof_phone" class="form-control rounded-3" placeholder="Enter phone number">
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">EMAIL ADDRESS</label>
+                <input type="email" id="prof_email" class="form-control rounded-3" placeholder="Enter email address">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">PRIMARY RESIDENCE STREET ADDRESS</label>
+                <input type="text" id="primary_street_addr" class="form-control rounded-3" placeholder="Enter street address">
+            </div>
+
+            <div class="section-header">
+                <span><i class="fa-solid fa-briefcase me-1"></i> 2. Business & Commercial Information</span>
+                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_biz_box')"><i class="fa-solid fa-plus me-1"></i> Add-On</button>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">DRIVER'S LICENSE / STATE ID # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
+                <input type="text" id="prof_dl" class="form-control rounded-3 uppercase-input" placeholder="Enter Driver's License #" oninput="this.value = this.value.toUpperCase()">
+            </div>
+            
+            <div class="mb-2">
+                <label class="form-label">BUSINESS / COMPANY NAME</label>
+                <input type="text" id="prof_company" class="form-control rounded-3" placeholder="Enter company name">
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <label class="form-label">TAX ID / EIN #</label>
+                    <input type="text" id="prof_taxid" class="form-control rounded-3 uppercase-input" placeholder="XX-XXXXXXX" oninput="this.value = this.value.toUpperCase()">
+                </div>
+                <div class="col-6">
+                    <label class="form-label">ACCOUNTS PAYABLE EMAIL</label>
+                    <input type="email" id="prof_ap_email" class="form-control rounded-3" placeholder="ap@company.com">
+                </div>
+            </div>
+
+            <div id="add_biz_box" class="add-on-box">
+                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-building-circle-add me-1"></i> Add Commercial / Business Unit Specs</h6>
+                <div class="mb-2">
+                    <label class="form-label">COMMERCIAL SYSTEM TYPE</label>
+                    <select class="form-select rounded-3">
+                        <option value="">Select Equipment Category...</option>
+                        <option>Gas System</option>
+                        <option>Electric System</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">VOLTAGE SPECIFICATION</label>
+                    <select class="form-select rounded-3">
+                        <option value="">Select Voltage...</option>
+                        <option>230/60/1</option>
+                        <option>230/60/3</option>
+                        <option>460/60/3</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">SYSTEM TYPE</label>
+                    <select class="form-select rounded-3" onchange="toggleCommConfig(this.value)">
+                        <option value="">Select Configuration...</option>
+                        <option value="rtu">Rooftop Unit (Under 25 Tons)</option>
+                        <option value="split">Split System (Under 25 Tons)</option>
+                    </select>
+                </div>
+
+                <div id="rtu_fields" style="display:none;">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">RTU MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                        <div class="col-6"><label class="form-label">RTU SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    </div>
+                </div>
+
+                <div id="split_fields" style="display:none;">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                        <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                        <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">HEAT KIT MODEL # <span class="text-muted fw-normal">(OPTIONAL)</span></label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                        <div class="col-6"><label class="form-label">HEAT KIT SERIAL # <span class="text-muted fw-normal">(OPTIONAL)</span></label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-2" onclick="toggleAddBox('add_biz_box')">Save Commercial Specs</button>
+            </div>
+
+            <div class="section-header">
+                <span><i class="fa-solid fa-sliders me-1"></i> 3. HVAC System Equipment & Data Plate Specs</span>
+                <div class="d-flex gap-1">
+                    <button type="button" class="btn btn-outline-secondary add-tab-btn" onclick="toggleAddBox('add_acc_box')"><i class="fa-solid fa-plus me-1"></i> Add Accessory</button>
+                    <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_hvac_box')"><i class="fa-solid fa-plus me-1"></i> Add-On</button>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">SYSTEM HEATING TYPE</label>
+                <select class="form-select rounded-3 fw-bold text-primary" id="main_heating_type_select" onchange="renderDynamicHvacFields(this.value, 'dynamic_hvac_container')">
+                    <option value="">Select System Type...</option>
+                    <option value="gas_sys">Gas System</option>
+                    <option value="elec_sys">Electric System</option>
+                    <option value="gas_hp">Gas Heat Pump System</option>
+                    <option value="elec_hp">Electric Heat Pump System</option>
+                    <option value="res_pkg">Residential Package Unit</option>
+                    <option value="comm_pkg">Commercial Package Unit</option>
+                    <option value="comm_split">Commercial Split System</option>
+                    <option value="mini_single">Mini Splits - Single Zone</option>
+                    <option value="mini_multi">Mini Splits - Multi-Zone</option>
+                    <option value="comm_mini_single">Commercial Mini Splits - Single Zone</option>
+                    <option value="comm_mini_multi">Commercial Mini Splits - Multi-Zone</option>
+                </select>
+            </div>
+
+            <div id="dynamic_hvac_container"></div>
+
+            <div class="mb-3">
+                <label class="form-label"><i class="fa-solid fa-image me-1 text-primary"></i> UNIT RATING PLATE PHOTO URL / UPLOAD <span class="text-muted fw-normal">(OPTIONAL)</span></label>
+                <input type="text" id="prof_tag_url" class="form-control rounded-3" placeholder="Upload or paste image URL of equipment tag">
+            </div>
+
+            <div id="add_acc_box" class="add-on-box">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-sliders me-1"></i> Add Additional Accessory</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="toggleAddBox('add_acc_box')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">ACCESSORY TYPE / NAME</label>
+                    <input type="text" class="form-control rounded-3" placeholder="e.g., Smart Thermostat, Surge Protector, Dehumidifier">
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_acc_box')">Save Accessory</button>
+            </div>
+
+            <div id="add_hvac_box" class="add-on-box">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-circle-plus me-1"></i> Add Additional HVAC System Tag</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="toggleAddBox('add_hvac_box')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">SYSTEM HEATING TYPE</label>
+                    <select class="form-select rounded-3 fw-bold text-primary" onchange="renderDynamicHvacFields(this.value, 'addon_hvac_container')">
+                        <option value="">Select System Type...</option>
+                        <option value="gas_sys">Gas System</option>
+                        <option value="elec_sys">Electric System</option>
+                        <option value="gas_hp">Gas Heat Pump System</option>
+                        <option value="elec_hp">Electric Heat Pump System</option>
+                        <option value="res_pkg">Residential Package Unit</option>
+                        <option value="comm_pkg">Commercial Package Unit</option>
+                        <option value="comm_split">Commercial Split System</option>
+                        <option value="mini_single">Mini Splits - Single Zone</option>
+                        <option value="mini_multi">Mini Splits - Multi-Zone</option>
+                        <option value="comm_mini_single">Commercial Mini Splits - Single Zone</option>
+                        <option value="comm_mini_multi">Commercial Mini Splits - Multi-Zone</option>
+                    </select>
+                </div>
+                <div id="addon_hvac_container" class="mb-2"></div>
+                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_hvac_box')">Save Additional HVAC Specs</button>
+            </div>
+
+            <div class="section-header">
+                <span><i class="fa-solid fa-credit-card me-1"></i> 4. Saved Payment Cards & Wallet</span>
+                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_card_box')"><i class="fa-solid fa-plus me-1"></i> Add Additional Card</button>
+            </div>
+
+            <div id="card_list_container">
+                <div class="card-box" id="card_1004">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold text-dark"><i class="fa-brands fa-cc-visa text-primary me-1 fs-5"></i> Visa ending in 1004</span>
+                            <span class="badge bg-primary me-1">Primary</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="btn btn-sm btn-success py-0 px-2 fw-bold" onclick="alert('Card Saved Successfully!')"><i class="fa-solid fa-floppy-disk me-1"></i> Save</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="deleteCard('card_1004')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                        </div>
+                    </div>
+                    <div class="row g-2 mt-1">
+                        <div class="col-12"><input type="text" class="form-control rounded-3 mb-1" placeholder="Cardholder Name" value="John Doe"></div>
+                        <div class="col-8"><input type="text" class="form-control rounded-3" placeholder="Card Number (XXXX-XXXX-XXXX-1004)" value="**** **** **** 1004"></div>
+                        <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY" value="12/28"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="add_card_box" class="add-on-box">
+                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-credit-card me-1"></i> Add New Payment Card</h6>
+                <input type="text" id="new_card_name" class="form-control rounded-3 mb-2" placeholder="Cardholder Name">
+                <div class="row g-2 mb-2">
+                    <div class="col-8"><input type="text" id="new_card_num" class="form-control rounded-3" placeholder="Card Number"></div>
+                    <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
+                </div>
+                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3" onclick="addNewCard()">Save Card to Wallet</button>
+            </div>
+
+            <div class="section-header">
+                <span><i class="fa-solid fa-location-dot me-1"></i> 5. Manage Additional Property Locations</span>
+                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_location_box')"><i class="fa-solid fa-plus me-1"></i> Add Location Specs</button>
+            </div>
+
+            <div class="mb-3">
+                <select class="form-select rounded-3 mb-2">
+                    <option value="">Select Property Address...</option>
+                </select>
+            </div>
+
+            <div id="add_location_box" class="add-on-box">
+                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-house-chimney-medical me-1"></i> Add Additional Location Specs</h6>
+                <div class="mb-2">
+                    <label class="form-label">PROPERTY ADDRESS</label>
+                    <input type="text" class="form-control rounded-3" placeholder="Street Address, City, State">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">SYSTEM TYPE</label>
+                    <select class="form-select rounded-3">
+                        <option value="">Select Gas or Electric...</option>
+                        <option>Gas System</option>
+                        <option>Electric System</option>
+                    </select>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3" onclick="toggleAddBox('add_location_box')">Save Location Specs</button>
+            </div>
+
+            <div class="row g-2 mb-3 mt-4">
+                <div class="col-6">
+                    <button type="submit" class="btn btn-amber w-100 py-2.5 rounded-3 fw-bold shadow-sm">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Save Profile
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button type="button" class="btn btn-outline-danger w-100 py-2.5 rounded-3 fw-bold" onclick="if(confirm('Are you sure you want to delete this profile?')) window.location.href='/';">
+                        <i class="fa-solid fa-trash me-1"></i> Delete Profile
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold"><i class="fa-solid fa-house me-1"></i> Home Page</a>
+    </div>
+
+    <script>
+    var multiZoneCount = 3;
+
+    function previewProfilePic(e) {
+        if(e.target.files && e.target.files[0]) {
+            let reader = new FileReader();
+            reader.onload = function(evt) { 
+                document.getElementById('profile_avatar_preview').src = evt.target.result;
+                localStorage.setItem('olmios_profile_pic', evt.target.result);
+            }
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    }
+
+    function toggleAddBox(boxId) {
+        let box = document.getElementById(boxId);
+        box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function toggleCommConfig(val) {
+        document.getElementById('rtu_fields').style.display = (val === 'rtu') ? 'block' : 'none';
+        document.getElementById('split_fields').style.display = (val === 'split') ? 'block' : 'none';
+    }
+
+    function addMoreIndoorUnit(targetContainerId) {
+        multiZoneCount++;
+        let container = document.getElementById(targetContainerId + '_indoor_units');
+        if(container) {
+            let unitHtml = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">INDOOR UNIT #${multiZoneCount} MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">INDOOR UNIT #${multiZoneCount} SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', unitHtml);
+        }
+    }
+
+    function renderDynamicHvacFields(systemType, targetId) {
+        let container = document.getElementById(targetId);
+        if(!container) return;
+        let html = '';
+
+        if (systemType === 'gas_sys') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">EVAPORATOR COIL MODEL #</label><input type="text" id="m_coil_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">COIL SERIAL #</label><input type="text" id="m_coil_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">FURNACE MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">FURNACE SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+        } else if (systemType === 'elec_sys') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+        } else if (systemType === 'gas_hp') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">HP CONDENSER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HP CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">EVAPORATOR COIL MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">COIL SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">FURNACE MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">FURNACE SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+        } else if (systemType === 'elec_hp') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">HP CONDENSER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HP CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+        } else if (systemType === 'res_pkg' || systemType === 'comm_pkg') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">UNIT MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">UNIT SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+        } else if (systemType === 'comm_split') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">COMMERCIAL CONDENSER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">COMMERCIAL CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">HEAT KIT MODEL # <span class="text-muted fw-normal">(OPTIONAL)</span></label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL # <span class="text-muted fw-normal">(OPTIONAL)</span></label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+        } else if (systemType === 'mini_single' || systemType === 'comm_mini_single') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">OUTDOOR UNIT MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">OUTDOOR UNIT SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">INDOOR UNIT MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">INDOOR UNIT SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+        } else if (systemType === 'mini_multi' || systemType === 'comm_mini_multi') {
+            multiZoneCount = 3;
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">OUTDOOR CONDENSER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">OUTDOOR CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div id="${targetId}_indoor_units">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">INDOOR UNIT #1 MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                        <div class="col-6"><label class="form-label">INDOOR UNIT #1 SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">INDOOR UNIT #2 MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                        <div class="col-6"><label class="form-label">INDOOR UNIT #2 SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">INDOOR UNIT #3 MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                        <div class="col-6"><label class="form-label">INDOOR UNIT #3 SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary fw-bold w-100 mb-2 rounded-3" onclick="addMoreIndoorUnit('${targetId}')"><i class="fa-solid fa-plus me-1"></i> Add Indoor Unit</button>`;
+        }
+
+        container.innerHTML = html;
+        restoreFormValues();
+    }
+
+    function deleteCard(cardId) {
+        let cardEl = document.getElementById(cardId);
+        if(cardEl && confirm('Are you sure you want to delete this payment card?')) {
+            cardEl.remove();
+        }
+    }
+
+    function addNewCard() {
+        let name = document.getElementById('new_card_name').value || 'New Card';
+        let num = document.getElementById('new_card_num').value || '4000';
+        let last4 = num.slice(-4) || '4000';
+        let newId = 'card_' + Date.now();
+
+        let newCardHtml = `
+            <div class="card-box" id="${newId}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold text-dark"><i class="fa-solid fa-credit-card text-success me-1 fs-5"></i> Card ending in ${last4}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <button type="button" class="btn btn-sm btn-success py-0 px-2 fw-bold" onclick="alert('Card Saved Successfully!')"><i class="fa-solid fa-floppy-disk me-1"></i> Save</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="deleteCard('${newId}')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                    </div>
+                </div>
+                <div class="row g-2 mt-1">
+                    <div class="col-12"><input type="text" class="form-control rounded-3 mb-1" value="${name}"></div>
+                    <div class="col-8"><input type="text" class="form-control rounded-3" value="**** **** **** ${last4}"></div>
+                    <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
+                </div>
+            </div>`;
+        document.getElementById('card_list_container').insertAdjacentHTML('beforeend', newCardHtml);
+        toggleAddBox('add_card_box');
+    }
+
+    function saveProfileToLocal(e) {
+        let fname = document.getElementById('prof_fname').value.trim();
+        let lname = document.getElementById('prof_lname').value.trim();
+        let phone = document.getElementById('prof_phone').value.trim();
+        let email = document.getElementById('prof_email').value.trim();
+        let addr = document.getElementById('primary_street_addr').value.trim();
+        let dl = document.getElementById('prof_dl').value.trim();
+        let comp = document.getElementById('prof_company').value.trim();
+        let tax = document.getElementById('prof_taxid').value.trim();
+        let ap = document.getElementById('prof_ap_email').value.trim();
+        let tag = document.getElementById('prof_tag_url').value.trim();
+
+        if(fname || lname) localStorage.setItem('olmios_fullname', (fname + ' ' + lname).trim());
+        if(phone) localStorage.setItem('olmios_phone', phone);
+        if(email) localStorage.setItem('olmios_email', email);
+        if(addr) localStorage.setItem('olmios_saved_address', addr);
+        if(dl) localStorage.setItem('olmios_dl', dl);
+        if(comp) localStorage.setItem('olmios_company', comp);
+        if(tax) localStorage.setItem('olmios_taxid', tax);
+        if(ap) localStorage.setItem('olmios_ap_email', ap);
+        if(tag) localStorage.setItem('olmios_tag_url', tag);
+
+        let hvacType = document.getElementById('main_heating_type_select').value;
+        if(hvacType) localStorage.setItem('olmios_hvac_type', hvacType);
+
+        if(document.getElementById('m_cond_mod')) localStorage.setItem('olmios_cond_mod', document.getElementById('m_cond_mod').value);
+        if(document.getElementById('m_cond_ser')) localStorage.setItem('olmios_cond_ser', document.getElementById('m_cond_ser').value);
+        if(document.getElementById('m_coil_mod')) localStorage.setItem('olmios_coil_mod', document.getElementById('m_coil_mod').value);
+        if(document.getElementById('m_coil_ser')) localStorage.setItem('olmios_coil_ser', document.getElementById('m_coil_ser').value);
+        if(document.getElementById('m_furn_mod')) localStorage.setItem('olmios_furn_mod', document.getElementById('m_furn_mod').value);
+        if(document.getElementById('m_furn_ser')) localStorage.setItem('olmios_furn_ser', document.getElementById('m_furn_ser').value);
+    }
+
+    function restoreFormValues() {
+        if(document.getElementById('m_cond_mod') && localStorage.getItem('olmios_cond_mod')) document.getElementById('m_cond_mod').value = localStorage.getItem('olmios_cond_mod');
+        if(document.getElementById('m_cond_ser') && localStorage.getItem('olmios_cond_ser')) document.getElementById('m_cond_ser').value = localStorage.getItem('olmios_cond_ser');
+        if(document.getElementById('m_coil_mod') && localStorage.getItem('olmios_coil_mod')) document.getElementById('m_coil_mod').value = localStorage.getItem('olmios_coil_mod');
+        if(document.getElementById('m_coil_ser') && localStorage.getItem('olmios_coil_ser')) document.getElementById('m_coil_ser').value = localStorage.getItem('olmios_coil_ser');
+        if(document.getElementById('m_furn_mod') && localStorage.getItem('olmios_furn_mod')) document.getElementById('m_furn_mod').value = localStorage.getItem('olmios_furn_mod');
+        if(document.getElementById('m_furn_ser') && localStorage.getItem('olmios_furn_ser')) document.getElementById('m_furn_ser').value = localStorage.getItem('olmios_furn_ser');
+    }
+
+    window.onload = function() {
+        let savedName = localStorage.getItem('olmios_fullname') || '';
+        let parts = savedName.split(' ');
+        if(parts.length > 0) document.getElementById('prof_fname').value = parts[0] || '';
+        if(parts.length > 1) document.getElementById('prof_lname').value = parts.slice(1).join(' ') || '';
+        
+        if(localStorage.getItem('olmios_phone')) document.getElementById('prof_phone').value = localStorage.getItem('olmios_phone');
+        if(localStorage.getItem('olmios_email')) document.getElementById('prof_email').value = localStorage.getItem('olmios_email');
+        if(localStorage.getItem('olmios_saved_address')) document.getElementById('primary_street_addr').value = localStorage.getItem('olmios_saved_address');
+        if(localStorage.getItem('olmios_dl')) document.getElementById('prof_dl').value = localStorage.getItem('olmios_dl');
+        if(localStorage.getItem('olmios_company')) document.getElementById('prof_company').value = localStorage.getItem('olmios_company');
+        if(localStorage.getItem('olmios_taxid')) document.getElementById('prof_taxid').value = localStorage.getItem('olmios_taxid');
+        if(localStorage.getItem('olmios_ap_email')) document.getElementById('prof_ap_email').value = localStorage.getItem('olmios_ap_email');
+        if(localStorage.getItem('olmios_tag_url')) document.getElementById('prof_tag_url').value = localStorage.getItem('olmios_tag_url');
+
+        let savedPic = localStorage.getItem('olmios_profile_pic');
+        if(savedPic) document.getElementById('profile_avatar_preview').src = savedPic;
+
+        let savedType = localStorage.getItem('olmios_hvac_type') || 'gas_sys';
+        document.getElementById('main_heating_type_select').value = savedType;
+        renderDynamicHvacFields(savedType, 'dynamic_hvac_container');
+    }
+    </script>
+</body>
+</html>"""
+    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{SAVED_MSG}}', saved_msg)
+
+@app.route('/invoices')
+def invoices():
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios - Invoices</title>
+    {{HEADER}}
+    <style>
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .form-label { font-weight: 800; color: #475569 !important; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase; }
+        .invoice-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; background: #f8fafc; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+    <div class="main-card">
+        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-receipt me-1 text-primary"></i> Service Invoices</h5>
+            <a href="/customer_home" title="Home">{{PHOENIX}}</a>
+        </div>
+
+        <div class="bg-light p-3 rounded-3 border mb-3">
+            <h6 class="fw-bold text-dark mb-2 small"><i class="fa-solid fa-filter me-1 text-primary"></i> FILTER INVOICES</h6>
+            <div class="row g-2">
+                <div class="col-6">
+                    <label class="form-label">LAST 4 CARD DIGITS</label>
+                    <input type="text" id="filter_card" class="form-control form-control-sm rounded-2" placeholder="e.g. 1004" onkeyup="filterInvoices()">
+                </div>
+                <div class="col-6">
+                    <label class="form-label">SERVICE DATE</label>
+                    <input type="date" id="filter_date" class="form-control form-control-sm rounded-2" onchange="filterInvoices()">
+                </div>
+                <div class="col-6">
+                    <label class="form-label">PO NUMBER</label>
+                    <input type="text" id="filter_po" class="form-control form-control-sm rounded-2" placeholder="PO #" onkeyup="filterInvoices()">
+                </div>
+                <div class="col-6">
+                    <label class="form-label">AMOUNT ($)</label>
+                    <input type="text" id="filter_amount" class="form-control form-control-sm rounded-2" placeholder="e.g. 185" onkeyup="filterInvoices()">
+                </div>
+            </div>
+        </div>
+        
+        <div id="invoice_list">
+            <div class="invoice-card" data-card="1004" data-po="88204" data-amount="185.00" data-date="2026-08-01">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-dark">INV-1002 (Capacitor Replacement)</span>
+                    <span class="badge bg-success">Paid</span>
+                </div>
+                <div class="small text-muted mb-2">Date: 08/01/2026 | Card: **** 1004 | PO: 88204 | Amount: $185.00</div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button class="btn btn-outline-danger btn-sm w-100 fw-bold rounded-2" onclick="alert('Refund Request Submitted.')">
+                            <i class="fa-solid fa-rotate-left me-1"></i> Request Refund
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-outline-primary btn-sm w-100 fw-bold rounded-2" onclick="window.print()">
+                            <i class="fa-solid fa-print me-1"></i> Print Invoice
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold mt-2"><i class="fa-solid fa-house me-1"></i> Home Page</a>
+    </div>
+
+    <script>
+    function filterInvoices() {
+        let card = document.getElementById('filter_card').value.toLowerCase();
+        let po = document.getElementById('filter_po').value.toLowerCase();
+        let amount = document.getElementById('filter_amount').value.toLowerCase();
+        let date = document.getElementById('filter_date').value;
+
+        document.querySelectorAll('.invoice-card').forEach(cardEl => {
+            let cCard = cardEl.getAttribute('data-card').toLowerCase();
+            let cPo = cardEl.getAttribute('data-po').toLowerCase();
+            let cAmt = cardEl.getAttribute('data-amount').toLowerCase();
+            let cDate = cardEl.getAttribute('data-date');
+
+            let match = true;
+            if (card && !cCard.includes(card)) match = false;
+            if (po && !cPo.includes(po)) match = false;
+            if (amount && !cAmt.includes(amount)) match = false;
+            if (date && cDate !== date) match = false;
+
+            cardEl.style.display = match ? 'block' : 'none';
+        });
+    }
+    </script>
+</body>
+</html>"""
+    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42))
+
+@app.route('/download_logo')
+def download_logo():
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios - Download Phoenix Logo (.JPG)</title>
+    {{HEADER}}
+    <style>
+        body { background-color: #0b1329; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 20px; }
+        .logo-card { background: #ffffff; padding: 40px; border-radius: 24px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5); max-width: 480px; width: 100%; color: #0f172a; }
+    </style>
+</head>
+<body>
+    <div class="logo-card">
+        <h4 class="fw-bold text-dark mb-1">Olmios Phoenix Symbol</h4>
+        <p class="text-muted small mb-3">High-Resolution .JPG Format</p>
+        
+        <div id="svg_container" style="display:none;">
+            {{PHOENIX_BIG}}
+        </div>
+
+        <div class="p-3 mb-3 border rounded-3 bg-light d-flex justify-content-center align-items-center" style="min-height: 260px;">
+            <img id="jpg_preview" style="max-width: 220px; height: auto;" alt="Olmios Phoenix Logo JPG">
+        </div>
+
+        <canvas id="jpg_canvas" width="1200" height="1200" style="display:none;"></canvas>
+
+        <button class="btn btn-warning btn-lg w-100 fw-bold rounded-3 shadow-sm mb-2 text-dark" onclick="downloadJPG()">
+            <i class="fa-solid fa-file-image me-1"></i> Download .JPG Logo File
+        </button>
+        <a href="/customer_home" class="btn btn-outline-secondary w-100 fw-bold rounded-3">Return to Dashboard</a>
+    </div>
+
+    <script>
+    function renderJPG() {
+        let svgElement = document.querySelector('#svg_container svg');
+        let svgData = new XMLSerializer().serializeToString(svgElement);
+        let svgBlob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
+        let URLObj = window.URL || window.webkitURL || window;
+        let blobURL = URLObj.createObjectURL(svgBlob);
+        
+        let img = new Image();
+        img.onload = function() {
+            let canvas = document.getElementById('jpg_canvas');
+            let ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            let jpgDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+            document.getElementById('jpg_preview').src = jpgDataUrl;
+        };
+        img.src = blobURL;
+    }
+
+    function downloadJPG() {
+        let canvas = document.getElementById('jpg_canvas');
+        let jpgUrl = canvas.toDataURL('image/jpeg', 0.95);
+        let downloadLink = document.createElement("a");
+        downloadLink.href = jpgUrl;
+        downloadLink.download = "olmios_phoenix_logo.jpg";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+
+    window.onload = renderJPG;
+    </script>
+</body>
+</html>"""
+    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX_BIG}}', get_phoenix_svg(600, 600))
+
 # ==========================================
-# RESTORED DISPATCH COMMAND CENTER (/admin)
+# DISPATCH COMMAND CENTER (/admin)
 # ==========================================
 @app.route('/admin')
 def admin():
