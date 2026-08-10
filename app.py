@@ -202,7 +202,7 @@ def clean_str(val):
     return str(val).replace('"', '').replace("'", '').replace('\n', ' ').strip()
 
 # ==========================================
-# CUSTOMER APP ROUTES (UNTOUCHED)
+# CUSTOMER APP ROUTES
 # ==========================================
 @app.route('/')
 def index():
@@ -435,6 +435,14 @@ def customer_home():
 
 @app.route('/dispatch_request')
 def dispatch_request():
+    is_dispatch_mode = request.args.get('mode') == 'dispatch'
+    dispatch_header = """
+        <div class="mb-3 p-2 rounded-3 bg-dark text-white d-flex justify-content-between align-items-center border border-primary">
+            <span class="small fw-bold text-warning"><i class="fa-solid fa-headset me-1"></i> DISPATCHER SERVICE ENTRY MODE</span>
+            <a href="/admin" class="btn btn-sm btn-primary fw-bold"><i class="fa-solid fa-house-laptop me-1"></i> Return to Dispatch Center</a>
+        </div>
+    """ if is_dispatch_mode else ""
+
     html = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -456,6 +464,7 @@ def dispatch_request():
 </head>
 <body>
     <div class="main-card">
+        {{DISPATCH_HEADER}}
         <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
             <div>
                 <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-truck-fast me-1 text-primary"></i> Instant HVAC Dispatch Request</h5>
@@ -784,7 +793,7 @@ def dispatch_request():
     </script>
 </body>
 </html>"""
-    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{PHOENIX_SMALL}}', get_phoenix_svg(28, 28))
+    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{PHOENIX_SMALL}}', get_phoenix_svg(28, 28)).replace('{{DISPATCH_HEADER}}', dispatch_header)
 
 @app.route('/submit_dispatch', methods=['POST'])
 def submit_dispatch():
@@ -868,6 +877,14 @@ def confirmation(req_id):
 
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
+    is_dispatch_mode = request.args.get('mode') == 'dispatch'
+    dispatch_header = """
+        <div class="mb-3 p-2 rounded-3 bg-dark text-white d-flex justify-content-between align-items-center border border-primary">
+            <span class="small fw-bold text-warning"><i class="fa-solid fa-user-plus me-1"></i> DISPATCHER CUSTOMER ENTRY MODE</span>
+            <a href="/admin" class="btn btn-sm btn-primary fw-bold"><i class="fa-solid fa-house-laptop me-1"></i> Return to Dispatch Center</a>
+        </div>
+    """ if is_dispatch_mode else ""
+
     saved_msg = ""
     if request.method == 'POST':
         saved_msg = '<div class="alert alert-success py-2 text-center small fw-bold mb-3"><i class="fa-solid fa-circle-check me-1"></i> Profile and Wallet specs updated successfully!</div>'
@@ -893,6 +910,7 @@ def profile():
 </head>
 <body>
     <div class="main-card">
+        {{DISPATCH_HEADER}}
         <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
             <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-id-card me-1 text-primary"></i> Customer Profile & Wallet</h5>
             <a href="/customer_home" title="Home">{{PHOENIX}}</a>
@@ -1435,7 +1453,7 @@ def profile():
     </script>
 </body>
 </html>"""
-    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{SAVED_MSG}}', saved_msg)
+    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{SAVED_MSG}}', saved_msg).replace('{{DISPATCH_HEADER}}', dispatch_header)
 
 @app.route('/invoices')
 def invoices():
@@ -2035,8 +2053,9 @@ def admin():
                 <div class="d-flex align-items-center gap-3">
                     <h1 class="brand-logo mb-0">OLMIOS</h1>
                     <div class="d-flex align-items-center gap-1">
-                        <a href="/profile" class="btn-admin btn-primary-admin"><i class="fa-solid fa-user-plus me-1"></i> + New Customer</a>
-                        <a href="/dispatch_request" class="btn-admin btn-accent-admin"><i class="fa-solid fa-bolt me-1"></i> Service Request</a>
+                        <!-- LINKED MODE DISPATCH URLS -->
+                        <a href="/profile?mode=dispatch" class="btn-admin btn-primary-admin"><i class="fa-solid fa-user-plus me-1"></i> + New Customer</a>
+                        <a href="/dispatch_request?mode=dispatch" class="btn-admin btn-accent-admin"><i class="fa-solid fa-bolt me-1"></i> Service Request</a>
                         <button type="button" class="btn-admin btn-outline-admin" data-bs-toggle="modal" data-bs-target="#existingCustomerModal"><i class="fa-solid fa-address-book me-1"></i> Existing Customer</button>
                         <button type="button" class="btn-admin btn-outline-admin" onclick="switchView('Active', document.querySelector('.filter-tabs .tab-btn'))"><i class="fa-solid fa-ticket me-1"></i> Open Service Ticket</button>
                         <button type="button" class="btn-admin btn-outline-admin text-danger border-danger-subtle" data-bs-toggle="modal" data-bs-target="#refundsModal"><i class="fa-solid fa-shield-cat me-1"></i> Refunds/Warranty Pending</button>
