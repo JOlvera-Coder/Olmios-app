@@ -34,7 +34,9 @@ def init_db():
             assigned_tech TEXT DEFAULT 'Unassigned',
             est_value REAL DEFAULT 99.00,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            status TEXT DEFAULT 'Pending'
+            status TEXT DEFAULT 'Pending',
+            is_backorder INTEGER DEFAULT 0,
+            backorder_notes TEXT DEFAULT ''
         )
     """)
 
@@ -47,6 +49,18 @@ def init_db():
             message_text TEXT NOT NULL,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             is_new INTEGER DEFAULT 1
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS refund_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER,
+            customer_name TEXT NOT NULL,
+            amount REAL NOT NULL,
+            reason TEXT NOT NULL,
+            status TEXT DEFAULT 'Pending Manager Approval',
+            requested_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
@@ -66,7 +80,12 @@ def init_db():
         pass
 
     try:
-        cursor.execute("ALTER TABLE service_requests ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+        cursor.execute("ALTER TABLE service_requests ADD COLUMN is_backorder INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE service_requests ADD COLUMN backorder_notes TEXT DEFAULT ''")
     except sqlite3.OperationalError:
         pass
 
@@ -116,41 +135,33 @@ COMMON_ADMIN_CSS = """
         color: #1e293b;
         border-radius: 16px;
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
-        padding: 24px;
+        padding: 20px;
     }
     .brand-logo {
-        font-size: 26px;
+        font-size: 24px;
         font-weight: 900;
-        letter-spacing: 5px;
+        letter-spacing: 4px;
         color: #0f172a;
         text-transform: uppercase;
     }
     .btn-admin {
         display: inline-block;
-        padding: 10px 20px;
+        padding: 6px 14px;
         border-radius: 8px;
         text-decoration: none;
         font-weight: 700;
-        font-size: 13px;
+        font-size: 12px;
         border: none;
         cursor: pointer;
         text-align: center;
+        transition: all 0.2s ease;
     }
     .btn-primary-admin { background-color: #2563eb; color: #ffffff; }
     .btn-primary-admin:hover { background-color: #1d4ed8; color: white; }
     .btn-accent-admin { background-color: #d97706; color: #ffffff; }
     .btn-accent-admin:hover { background-color: #b45309; color: white; }
-    
-    .home-phoenix-btn {
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 4px;
-        border-radius: 10px;
-        transition: transform 0.2s ease;
-    }
-    .home-phoenix-btn:hover { transform: scale(1.08); }
+    .btn-outline-admin { border: 1px solid #cbd5e1; background: #ffffff; color: #1e293b; }
+    .btn-outline-admin:hover { background: #f1f5f9; color: #2563eb; }
 """
 
 def get_lat_lng(address_str):
@@ -186,7 +197,7 @@ def calculate_age(created_at_str):
         return "Recent", False
 
 # ==========================================
-# CUSTOMER APP ROUTES
+# CUSTOMER APP ROUTES (UNTOUCHED)
 # ==========================================
 @app.route('/')
 def index():
@@ -582,7 +593,6 @@ def dispatch_request():
                 </select>
             </div>
 
-            <!-- EXPLICIT $99 PRICING BUTTON AND FORM SUBMIT -->
             <button type="submit" class="btn btn-amber w-100 py-3 rounded-3 fw-bold mb-2 shadow-sm fs-6">
                 💳 Request Service & Dispatch - $99.00
             </button>
@@ -855,7 +865,7 @@ def confirmation(req_id):
     """
 
 # ==========================================
-# PROFILE & OTHER PAGES
+# PROFILE & INVOICES (UNTOUCHED)
 # ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -1618,6 +1628,9 @@ def admin():
     cursor.execute("SELECT COUNT(*) FROM service_requests WHERE status = 'Completed'")
     completed_count = cursor.fetchone()[0]
 
+    cursor.execute("SELECT COUNT(*) FROM service_requests WHERE is_backorder = 1")
+    backorder_count = cursor.fetchone()[0]
+
     cursor.execute("SELECT SUM(est_value) FROM service_requests WHERE status != 'Completed'")
     total_pipeline_val = cursor.fetchone()[0]
     total_pipeline_val = total_pipeline_val if total_pipeline_val else 0.00
@@ -1633,7 +1646,7 @@ def admin():
     cursor.execute("""
         SELECT id, first_name, last_name, customer_name, phone, email, 
                address, city, zip_code, urgency, equipment, model_number, 
-               serial_number, issue_description, assigned_tech, status, est_value, created_at 
+               serial_number, issue_description, assigned_tech, status, est_value, created_at, is_backorder, backorder_notes 
         FROM service_requests ORDER BY id DESC
     """)
     rows = cursor.fetchall()
@@ -1648,7 +1661,7 @@ def admin():
     for idx, r in enumerate(rows):
         (req_id, first_name, last_name, old_cust_name, phone, email,
          address, city, zip_code, urgency, equip, model_no,
-         serial_no, desc, assigned_tech, status, est_value, created_at) = r
+         serial_no, desc, assigned_tech, status, est_value, created_at, is_backorder, bo_notes) = r
         status = status if status else "Pending"
         assigned_tech = assigned_tech if assigned_tech else "Unassigned"
 
@@ -1726,13 +1739,15 @@ def admin():
         initial_display = "display: none;" if status == "Completed" else ""
         age_badge_color = "background: #fee2e2; color: #dc2626;" if (is_urgent_age and status == "Pending") else "background: #f1f5f9; color: #64748b;"
 
+        bo_badge = "<span class='badge bg-warning text-dark ms-1'>Backorder</span>" if is_backorder else ""
+
         table_rows += f"""
-        <tr class="data-row job-row" data-status="{status}" style="{initial_display}">
+        <tr class="data-row job-row" data-status="{status}" data-backorder="{is_backorder}" style="{initial_display}">
             <td style="width: 35px;"><strong style="color: #64748b;">#{req_id}</strong></td>
             <td style="min-width: 110px;">
                 <a href="javascript:void(0);" onclick="openDrawer({req_id}, '{full_name}', '{phone}', '{full_address}', '{equip}', '{desc}', '{assigned_tech}')" style="color: #0f172a; text-decoration: underline; font-weight: 700;">
                     {full_name}
-                </a><br>
+                </a>{bo_badge}<br>
                 <span style="{age_badge_color} font-size: 9px; padding: 2px 5px; border-radius: 4px; font-weight: 700;">⏱️ {age_text}</span>
             </td>
             <td style="min-width: 120px;">{contact_info}</td>
@@ -1792,11 +1807,12 @@ def admin():
     <html>
     <head>
         <title>OLMIOS | Dispatch Command Center</title>
+        {COMMON_HEADER}
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <style>
             {COMMON_ADMIN_CSS}
             .container-admin {{ max-width: 100%; margin: 0 auto; padding: 10px; }}
-            .header-admin {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }}
+            .header-admin {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }}
             
             .kpi-grid {{ display: flex; gap: 12px; margin-bottom: 20px; }}
             .kpi-card {{ flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; }}
@@ -1827,30 +1843,23 @@ def admin():
             }}
             #leafletMap {{ height: 500px; width: 100%; }}
 
-            .controls-bar {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; flex-wrap: wrap; }}
-            .search-input {{ flex: 1; min-width: 180px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-family: inherit; }}
+            .controls-bar {{ display: flex; justify-content: flex-start; align-items: center; margin-bottom: 15px; gap: 10px; flex-wrap: wrap; }}
+            /* SHOT #2 ADJUSTMENT: HALF SIZE SEARCH BAR */
+            .search-input {{ width: 220px; max-width: 220px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-family: inherit; }}
             
-            .filter-tabs {{ display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }}
-            .tab-btn {{ padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: #f1f5f9; color: #475569; display: flex; align-items: center; gap: 4px; }}
+            /* SHOT #2 ADJUSTMENT: SHIFTED LEFT TABS */
+            .filter-tabs {{ display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }}
+            .tab-btn {{ padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: #f1f5f9; color: #475569; display: flex; align-items: center; gap: 4px; }}
             .tab-btn.active {{ background: #2563eb; color: #ffffff; border-color: #2563eb; }}
             .tab-sms-cust {{ border-color: #2563eb; color: #2563eb; background: #eff6ff; }}
             .tab-sms-tech {{ border-color: #d97706; color: #b45309; background: #fffbe3; }}
-            .tab-btn.active.tab-sms-cust {{ background: #2563eb; color: #ffffff; }}
-            .tab-btn.active.tab-sms-tech {{ background: #d97706; color: #ffffff; }}
+            .tab-backorder {{ border-color: #d97706; color: #d97706; background: #fef3c7; }}
 
             .table-wrapper {{ overflow-x: auto; width: 100%; }}
             table {{ width: 100%; border-collapse: collapse; table-layout: auto; }}
             th, td {{ padding: 10px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 12px; vertical-align: top; box-sizing: border-box; color: #0f172a; }}
             th {{ background: #f8fafc; color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; white-space: nowrap; }}
-            .nav-actions {{ display: flex; gap: 12px; align-items: center; }}
             
-            .view-panel {{ display: none; }}
-            .view-panel.active {{ display: block; }}
-            
-            .map-legend {{ display: flex; gap: 10px; font-size: 10px; font-weight: 700; }}
-            .legend-item {{ display: flex; align-items: center; gap: 4px; }}
-            .dot {{ width: 9px; height: 9px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,0.2); }}
-
             .drawer {{
                 position: fixed;
                 top: 0; right: -400px;
@@ -1866,6 +1875,7 @@ def admin():
             }}
             .drawer.open {{ right: 0; }}
             .drawer-close {{ font-size: 20px; font-weight: 800; cursor: pointer; color: #64748b; float: right; }}
+            .modal-dark { background: rgba(15, 23, 42, 0.85); }
         </style>
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script>
@@ -1981,7 +1991,11 @@ def admin():
                 let rows = document.querySelectorAll('.job-row');
                 rows.forEach(r => {{
                     let status = r.getAttribute('data-status');
-                    if (view === 'Active') {{
+                    let isBo = r.getAttribute('data-backorder');
+
+                    if (view === 'Backorder') {{
+                        r.style.display = (isBo === '1') ? '' : 'none';
+                    }} else if (view === 'Active') {{
                         r.style.display = (status !== 'Completed') ? '' : 'none';
                     }} else if (view === 'All') {{
                         r.style.display = '';
@@ -2003,15 +2017,23 @@ def admin():
     </head>
     <body>
         <div class="panel container-admin">
+            
+            <!-- SHOT #1 ADJUSTMENT: MOVED NEW CUSTOMER & DISPATCH CONTROLS TO TOP LEFT -->
             <div class="header-admin">
-                <div>
-                    <h1 class="brand-logo" style="margin: 0;">OLMIOS</h1>
-                    <span style="color: #64748b; font-size: 12px; letter-spacing: 0.5px; font-weight: 700;">DISPATCH COMMAND CENTER</span>
+                <div class="d-flex align-items-center gap-3">
+                    <h1 class="brand-logo mb-0">OLMIOS</h1>
+                    <div class="d-flex align-items-center gap-1">
+                        <a href="/profile" class="btn-admin btn-primary-admin"><i class="fa-solid fa-user-plus me-1"></i> + New Customer</a>
+                        <a href="/dispatch_request" class="btn-admin btn-accent-admin"><i class="fa-solid fa-bolt me-1"></i> Service Request</a>
+                        <button type="button" class="btn-admin btn-outline-admin" data-bs-toggle="modal" data-bs-target="#existingCustomerModal"><i class="fa-solid fa-address-book me-1"></i> Existing Customer</button>
+                        <button type="button" class="btn-admin btn-outline-admin" onclick="switchView('Active', document.querySelector('.filter-tabs .tab-btn'))"><i class="fa-solid fa-ticket me-1"></i> Open Service Ticket</button>
+                        <button type="button" class="btn-admin btn-outline-admin text-danger border-danger-subtle" data-bs-toggle="modal" data-bs-target="#refundsModal"><i class="fa-solid fa-shield-cat me-1"></i> Refunds/Warranty Pending</button>
+                    </div>
                 </div>
-                <div class="nav-actions">
-                    <a href="/customer_home" class="btn-admin btn-primary-admin">+ NEW ORDER</a>
+                <div class="d-flex align-items-center gap-2">
+                    <span style="color: #64748b; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;">DISPATCH COMMAND CENTER</span>
                     <a href="/customer_home" class="home-phoenix-btn" title="Return to Customer Home">
-                        {get_phoenix_svg(46, 46)}
+                        {get_phoenix_svg(42, 42)}
                     </a>
                 </div>
             </div>
@@ -2041,15 +2063,18 @@ def admin():
                 
                 <!-- LEFT PANE: PRIORITIZED TABS & VIEWS -->
                 <div class="left-pane">
+                    
+                    <!-- SHOT #2 ADJUSTMENT: HALF SIZE SEARCH BAR & LEFT ALIGNED TABS -->
                     <div class="controls-bar">
-                        <input type="text" id="searchInput" class="search-input" onkeyup="searchTable()" placeholder="🔍 Search customer, phone, or site...">
+                        <input type="text" id="searchInput" class="search-input" onkeyup="searchTable()" placeholder="🔍 Search customer, phone...">
                         
                         <div class="filter-tabs">
                             <button class="tab-btn active" onclick="switchView('Active', this)">Active Jobs ({active_count})</button>
                             <button class="tab-btn tab-sms-cust" onclick="switchView('CustomerSMS', this)">💬 Customer Texts {cust_alert_badge}</button>
                             <button class="tab-btn tab-sms-tech" onclick="switchView('TechSMS', this)">📱 Tech/Driver Texts {tech_alert_badge}</button>
+                            <button class="tab-btn tab-backorder" onclick="switchView('Backorder', this)">📦 Backorder ({backorder_count})</button>
                             
-                            <span style="color:#cbd5e1; margin:0 2px;">|</span>
+                            <span style="color:#cbd5e1; margin:0 1px;">|</span>
                             
                             <button class="tab-btn" onclick="switchView('Pending', this)">Pending ({pending_count})</button>
                             <button class="tab-btn" onclick="switchView('In Progress', this)">In Progress ({progress_count})</button>
@@ -2144,12 +2169,82 @@ def admin():
                 </a>
             </div>
         </div>
+
+        <!-- EXISTING CUSTOMER HISTORY MODAL -->
+        <div class="modal fade" id="existingCustomerModal" tabindex="-1">
+            <div class="modal-dialog modal-xl modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0">
+                    <div class="modal-header bg-dark text-white border-0">
+                        <h5 class="modal-title fw-bold"><i class="fa-solid fa-address-book text-primary me-2"></i> Existing Customer History & Lifetime Records</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4 text-dark">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped align-middle">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Customer Name</th>
+                                        <th>Serviced Equipment / Parts</th>
+                                        <th>Servicing Tech</th>
+                                        <th>Linked Job Photos</th>
+                                        <th>Vendor Invoices</th>
+                                        <th>Sales History</th>
+                                        <th>Card History</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="fw-bold">Ian Olvera<br><span class="text-muted small">8323884957</span></td>
+                                        <td>Trane Condenser (5TTR6048) + Evaporator Coil (5TXCC007)</td>
+                                        <td>Tech A (Lead)</td>
+                                        <td><span class="badge bg-primary">📸 3 Photos Linked</span></td>
+                                        <td><span class="badge bg-secondary">📄 Johnstone INV-9902</span></td>
+                                        <td class="fw-bold text-success">$99.00 Diagnostic + $1,850 Repair</td>
+                                        <td>💳 Visa ending in 1004</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- REFUNDS & WARRANTY MANAGER APPROVAL MODAL -->
+        <div class="modal fade" id="refundsModal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0">
+                    <div class="modal-header bg-danger text-white border-0">
+                        <h5 class="modal-title fw-bold"><i class="fa-solid fa-shield-cat me-2"></i> Refunds & Warranty Pending Manager Approval</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4 text-dark">
+                        <div class="alert alert-warning small fw-bold">
+                            <i class="fa-solid fa-lock me-1"></i> Manager sign-off is required before finalizing any refund or processing card reversals.
+                        </div>
+                        <div class="card p-3 border shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-dark">REFUND REQUEST #1002 — Ian Olvera</span>
+                                <span class="badge bg-danger">Pending Manager Approval</span>
+                            </div>
+                            <p class="small text-muted mb-2">Requested Amount: <strong>$99.00</strong> | Diagnostic Fee Adjustment</p>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-success fw-bold w-50" onclick="alert('Refund Approved by Manager & Processed to Card ending 1004.')"><i class="fa-solid fa-check me-1"></i> Manager Approve & Issue Refund</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger fw-bold w-50" onclick="alert('Refund Request Declined.')"><i class="fa-solid fa-xmark me-1"></i> Decline Request</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     </body>
     </html>
     """
 
 # ==========================================
-# ADMIN ACTION ENDPOINTS
+# ADMIN ACTIONS & ENDPOINTS
 # ==========================================
 @app.route("/accept_and_dispatch/<int:req_id>", methods=["POST"])
 def accept_and_dispatch(req_id):
