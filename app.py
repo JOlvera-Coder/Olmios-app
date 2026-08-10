@@ -32,7 +32,7 @@ def init_db():
             serial_number TEXT,
             issue_description TEXT NOT NULL,
             assigned_tech TEXT DEFAULT 'Unassigned',
-            est_value REAL DEFAULT 150.00,
+            est_value REAL DEFAULT 99.00,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             status TEXT DEFAULT 'Pending'
         )
@@ -61,7 +61,7 @@ def init_db():
             pass
 
     try:
-        cursor.execute("ALTER TABLE service_requests ADD COLUMN est_value REAL DEFAULT 150.00")
+        cursor.execute("ALTER TABLE service_requests ADD COLUMN est_value REAL DEFAULT 99.00")
     except sqlite3.OperationalError:
         pass
 
@@ -69,19 +69,6 @@ def init_db():
         cursor.execute("ALTER TABLE service_requests ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
     except sqlite3.OperationalError:
         pass
-
-    cursor.execute("SELECT COUNT(*) FROM sms_messages")
-    if cursor.fetchone()[0] == 0:
-        sample_messages = [
-            ("Customer", "John Doe", "8323884957", "Hi, what time will the tech arrive today for #5?"),
-            ("Customer", "Ian Olvera", "3468043947", "I unlocked the side gate for the technician."),
-            ("Tech", "Tech A (Lead)", "8325550199", "Accepted job #4, heading to site now."),
-            ("Tech", "Tech B", "8325550144", "Need a replacement capacitor for unit #2.")
-        ]
-        cursor.executemany("""
-            INSERT INTO sms_messages (sender_type, sender_name, sender_phone, message_text, is_new)
-            VALUES (?, ?, ?, ?, 1)
-        """, sample_messages)
 
     conn.commit()
     conn.close()
@@ -465,136 +452,142 @@ def dispatch_request():
             <span id="verified_status_line">Profile Verified & Ready</span>
         </div>
 
-        <div id="service_mode_container" class="mb-3">
-            <label class="form-label text-center d-block text-primary fw-bold fs-6 mb-2"><i class="fa-solid fa-list-check me-1"></i> SELECT SERVICE NEED</label>
-            <div class="row g-2">
-                <div class="col-6">
-                    <button type="button" class="btn-service-type" onclick="chooseServiceMode('repair')">
-                        <i class="fa-solid fa-screwdriver-wrench text-warning mb-1 d-block fs-4"></i> System Repair
+        <form method="POST" action="/submit_dispatch">
+            <input type="hidden" name="customer_name_hidden" id="customer_name_hidden">
+            <input type="hidden" name="address_hidden" id="address_hidden">
+
+            <div id="service_mode_container" class="mb-3">
+                <label class="form-label text-center d-block text-primary fw-bold fs-6 mb-2"><i class="fa-solid fa-list-check me-1"></i> SELECT SERVICE NEED</label>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button type="button" class="btn-service-type" onclick="chooseServiceMode('repair')">
+                            <i class="fa-solid fa-screwdriver-wrench text-warning mb-1 d-block fs-4"></i> System Repair
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn-service-type" onclick="chooseServiceMode('replacement')">
+                            <i class="fa-solid fa-arrows-rotate text-success mb-1 d-block fs-4"></i> System Replacement
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="repair_tabs_container" class="row g-2 mb-3" style="display: none;">
+                <div class="col-4">
+                    <button type="button" class="btn-category active" id="cat_cooling" onclick="selectRepairCategory('cooling')">
+                        <i class="fa-solid fa-snowflake text-info mb-1 d-block fs-5"></i> Cooling
                     </button>
                 </div>
-                <div class="col-6">
-                    <button type="button" class="btn-service-type" onclick="chooseServiceMode('replacement')">
-                        <i class="fa-solid fa-arrows-rotate text-success mb-1 d-block fs-4"></i> System Replacement
+                <div class="col-4">
+                    <button type="button" class="btn-category" id="cat_heating" onclick="selectRepairCategory('heating')">
+                        <i class="fa-solid fa-fire text-danger mb-1 d-block fs-5"></i> Heating
+                    </button>
+                </div>
+                <div class="col-4">
+                    <button type="button" class="btn-category" id="cat_thermostat" onclick="selectRepairCategory('thermostat')">
+                        <i class="fa-solid fa-sliders text-primary mb-1 d-block fs-5"></i> Thermostat
                     </button>
                 </div>
             </div>
-        </div>
 
-        <div id="repair_tabs_container" class="row g-2 mb-3" style="display: none;">
-            <div class="col-4">
-                <button type="button" class="btn-category active" id="cat_cooling" onclick="selectRepairCategory('cooling')">
-                    <i class="fa-solid fa-snowflake text-info mb-1 d-block fs-5"></i> Cooling
-                </button>
+            <div id="replacement_tabs_container" class="mb-3" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="form-label small text-muted mb-0">SELECT SAVED EQUIPMENT TO REPLACE:</label>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="resetToServiceMode()"><i class="fa-solid fa-arrow-left me-1"></i> Back</button>
+                </div>
+                <div id="dynamic_replacement_tabs" class="d-flex flex-column gap-2"></div>
             </div>
-            <div class="col-4">
-                <button type="button" class="btn-category" id="cat_heating" onclick="selectRepairCategory('heating')">
-                    <i class="fa-solid fa-fire text-danger mb-1 d-block fs-5"></i> Heating
-                </button>
+
+            <div class="mb-3">
+                <label class="form-label">SELECT JOB SITE PROPERTY ADDRESS</label>
+                <select class="form-select rounded-3" id="dispatch_address_select" name="address">
+                    <option value="primary">📍 Primary Residential Address</option>
+                </select>
             </div>
-            <div class="col-4">
-                <button type="button" class="btn-category" id="cat_thermostat" onclick="selectRepairCategory('thermostat')">
-                    <i class="fa-solid fa-sliders text-primary mb-1 d-block fs-5"></i> Thermostat
-                </button>
+
+            <div class="mb-3">
+                <label class="form-label">PURCHASE ORDER (PO) # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
+                <input type="text" name="po_number" class="form-control rounded-3" placeholder="e.g. PO-88204">
             </div>
-        </div>
 
-        <div id="replacement_tabs_container" class="mb-3" style="display: none;">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <label class="form-label small text-muted mb-0">SELECT SAVED EQUIPMENT TO REPLACE:</label>
-                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="resetToServiceMode()"><i class="fa-solid fa-arrow-left me-1"></i> Back</button>
+            <div class="mb-3">
+                <label class="form-label">SERVICE URGENCY</label>
+                <select class="form-select rounded-3 fw-bold" id="urgency_select" name="urgency" onchange="toggleUrgencySchedule(this.value)">
+                    <option value="Dispatch Now" selected>⚡ Dispatch Now</option>
+                    <option value="Scheduled">📅 Other (Select Date & Time)</option>
+                </select>
             </div>
-            <div id="dynamic_replacement_tabs" class="d-flex flex-column gap-2"></div>
-        </div>
 
-        <div class="mb-3">
-            <label class="form-label">SELECT JOB SITE PROPERTY ADDRESS</label>
-            <select class="form-select rounded-3" id="dispatch_address_select">
-                <option value="primary">📍 Primary Residential Address</option>
-            </select>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">PURCHASE ORDER (PO) # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
-            <input type="text" class="form-control rounded-3" placeholder="e.g. PO-88204">
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">SERVICE URGENCY</label>
-            <select class="form-select rounded-3 fw-bold" id="urgency_select" onchange="toggleUrgencySchedule(this.value)">
-                <option value="now" selected>⚡ Dispatch Now</option>
-                <option value="other">📅 Other (Select Date & Time)</option>
-            </select>
-        </div>
-
-        <div id="urgency_schedule_box" class="row g-2 mb-3 p-2 bg-light border rounded-3" style="display: none;">
-            <div class="col-6">
-                <label class="form-label small mb-1">SELECT DATE</label>
-                <input type="date" id="scheduled_date" class="form-control rounded-2">
+            <div id="urgency_schedule_box" class="row g-2 mb-3 p-2 bg-light border rounded-3" style="display: none;">
+                <div class="col-6">
+                    <label class="form-label small mb-1">SELECT DATE</label>
+                    <input type="date" id="scheduled_date" class="form-control rounded-2">
+                </div>
+                <div class="col-6">
+                    <label class="form-label small mb-1">SELECT TIME</label>
+                    <input type="time" id="scheduled_time" class="form-control rounded-2">
+                </div>
             </div>
-            <div class="col-6">
-                <label class="form-label small mb-1">SELECT TIME</label>
-                <input type="time" id="scheduled_time" class="form-control rounded-2">
+
+            <div class="mb-3">
+                <label class="form-label">EQUIPMENT TYPE (INCLUDES RESIDENTIAL & COMMERCIAL)</label>
+                <select class="form-select rounded-3" id="equipment_type_select" name="equipment">
+                    <option value="General HVAC Issue">Select HVAC Equipment...</option>
+                    <option value="Cooling Issue">Cooling Issue</option>
+                    <option value="Heating Issue">Heating Issue</option>
+                    <option value="Control / Thermostat Issue">Control / Thermostat Issue</option>
+                    <option value="A/C Condenser">A/C Condenser</option>
+                    <option value="Furnace / Air Handler">Furnace / Air Handler</option>
+                    <option value="Complete Split System">Complete Split System</option>
+                    <option value="Commercial RTU">Commercial RTU</option>
+                </select>
             </div>
-        </div>
 
-        <div class="mb-3">
-            <label class="form-label">EQUIPMENT TYPE (INCLUDES RESIDENTIAL & COMMERCIAL)</label>
-            <select class="form-select rounded-3" id="equipment_type_select">
-                <option value="">Select HVAC Equipment...</option>
-                <option value="Cooling Issue">Cooling Issue</option>
-                <option value="Heating Issue">Heating Issue</option>
-                <option value="Control / Thermostat Issue">Control / Thermostat Issue</option>
-                <option value="A/C Condenser">A/C Condenser</option>
-                <option value="Furnace / Air Handler">Furnace / Air Handler</option>
-                <option value="Complete Split System">Complete Split System</option>
-                <option value="Commercial RTU">Commercial RTU</option>
-            </select>
-        </div>
-
-        <div class="p-3 mb-3 rounded-4" style="background: #f0f7ff; border: 1.5px solid #3b82f6;">
-            <div class="d-flex align-items-center gap-2 mb-2">
-                {{PHOENIX_SMALL}}
-                <h6 class="fw-bold mb-0 text-primary">OLMIOS Diagnostic Chat Assistant</h6>
-            </div>
-            <p class="small text-muted mb-2">Tell us what's going on! Mention symptoms, specific defective part notes, or paste image URLs:</p>
-            
-            <textarea id="chat_assistant_input" class="form-control mb-2" rows="3" placeholder="e.g., Coil leaking water near furnace..."></textarea>
-            
-            <button type="button" class="btn btn-primary w-100 py-2 fw-bold rounded-3 shadow-sm" onclick="autoFillDescription()">
-                <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AUTO-FILL ISSUE DESCRIPTION
-            </button>
-
-            <div id="ai_followup_box" class="ai-followup-box">
-                <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-info-subtle">
+            <div class="p-3 mb-3 rounded-4" style="background: #f0f7ff; border: 1.5px solid #3b82f6;">
+                <div class="d-flex align-items-center gap-2 mb-2">
                     {{PHOENIX_SMALL}}
-                    <span class="fw-bold text-primary small"><i class="fa-solid fa-robot me-1"></i> Olmios AI Diagnostic Follow-Up:</span>
+                    <h6 class="fw-bold mb-0 text-primary">OLMIOS Diagnostic Chat Assistant</h6>
                 </div>
-                <p class="small text-dark fw-semibold mb-2" id="ai_followup_question">Is the leak on the outdoor condenser coil or the indoor evaporator coil/air handler?</p>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold w-50" onclick="answerAiLeak('Outdoor Condenser Coil')">Outdoor Condenser Coil</button>
-                    <button type="button" class="btn btn-sm btn-primary fw-bold w-50" onclick="answerAiLeak('Indoor Evaporator Coil')">Indoor Evaporator Coil</button>
+                <p class="small text-muted mb-2">Tell us what's going on! Mention symptoms, specific defective part notes, or paste image URLs:</p>
+                
+                <textarea id="chat_assistant_input" class="form-control mb-2" rows="3" placeholder="e.g., Coil leaking water near furnace..."></textarea>
+                
+                <button type="button" class="btn btn-primary w-100 py-2 fw-bold rounded-3 shadow-sm" onclick="autoFillDescription()">
+                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AUTO-FILL ISSUE DESCRIPTION
+                </button>
+
+                <div id="ai_followup_box" class="ai-followup-box">
+                    <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-info-subtle">
+                        {{PHOENIX_SMALL}}
+                        <span class="fw-bold text-primary small"><i class="fa-solid fa-robot me-1"></i> Olmios AI Diagnostic Follow-Up:</span>
+                    </div>
+                    <p class="small text-dark fw-semibold mb-2" id="ai_followup_question">Is the leak on the outdoor condenser coil or the indoor evaporator coil/air handler?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold w-50" onclick="answerAiLeak('Outdoor Condenser Coil')">Outdoor Condenser Coil</button>
+                        <button type="button" class="btn btn-sm btn-primary fw-bold w-50" onclick="answerAiLeak('Indoor Evaporator Coil')">Indoor Evaporator Coil</button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="mb-3">
-            <label class="form-label">ISSUE DESCRIPTION (FINAL DISPATCH SUMMARY)</label>
-            <textarea id="issue_description" class="form-control rounded-3" rows="3" placeholder="Describe requested HVAC issue or click Auto-Fill above..."></textarea>
-        </div>
+            <div class="mb-3">
+                <label class="form-label">ISSUE DESCRIPTION (FINAL DISPATCH SUMMARY)</label>
+                <textarea id="issue_description" name="issue_description" class="form-control rounded-3" rows="3" placeholder="Describe requested HVAC issue or click Auto-Fill above..."></textarea>
+            </div>
 
-        <div class="mb-3">
-            <label class="form-label">SELECT SAVED PAYMENT CARD</label>
-            <select class="form-select rounded-3">
-                <option value="">Select Payment Method...</option>
-                <option selected>💳 Visa ending in 1004</option>
-            </select>
-        </div>
+            <div class="mb-3">
+                <label class="form-label">SELECT SAVED PAYMENT CARD</label>
+                <select class="form-select rounded-3">
+                    <option value="">Select Payment Method...</option>
+                    <option selected>💳 Visa ending in 1004</option>
+                </select>
+            </div>
 
-        <button type="button" class="btn btn-amber w-100 py-3 rounded-3 fw-bold mb-2 shadow-sm" onclick="alert('Service Request Dispatched! Technician assigned.')">
-            💳 Request Service & Dispatch Tech
-        </button>
-        
+            <!-- EXPLICIT $99 PRICING BUTTON AND FORM SUBMIT -->
+            <button type="submit" class="btn btn-amber w-100 py-3 rounded-3 fw-bold mb-2 shadow-sm fs-6">
+                💳 Request Service & Dispatch - $99.00
+            </button>
+        </form>
+
         <a href="/customer_home" class="btn btn-outline-secondary w-100 py-2 rounded-3 fw-bold small"><i class="fa-solid fa-house me-1"></i> Home Page</a>
     </div>
 
@@ -626,7 +619,7 @@ def dispatch_request():
 
     function toggleUrgencySchedule(val) {
         let scheduleBox = document.getElementById('urgency_schedule_box');
-        scheduleBox.style.display = (val === 'other') ? 'flex' : 'none';
+        scheduleBox.style.display = (val === 'Scheduled') ? 'flex' : 'none';
     }
 
     function selectRepairCategory(catName) {
@@ -770,12 +763,100 @@ def dispatch_request():
         let addr = localStorage.getItem('olmios_saved_address') || '18510 Ranch View Trail Cir, Houston, TX';
         document.getElementById('verified_status_line').innerText = "Profile Verified: " + name;
         document.getElementById('dispatch_address_select').options[0].text = "📍 " + addr;
+        document.getElementById('customer_name_hidden').value = name;
+        document.getElementById('address_hidden').value = addr;
     }
     </script>
 </body>
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{PHOENIX_SMALL}}', get_phoenix_svg(28, 28))
 
+# ==========================================
+# SUBMIT DISPATCH ACTION (WRITE TO DATABASE)
+# ==========================================
+@app.route('/submit_dispatch', methods=['POST'])
+def submit_dispatch():
+    cust_name = request.form.get('customer_name_hidden') or 'Ian Olvera'
+    address = request.form.get('address_hidden') or '18510 Ranch View Trail Cir, Houston, TX 77073'
+    urgency = request.form.get('urgency', 'Dispatch Now')
+    equipment = request.form.get('equipment') or 'A/C Condenser'
+    issue_description = request.form.get('issue_description') or 'Customer requested diagnostic service.'
+
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO service_requests (
+            first_name, last_name, customer_name, phone, address, city, zip_code,
+            urgency, equipment, issue_description, assigned_tech, est_value, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Unassigned', 99.00, 'Pending')
+    """, ('Ian', 'Olvera', cust_name, '8323884957', address, 'Houston', '77073', urgency, equipment, issue_description))
+    
+    req_id = cursor.lastrowid
+
+    cursor.execute("""
+        INSERT INTO sms_messages (sender_type, sender_name, sender_phone, message_text, is_new)
+        VALUES ('Customer', ?, '8323884957', ?, 1)
+    """, (cust_name, f"New $99 Order #{req_id}: {equipment} - {urgency}"))
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('confirmation', req_id=req_id))
+
+@app.route("/confirmation/<int:req_id>")
+def confirmation(req_id):
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT customer_name, phone, address, city, zip_code, urgency, equipment, status, issue_description 
+        FROM service_requests WHERE id = ?
+    """, (req_id,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return redirect(url_for('customer_home'))
+
+    (cust_name, phone, address, city, zip_code, urgency, equip, status, desc) = row
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>OLMIOS | Request Received</title>
+        {COMMON_HEADER}
+        <style>
+            body {{ background-color: #0b1329; color: white; font-family: 'Outfit', sans-serif; padding: 20px; min-height: 100vh; display: flex; align-items: center; justify-content: center; }}
+            .card {{ background: #ffffff; color: #0f172a; padding: 35px; max-width: 480px; width: 100%; border-radius: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }}
+            .success-icon {{ width: 64px; height: 64px; background: #dcfce7; color: #166534; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 15px; }}
+            .summary-box {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; text-align: left; margin: 20px 0; font-size: 13px; }}
+            .summary-row {{ display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; }}
+            .status-badge {{ background: #fef3c7; color: #b45309; padding: 3px 10px; border-radius: 12px; font-weight: 800; font-size: 11px; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="success-icon">✓</div>
+            <h3 class="fw-bold text-dark mb-1">Service Dispatched!</h3>
+            <p class="text-muted small">Your $99.00 diagnostic request is active in the Olmios network.</p>
+
+            <div class="summary-box">
+                <div class="summary-row"><span class="text-muted fw-bold">Ticket #:</span><span class="fw-bold text-primary">#{req_id}</span></div>
+                <div class="summary-row"><span class="text-muted fw-bold">Amount Paid:</span><span class="fw-bold text-success">$99.00</span></div>
+                <div class="summary-row"><span class="text-muted fw-bold">Status:</span><span><span class="status-badge">{status.upper()}</span></span></div>
+                <div class="summary-row"><span class="text-muted fw-bold">Equipment:</span><span class="fw-bold">{equip}</span></div>
+                <div class="summary-row"><span class="text-muted fw-bold">Location:</span><span class="fw-bold">{address}</span></div>
+            </div>
+
+            <a href="/customer_home" class="btn btn-primary w-100 py-2.5 rounded-3 fw-bold"><i class="fa-solid fa-house me-1"></i> Return to Home Dashboard</a>
+        </div>
+    </body>
+    </html>
+    """
+
+# ==========================================
+# PROFILE & OTHER PAGES
+# ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
     saved_msg = ""
@@ -1589,7 +1670,7 @@ def admin():
         circle_color = "#0284c7"
         is_emergency = False
 
-        if "Emergency" in urgency:
+        if "Emergency" in urgency or "Dispatch Now" in urgency:
             urgency_bg = "#fee2e2"
             urgency_color = "#dc2626"
             circle_color = "#dc2626"
