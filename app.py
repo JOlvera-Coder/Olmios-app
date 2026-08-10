@@ -16,7 +16,7 @@ PHOENIX_SVG = """<svg width="120" height="120" viewBox="0 0 100 100" fill="none"
     <path d="M50 22 C52 22 55 24 55 27 C55 30 52 32 50 34 C49 36 49 42 50 50 C51 58 53 68 50 78 C47 68 49 58 50 50 C51 42 51 36 50 34 C48 32 45 30 45 27 C45 24 48 22 50 22 Z" fill="url(#goldFeathers)" />
     <path d="M50 18 L53 23 L50 21 L47 23 Z" fill="#d97706"/>
     <path d="M53 26 L58 28 L54 30 Z" fill="#b45309"/>
-    <path d="M48 36 C38 30 26 28 16 34 C24 38 32 40 40 46 C28 46 18 50 14 58 C22 58 32 56 42 58 C32 62 24 68 46 64 Z" fill="url(#goldFeathers)" />
+    <path d="M48 36 C38 30 26 28 16 34 C24 38 32 40 40 46 C28 46 18 50 14 58 C22 58 32 56 42 58 C32 62 24 68 22 74 C30 72 38 68 46 64 Z" fill="url(#goldFeathers)" />
     <path d="M52 36 C62 30 74 28 84 34 C76 38 68 40 60 46 C72 46 82 50 86 58 C68 62 76 68 78 74 C70 72 62 68 54 64 Z" fill="url(#goldFeathers)"/>
     <path d="M50 70 L44 86 L50 82 L56 86 Z" fill="url(#goldFeathers)"/>
 </svg>"""
@@ -315,29 +315,32 @@ def dispatch_request():
             </div>
         </div>
 
-        <!-- REPAIR OPTION TABS (SHOWS ON 'SYSTEM REPAIR' SELECTION) -->
+        <!-- REPAIR OPTION TABS: COOLING, HEATING, THERMOSTAT -->
         <div id="repair_tabs_container" class="row g-2 mb-3" style="display: none;">
             <div class="col-4">
-                <button type="button" class="btn-category active" id="cat_cooling" onclick="selectCat('cooling')">
-                    <i class="fa-solid fa-snowflake text-info mb-1 d-block fs-5"></i> Cooling & AC
+                <button type="button" class="btn-category active" id="cat_cooling" onclick="selectRepairCategory('cooling')">
+                    <i class="fa-solid fa-snowflake text-info mb-1 d-block fs-5"></i> Cooling
                 </button>
             </div>
             <div class="col-4">
-                <button type="button" class="btn-category" id="cat_heating" onclick="selectCat('heating')">
+                <button type="button" class="btn-category" id="cat_heating" onclick="selectRepairCategory('heating')">
                     <i class="fa-solid fa-fire text-danger mb-1 d-block fs-5"></i> Heating
                 </button>
             </div>
             <div class="col-4">
-                <button type="button" class="btn-category" id="cat_maintenance" onclick="selectCat('maintenance')">
-                    <i class="fa-solid fa-wrench text-warning mb-1 d-block fs-5"></i> Maintenance
+                <button type="button" class="btn-category" id="cat_thermostat" onclick="selectRepairCategory('thermostat')">
+                    <i class="fa-solid fa-sliders text-primary mb-1 d-block fs-5"></i> Thermostat
                 </button>
             </div>
         </div>
 
-        <!-- REPLACEMENT EQUIPMENT TABS (DYNAMICALLY POPULATED FROM CUSTOMER PROFILE) -->
+        <!-- REPLACEMENT EQUIPMENT TABS (MULTI-SELECT ENABLED + BACK BUTTON) -->
         <div id="replacement_tabs_container" class="mb-3" style="display: none;">
-            <label class="form-label small text-muted mb-1">SELECT SAVED EQUIPMENT TO REPLACE:</label>
-            <div id="dynamic_replacement_tabs" class="d-flex flex-wrap gap-2"></div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label small text-muted mb-0">SELECT SAVED EQUIPMENT TO REPLACE:</label>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="resetToServiceMode()"><i class="fa-solid fa-arrow-left me-1"></i> Back</button>
+            </div>
+            <div id="dynamic_replacement_tabs" class="d-flex flex-column gap-2"></div>
         </div>
 
         <div class="mb-3">
@@ -352,23 +355,37 @@ def dispatch_request():
             <input type="text" class="form-control rounded-3" placeholder="e.g. PO-88204">
         </div>
 
+        <!-- SERVICE URGENCY (DISPATCH NOW VS OTHER SCHEDULING) -->
         <div class="mb-3">
             <label class="form-label">SERVICE URGENCY</label>
-            <select class="form-select rounded-3">
-                <option value="">Select Urgency Level...</option>
-                <option value="standard">Standard Dispatch (Within 24 Hours)</option>
-                <option value="emergency">🚨 Emergency Same-Day Dispatch</option>
+            <select class="form-select rounded-3 fw-bold" id="urgency_select" onchange="toggleUrgencySchedule(this.value)">
+                <option value="now" selected>⚡ Dispatch Now</option>
+                <option value="other">📅 Other (Select Date & Time)</option>
             </select>
+        </div>
+
+        <div id="urgency_schedule_box" class="row g-2 mb-3 p-2 bg-light border rounded-3" style="display: none;">
+            <div class="col-6">
+                <label class="form-label small mb-1">SELECT DATE</label>
+                <input type="date" id="scheduled_date" class="form-control rounded-2">
+            </div>
+            <div class="col-6">
+                <label class="form-label small mb-1">SELECT TIME</label>
+                <input type="time" id="scheduled_time" class="form-control rounded-2">
+            </div>
         </div>
 
         <div class="mb-3">
             <label class="form-label">EQUIPMENT TYPE (INCLUDES RESIDENTIAL & COMMERCIAL)</label>
-            <select class="form-select rounded-3">
+            <select class="form-select rounded-3" id="equipment_type_select">
                 <option value="">Select HVAC Equipment...</option>
-                <option>A/C Condenser</option>
-                <option>Furnace / Air Handler</option>
-                <option>Complete Split System</option>
-                <option>Commercial RTU</option>
+                <option value="Cooling Issue">Cooling Issue</option>
+                <option value="Heating Issue">Heating Issue</option>
+                <option value="Control / Thermostat Issue">Control / Thermostat Issue</option>
+                <option value="A/C Condenser">A/C Condenser</option>
+                <option value="Furnace / Air Handler">Furnace / Air Handler</option>
+                <option value="Complete Split System">Complete Split System</option>
+                <option value="Commercial RTU">Commercial RTU</option>
             </select>
         </div>
 
@@ -385,7 +402,7 @@ def dispatch_request():
                 <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AUTO-FILL ISSUE DESCRIPTION
             </button>
 
-            <!-- INTERACTIVE AI FOLLOW-UP PROMPT WITH PHOENIX SYMBOL & BRANDING -->
+            <!-- INTERACTIVE AI FOLLOW-UP PROMPT -->
             <div id="ai_followup_box" class="ai-followup-box">
                 <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-info-subtle">
                     {{PHOENIX_SMALL}}
@@ -422,6 +439,7 @@ def dispatch_request():
     <script>
     var currentCoilSelection = "";
     var currentServiceMode = "";
+    var selectedReplacementTabs = [];
 
     function chooseServiceMode(mode) {
         currentServiceMode = mode;
@@ -437,10 +455,36 @@ def dispatch_request():
         }
     }
 
+    function resetToServiceMode() {
+        document.getElementById('service_mode_container').style.display = 'block';
+        document.getElementById('repair_tabs_container').style.display = 'none';
+        document.getElementById('replacement_tabs_container').style.display = 'none';
+        selectedReplacementTabs = [];
+    }
+
+    function toggleUrgencySchedule(val) {
+        let scheduleBox = document.getElementById('urgency_schedule_box');
+        scheduleBox.style.display = (val === 'other') ? 'flex' : 'none';
+    }
+
+    function selectRepairCategory(catName) {
+        document.querySelectorAll('#repair_tabs_container .btn-category').forEach(b => b.classList.remove('active'));
+        let targetBtn = document.getElementById('cat_' + catName);
+        if(targetBtn) targetBtn.classList.add('active');
+
+        let eqSelect = document.getElementById('equipment_type_select');
+        if(catName === 'cooling') eqSelect.value = 'Cooling Issue';
+        else if(catName === 'heating') eqSelect.value = 'Heating Issue';
+        else if(catName === 'thermostat') eqSelect.value = 'Control / Thermostat Issue';
+
+        autoFillDescription();
+    }
+
     function loadProfileEquipmentTabs() {
         let savedType = localStorage.getItem('olmios_hvac_type') || 'gas_sys';
         let condModel = localStorage.getItem('olmios_cond_mod') || '5TTR6048';
         let coilModel = localStorage.getItem('olmios_coil_mod') || '5TXCC007';
+        let furnModel = localStorage.getItem('olmios_furn_mod') || 'S8X1C080';
 
         let typeLabel = "Gas System";
         if(savedType === 'elec_sys') typeLabel = "Electric System";
@@ -452,24 +496,32 @@ def dispatch_request():
 
         let container = document.getElementById('dynamic_replacement_tabs');
         container.innerHTML = `
-            <button type="button" class="btn-category active" onclick="selectReplacementTab('${typeLabel}')">
-                <i class="fa-solid fa-arrows-rotate text-success mb-1 d-block fs-5"></i> Replace ${typeLabel} (${condModel})
+            <button type="button" class="btn-category text-start px-3 py-2.5" onclick="toggleMultiReplacementTab(this, 'Complete ${typeLabel} (${condModel})')">
+                <i class="fa-solid fa-arrows-rotate text-success me-2"></i> Replace Complete ${typeLabel} (Condenser: ${condModel})
             </button>
-            <button type="button" class="btn-category" onclick="selectReplacementTab('Evaporator Coil')">
-                <i class="fa-solid fa-box text-info mb-1 d-block fs-5"></i> Replace Evaporator Coil (${coilModel})
+            <button type="button" class="btn-category text-start px-3 py-2.5" onclick="toggleMultiReplacementTab(this, 'Evaporator Coil (${coilModel})')">
+                <i class="fa-solid fa-box text-info me-2"></i> Replace Evaporator Coil (${coilModel})
+            </button>
+            <button type="button" class="btn-category text-start px-3 py-2.5" onclick="toggleMultiReplacementTab(this, 'Furnace / Heating Unit (${furnModel})')">
+                <i class="fa-solid fa-fire text-danger me-2"></i> Replace Furnace / Heating Unit (${furnModel})
             </button>`;
     }
 
-    function selectReplacementTab(tabName) {
-        document.querySelectorAll('#dynamic_replacement_tabs .btn-category').forEach(b => b.classList.remove('active'));
-        event.currentTarget.classList.add('active');
-        let issueBox = document.getElementById('issue_description');
-        issueBox.value = "Customer requested FULL SYSTEM REPLACEMENT evaluation for: " + tabName;
-    }
+    function toggleMultiReplacementTab(element, tabName) {
+        element.classList.toggle('active');
+        let index = selectedReplacementTabs.indexOf(tabName);
+        if(index > -1) {
+            selectedReplacementTabs.splice(index, 1);
+        } else {
+            selectedReplacementTabs.push(tabName);
+        }
 
-    function selectCat(catName) {
-        document.querySelectorAll('#repair_tabs_container .btn-category').forEach(b => b.classList.remove('active'));
-        document.getElementById('cat_' + catName).classList.add('active');
+        let issueBox = document.getElementById('issue_description');
+        if(selectedReplacementTabs.length > 0) {
+            issueBox.value = "Customer requested SYSTEM REPLACEMENT evaluation for: " + selectedReplacementTabs.join(" + ");
+        } else {
+            issueBox.value = "Customer requested SYSTEM REPLACEMENT evaluation.";
+        }
     }
 
     function parseModelNumberDetails(modelStr) {
@@ -502,9 +554,11 @@ def dispatch_request():
         let chatInput = document.getElementById('chat_assistant_input').value.trim();
         let issueBox = document.getElementById('issue_description');
         let followupBox = document.getElementById('ai_followup_box');
+        let eqSelectVal = document.getElementById('equipment_type_select').value;
 
         let condModel = localStorage.getItem('olmios_cond_mod') || '5TTR6048';
         let coilModel = localStorage.getItem('olmios_coil_mod') || '5TXCC007';
+        let furnModel = localStorage.getItem('olmios_furn_mod') || 'S8X1C080';
         let sysType = localStorage.getItem('olmios_hvac_type') || 'gas_sys';
         let parsed = parseModelNumberDetails(condModel);
 
@@ -518,22 +572,23 @@ def dispatch_request():
             followupBox.style.display = 'none';
         }
 
-        // ACCURATE COIL MODEL SYNCING
-        let componentDetails = "Condenser " + condModel;
+        let componentDetails = "Condenser " + condModel + ", Evaporator Coil " + coilModel + ", Furnace " + furnModel;
         if(currentCoilSelection === 'Indoor Evaporator Coil') {
             componentDetails = "Evaporator Coil " + coilModel + " (Indoor Evaporator Coil Specified)";
         } else if(currentCoilSelection === 'Outdoor Condenser Coil') {
             componentDetails = "Condenser " + condModel + " (Outdoor Condenser Coil Specified)";
         }
 
-        let prioritizedSpecs = " | [TECH SPECS SUMMARY]: " +
+        let issueContextStr = eqSelectVal ? " | [ISSUE CATEGORY]: " + eqSelectVal : "";
+
+        let prioritizedSpecs = issueContextStr + " | [TECH SPECS SUMMARY]: " +
             "1. Manufacturer: " + parsed.brand + " " +
             "| 2. System Energy: " + sysEnergyLabel + " " +
             "| 3. Tonnage: " + parsed.tonnage + " " +
             "| 4. SEER Rating: " + parsed.SEER + " " +
             "| 5. Refrigerant Type: " + parsed.refrig + " " +
             "| 6. Line Size: 3/8' Liquid x 7/8' Suction " +
-            "| 7. Model/Serial: " + componentDetails;
+            "| 7. Model/Serial Specs: " + componentDetails;
 
         if (chatInput !== "") {
             issueBox.value = chatInput + prioritizedSpecs;
