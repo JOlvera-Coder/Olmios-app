@@ -334,7 +334,7 @@ def dispatch_request():
             </div>
         </div>
 
-        <!-- REPLACEMENT EQUIPMENT TABS (MULTI-SELECT ENABLED + BACK BUTTON) -->
+        <!-- REPLACEMENT EQUIPMENT TABS -->
         <div id="replacement_tabs_container" class="mb-3" style="display: none;">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <label class="form-label small text-muted mb-0">SELECT SAVED EQUIPMENT TO REPLACE:</label>
@@ -355,7 +355,7 @@ def dispatch_request():
             <input type="text" class="form-control rounded-3" placeholder="e.g. PO-88204">
         </div>
 
-        <!-- SERVICE URGENCY (DISPATCH NOW VS OTHER SCHEDULING) -->
+        <!-- SERVICE URGENCY -->
         <div class="mb-3">
             <label class="form-label">SERVICE URGENCY</label>
             <select class="form-select rounded-3 fw-bold" id="urgency_select" onchange="toggleUrgencySchedule(this.value)">
@@ -614,7 +614,96 @@ def dispatch_request():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{PHOENIX_SMALL}}', get_phoenix_svg(28, 28))
 
-# --- 4. CUSTOMER PROFILE & WALLET ('/profile') ---
+# --- 4. ADMIN & OFFICE DISPATCH PORTAL ('/admin') ---
+@app.route('/admin')
+def admin_portal():
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios - Dispatch Office Admin</title>
+    {{HEADER}}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
+        .admin-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 900px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        #admin_map { height: 320px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; }
+        .stat-badge { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; text-align: center; }
+        .dispatch-row { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="admin-card">
+        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+            <div class="d-flex align-items-center gap-2">
+                {{PHOENIX_SMALL}}
+                <div>
+                    <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-headset text-primary me-1"></i> Olmios Central Dispatch Office</h5>
+                    <span class="text-muted small">Live Real-Time Tech & Request Control Center</span>
+                </div>
+            </div>
+            <a href="/customer_home" class="btn btn-sm btn-outline-primary fw-bold"><i class="fa-solid fa-house me-1"></i> Dashboard</a>
+        </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-3">
+                <div class="stat-badge">
+                    <span class="text-muted small fw-bold d-block">ACTIVE DISPATCHES</span>
+                    <span class="fs-4 fw-bold text-primary">12</span>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="stat-badge">
+                    <span class="text-muted small fw-bold d-block">OPEN WORLD TECHS</span>
+                    <span class="fs-4 fw-bold text-success">48</span>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="stat-badge">
+                    <span class="text-muted small fw-bold d-block">AVG RESPONSE</span>
+                    <span class="fs-4 fw-bold text-warning">22 sec</span>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="stat-badge">
+                    <span class="text-muted small fw-bold d-block">TODAY REVENUE</span>
+                    <span class="fs-4 fw-bold text-dark">$1,480</span>
+                </div>
+            </div>
+        </div>
+
+        <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-map-location-dot text-primary me-1"></i> REAL-TIME ACTIVE FIELD MAP</h6>
+        <div id="admin_map"></div>
+
+        <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-list-check text-primary me-1"></i> LIVE DISPATCH QUEUE</h6>
+        <div id="admin_dispatch_queue">
+            <div class="dispatch-row">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-primary">DISPATCH #88204 — John Doe</span>
+                    <span class="badge bg-success">Tech En-Route (18s Latency)</span>
+                </div>
+                <p class="small text-muted mb-1">📍 18510 Ranch View Trail Cir, Houston TX | System: Gas System (Trane 5TTR6048)</p>
+                <div class="p-2 bg-light rounded-2 border small font-monospace text-dark">
+                    Issue: Coil leaking water | Tech Specs: Trane | Gas System | 4.0 Tons | 16 SEER2 | R-454B
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var adminMap = L.map('admin_map').setView([29.7604, -95.3698], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(adminMap);
+
+        L.marker([29.7604, -95.3698]).addTo(adminMap).bindPopup("<b>Active Customer Request</b><br>18510 Ranch View Trail Cir");
+        L.circle([29.7800, -95.3800], { radius: 1200, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.4 }).addTo(adminMap).bindPopup("Tech #104 En-Route");
+    </script>
+</body>
+</html>"""
+    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX_SMALL}}', get_phoenix_svg(35, 35))
+
+# --- 5. CUSTOMER PROFILE & WALLET ('/profile') ---
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
     saved_msg = ""
@@ -1194,7 +1283,7 @@ def profile():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42)).replace('{{SAVED_MSG}}', saved_msg)
 
-# --- 5. INVOICES & REFUND REQUESTS ('/invoices') ---
+# --- 6. INVOICES & REFUND REQUESTS ('/invoices') ---
 @app.route('/invoices')
 def invoices():
     html = """<!DOCTYPE html>
@@ -1292,7 +1381,7 @@ def invoices():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42))
 
-# --- 6. DOWNLOAD PHOENIX LOGO PAGE ('/download_logo') ---
+# --- 7. DOWNLOAD PHOENIX LOGO PAGE ('/download_logo') ---
 @app.route('/download_logo')
 def download_logo():
     html = """<!DOCTYPE html>
