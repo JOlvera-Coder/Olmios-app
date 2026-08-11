@@ -197,18 +197,117 @@ def clean_str(val):
     return str(val).replace('"', '').replace("'", '').replace('\n', ' ').strip()
 
 # ==========================================
-# CUSTOMER APP ROUTES
+# CUSTOMER AUTH / SIGN IN GATEWAY ROUTE
 # ==========================================
 @app.route('/')
-def index():
-    return redirect('/customer_home')
+def auth_gateway():
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios - Customer Auth Gateway</title>
+    {{HEADER}}
+    <style>
+        body { background-color: #0b1329; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 20px; }
+        .auth-card { background: #162038; border: 1px solid #2a3756; border-radius: 24px; padding: 32px 28px; width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); text-align: center; }
+        .brand-title { font-size: 2.6rem; font-weight: 900; letter-spacing: 6px; background: linear-gradient(135deg, #ffffff 30%, #fbbf24 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; margin-top: 10px; margin-bottom: 6px; }
+        .hero-badge { display: inline-block; background: rgba(217, 119, 6, 0.18); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); padding: 6px 16px; border-radius: 50px; font-weight: 700; font-size: 0.82rem; letter-spacing: 0.5px; margin-bottom: 24px; }
+        .nav-pills { background: #0b1329; padding: 5px; border-radius: 14px; border: 1px solid #2a3756; }
+        .nav-pills .nav-link { color: #94a3b8; border-radius: 10px; font-weight: 800; font-size: 0.95rem; transition: all 0.2s ease; }
+        .nav-pills .nav-link.active { background: #3b82f6; color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+        .form-label { color: #ffffff !important; font-weight: 800; font-size: 0.8rem; letter-spacing: 1px; display: block; text-align: left; margin-bottom: 6px; }
+        .form-control { height: 48px; border-radius: 12px; font-weight: 600; border: 1px solid #334155; font-size: 0.95rem; background: #ffffff; color: #0f172a; }
+        .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; font-size: 1.05rem; height: 50px; border-radius: 12px; box-shadow: 0 10px 20px -5px rgba(217, 119, 6, 0.5); }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <a href="/customer_home" style="display:inline-block; text-decoration:none;">{{PHOENIX}}</a>
+        <div class="brand-title">OLMIOS</div>
+        <div class="hero-badge"><i class="fa-solid fa-bolt me-1"></i> On-Demand HVAC Techs at Your Door</div>
+
+        <ul class="nav nav-pills nav-justified mb-4">
+            <li class="nav-item"><button class="nav-link active py-2.5" id="tab-login" onclick="toggleAuth('login')">Sign In</button></li>
+            <li class="nav-item"><button class="nav-link py-2.5" id="tab-register" onclick="toggleAuth('register')">Register</button></li>
+        </ul>
+
+        <div id="form-login">
+            <div class="mb-3">
+                <label class="form-label"><i class="fa-solid fa-envelope me-1"></i> USERNAME / EMAIL</label>
+                <input type="text" id="login_user" class="form-control" placeholder="Enter username or email">
+            </div>
+            <div class="mb-4">
+                <label class="form-label"><i class="fa-solid fa-lock me-1"></i> PASSWORD</label>
+                <input type="password" class="form-control" placeholder="Enter password">
+            </div>
+            <button type="button" class="btn btn-amber w-100 d-flex align-items-center justify-content-center" onclick="handleLogin()">Access Dashboard</button>
+        </div>
+
+        <div id="form-register" style="display: none;">
+            <div class="mb-2">
+                <label class="form-label"><i class="fa-solid fa-user me-1"></i> FULL NAME</label>
+                <input type="text" id="reg_fullname" class="form-control" placeholder="Enter full name">
+            </div>
+            <div class="mb-2">
+                <label class="form-label"><i class="fa-solid fa-at me-1"></i> CREATE USERNAME</label>
+                <input type="text" class="form-control" placeholder="Enter desired username">
+            </div>
+            <div class="mb-2">
+                <label class="form-label"><i class="fa-solid fa-key me-1"></i> PASSWORD</label>
+                <input type="password" class="form-control" placeholder="Create strong password">
+            </div>
+            <div class="mb-4">
+                <label class="form-label"><i class="fa-solid fa-location-dot me-1"></i> SERVICE ADDRESS</label>
+                <input type="text" id="reg_address" class="form-control" placeholder="Enter street address, city, state">
+            </div>
+            <button type="button" class="btn btn-amber w-100 d-flex align-items-center justify-content-center" onclick="handleRegister()">Create Account & Continue</button>
+        </div>
+    </div>
+
+    <script>
+    function toggleAuth(mode) {
+        if(mode === 'login') {
+            document.getElementById('form-login').style.display = 'block';
+            document.getElementById('form-register').style.display = 'none';
+            document.getElementById('tab-login').className = 'nav-link active py-2.5';
+            document.getElementById('tab-register').className = 'nav-link py-2.5';
+        } else {
+            document.getElementById('form-login').style.display = 'none';
+            document.getElementById('form-register').style.display = 'block';
+            document.getElementById('tab-login').className = 'nav-link py-2.5';
+            document.getElementById('tab-register').className = 'nav-link active py-2.5';
+        }
+    }
+
+    function handleLogin() {
+        localStorage.setItem('olmios_is_first_login', 'false');
+        let userVal = document.getElementById('login_user').value.trim();
+        if(userVal && !localStorage.getItem('olmios_fullname')) {
+            localStorage.setItem('olmios_fullname', userVal);
+        }
+        window.location.href = '/customer_home';
+    }
+
+    function handleRegister() {
+        let name = document.getElementById('reg_fullname').value.trim() || 'John Doe';
+        let addr = document.getElementById('reg_address').value.trim();
+        localStorage.setItem('olmios_fullname', name);
+        if(addr) localStorage.setItem('olmios_saved_address', addr);
+        localStorage.setItem('olmios_is_first_login', 'true');
+        window.location.href = '/customer_home';
+    }
+    </script>
+</body>
+</html>"""
+    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(130, 130))
 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect('/')
 
-# SHOT #1 UPDATE: RE-LABELED BUTTON TO "⚡ Request HVAC Service & Dispatch - ($99)"
+# SHOT #1 RESTORED LOG OFF & SIGN IN / REGISTER GATEWAY BUTTONS
 @app.route('/customer_home')
 def customer_home():
     html = """<!DOCTYPE html>
@@ -228,6 +327,10 @@ def customer_home():
         .btn-light-gray { background: #f1f5f9; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 800; border-radius: 12px; transition: all 0.2s; text-decoration: none; }
         .btn-light-gray:hover { background: #e2e8f0; color: #2563eb; border-color: #3b82f6; }
         .guarantee-box { background: #059669; color: white; padding: 10px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; text-align: center; }
+        .btn-logoff { border: 1px solid #fca5a5; background: #fef2f2; color: #dc2626; font-weight: 800; border-radius: 12px; padding: 10px; width: 100%; transition: all 0.2s; text-decoration: none; display: block; text-align: center; }
+        .btn-logoff:hover { background: #fee2e2; color: #991b1b; }
+        .btn-auth-link { border: 1px solid #cbd5e1; background: #ffffff; color: #2563eb; font-weight: 800; border-radius: 12px; padding: 10px; width: 100%; transition: all 0.2s; text-decoration: none; display: block; text-align: center; }
+        .btn-auth-link:hover { background: #f0f7ff; color: #1d4ed8; }
     </style>
 </head>
 <body>
@@ -245,7 +348,6 @@ def customer_home():
 
         <div id="map"></div>
 
-        <!-- SHOT #1: RE-LABELED SERVICE REQUEST BUTTON -->
         <a href="/dispatch_request" class="btn btn-amber w-100 py-3 rounded-3 fw-bold fs-6 mb-3 shadow-sm">
             ⚡ Request HVAC Service & Dispatch - ($99)
         </a>
@@ -263,8 +365,18 @@ def customer_home():
             </div>
         </div>
 
-        <div class="guarantee-box shadow-sm mb-1">
+        <div class="guarantee-box shadow-sm mb-3">
             <i class="fa-solid fa-shield-halved me-1"></i> VERIFIED OLMIOS GUARANTEE - 100% Licensed & Background-Checked
+        </div>
+
+        <!-- SHOT #1 RESTORED LOG OFF & AUTH GATEWAY BUTTONS -->
+        <div class="d-flex flex-column gap-2 border-top pt-3">
+            <a href="/" class="btn-auth-link shadow-sm">
+                <i class="fa-solid fa-right-to-bracket me-1"></i> Sign In / Register Gateway
+            </a>
+            <a href="/logout" class="btn-logoff shadow-sm" onclick="localStorage.removeItem('olmios_is_first_login');">
+                <i class="fa-solid fa-right-from-bracket me-1"></i> Log Off
+            </a>
         </div>
     </div>
 
@@ -411,6 +523,7 @@ def customer_quotes():
 def customer_work_orders():
     return redirect('/customer_services')
 
+# SHOT #2 & SHOT #3 REFINED AI DIAGNOSTIC CHAT ASSISTANT (REMOVED ROBOT EMOJI & CONNECTED DYNAMIC SPECS)
 @app.route('/dispatch_request')
 def dispatch_request():
     is_dispatch_mode = request.args.get('mode') == 'dispatch'
@@ -534,7 +647,7 @@ def dispatch_request():
 
             <div class="mb-3">
                 <label class="form-label">EQUIPMENT TYPE (INCLUDES RESIDENTIAL & COMMERCIAL)</label>
-                <select class="form-select rounded-3" id="equipment_type_select" name="equipment">
+                <select class="form-select rounded-3" id="equipment_type_select" name="equipment" onchange="autoFillDescription()">
                     <option value="General HVAC Issue">Select HVAC Equipment...</option>
                     <option value="Cooling Issue">Cooling Issue</option>
                     <option value="Heating Issue">Heating Issue</option>
@@ -553,16 +666,17 @@ def dispatch_request():
                 </div>
                 <p class="small text-muted mb-2">Tell us what's going on! Mention symptoms, specific defective part notes, or paste image URLs:</p>
                 
-                <textarea id="chat_assistant_input" class="form-control mb-2" rows="3" placeholder="e.g., Coil leaking water near furnace..."></textarea>
+                <textarea id="chat_assistant_input" class="form-control mb-2" rows="3" placeholder="e.g., Blower motor not spinning..." oninput="autoFillDescription()"></textarea>
                 
                 <button type="button" class="btn btn-primary w-100 py-2 fw-bold rounded-3 shadow-sm" onclick="autoFillDescription()">
                     <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AUTO-FILL ISSUE DESCRIPTION
                 </button>
 
+                <!-- SHOT #2: REMOVED ROBOT EMOJI & RETAINED CLEAN PHOENIX BRANDING -->
                 <div id="ai_followup_box" class="ai-followup-box">
                     <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-info-subtle">
                         {{PHOENIX_SMALL}}
-                        <span class="fw-bold text-primary small"><i class="fa-solid fa-robot me-1"></i> Olmios AI Diagnostic Follow-Up:</span>
+                        <span class="fw-bold text-primary small">Olmios AI Diagnostic Follow-Up:</span>
                     </div>
                     <p class="small text-dark fw-semibold mb-2" id="ai_followup_question">Is the leak on the outdoor condenser coil or the indoor evaporator coil/air handler?</p>
                     <div class="d-flex gap-2">
@@ -707,12 +821,14 @@ def dispatch_request():
         return result;
     }
 
+    // SHOT #3 DYNAMIC AI COMMUNICATION WITH CUSTOMER PROFILE SAVED SPECS
     function autoFillDescription() {
         let chatInput = document.getElementById('chat_assistant_input').value.trim();
         let issueBox = document.getElementById('issue_description');
         let followupBox = document.getElementById('ai_followup_box');
         let eqSelectVal = document.getElementById('equipment_type_select').value;
 
+        // DYNAMICALLY FETCH SAVED PROFILE SPECS FROM LOCALSTORAGE
         let condModel = localStorage.getItem('olmios_cond_mod') || '5TTR6048';
         let coilModel = localStorage.getItem('olmios_coil_mod') || '5TXCC007';
         let furnModel = localStorage.getItem('olmios_furn_mod') || 'S8X1C080';
@@ -729,11 +845,17 @@ def dispatch_request():
             followupBox.style.display = 'none';
         }
 
-        let componentDetails = "Condenser " + condModel + ", Evaporator Coil " + coilModel + ", Furnace " + furnModel;
-        if(currentCoilSelection === 'Indoor Evaporator Coil') {
-            componentDetails = "Evaporator Coil " + coilModel + " (Indoor Evaporator Coil Specified)";
-        } else if(currentCoilSelection === 'Outdoor Condenser Coil') {
-            componentDetails = "Condenser " + condModel + " (Outdoor Condenser Coil Specified)";
+        // TAILOR COMPONENT SPECS BASED ON WHAT THE CUSTOMER TYPES OR SELECTS
+        let targetedComponent = "Condenser " + condModel + ", Evaporator Coil " + coilModel + ", Furnace " + furnModel;
+        
+        if (lowerChat.includes('blower') || lowerChat.includes('motor') || lowerChat.includes('furnace') || lowerChat.includes('heat') || eqSelectVal.includes('Furnace')) {
+            targetedComponent = "Furnace / Air Handler " + furnModel + " (Targeted Motor/Air Specs Specified)";
+        } else if (lowerChat.includes('leak') || lowerChat.includes('coil') || eqSelectVal.includes('Cooling')) {
+            if(currentCoilSelection === 'Indoor Evaporator Coil') {
+                targetedComponent = "Evaporator Coil " + coilModel + " (Indoor Evaporator Coil Specified)";
+            } else if(currentCoilSelection === 'Outdoor Condenser Coil') {
+                targetedComponent = "Condenser " + condModel + " (Outdoor Condenser Coil Specified)";
+            }
         }
 
         let issueContextStr = eqSelectVal ? " | [ISSUE CATEGORY]: " + eqSelectVal : "";
@@ -745,7 +867,7 @@ def dispatch_request():
             "| 4. SEER Rating: " + parsed.SEER + " " +
             "| 5. Refrigerant Type: " + parsed.refrig + " " +
             "| 6. Line Size: 3/8' Liquid x 7/8' Suction " +
-            "| 7. Model/Serial Specs: " + componentDetails;
+            "| 7. Model/Serial Specs: " + targetedComponent;
 
         if (chatInput !== "") {
             issueBox.value = chatInput + prioritizedSpecs;
@@ -855,7 +977,6 @@ def confirmation(req_id):
     </html>
     """
 
-# SHOT #2, SHOT #3 & SHOT #4: COLLAPSIBLE BUSINESS DROPBOX, ID PHOTO UPLOAD & TAX EXEMPTION CERTIFICATE
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
     is_dispatch_mode = request.args.get('mode') == 'dispatch'
@@ -912,7 +1033,6 @@ def profile():
                 </div>
             </div>
 
-            <!-- SECTION 1: Personal Information -->
             <div class="section-header">
                 <span><i class="fa-solid fa-user me-1"></i> 1. Basic Personal Information & Residence</span>
             </div>
@@ -943,7 +1063,6 @@ def profile():
                 <input type="text" id="primary_street_addr" class="form-control rounded-3" placeholder="Enter street address">
             </div>
 
-            <!-- SHOT #2: COLLAPSIBLE BUSINESS DROPBOX OPTIONS WITH CUSTOMER PROMPT -->
             <div class="prompt-dropbox-header mb-3" onclick="toggleAddBox('biz_collapsible_container')">
                 <div class="d-flex justify-content-between align-items-center">
                     <span class="fw-bold text-primary small"><i class="fa-solid fa-building me-1"></i> Do you own or manage a business? Click here to add commercial details.</span>
@@ -956,7 +1075,6 @@ def profile():
                     <span><i class="fa-solid fa-briefcase me-1"></i> 2. Business & Commercial Information</span>
                 </div>
 
-                <!-- SHOT #4: DRIVER LICENSE REQUIRED & PHOTO UPLOAD -->
                 <div class="mb-3">
                     <label class="form-label">DRIVER'S LICENSE / STATE ID # <span class="text-danger fw-bold">(REQUIRED FOR COMMERCIAL VERIFICATION)</span></label>
                     <input type="text" id="prof_dl" class="form-control rounded-3 uppercase-input mb-2" placeholder="ENTER DRIVER'S LICENSE #" oninput="this.value = this.value.toUpperCase()">
@@ -982,7 +1100,6 @@ def profile():
                     </div>
                 </div>
 
-                <!-- TAX EXEMPT / RESALE CERTIFICATE INTEGRATION -->
                 <div class="p-2.5 border rounded-3 bg-white mb-2">
                     <label class="form-label mb-1">SALES TAX EXEMPT / RESALE STATUS</label>
                     <select class="form-select rounded-3 fw-bold text-primary mb-2" id="tax_exempt_select" onchange="toggleTaxCertBox(this.value)">
@@ -1003,7 +1120,6 @@ def profile():
                 </div>
             </div>
 
-            <!-- SECTION 3: HVAC System Specs -->
             <div class="section-header">
                 <span><i class="fa-solid fa-sliders me-1"></i> 3. HVAC System Equipment & Data Plate Specs</span>
                 <div class="d-flex gap-1">
@@ -1058,7 +1174,6 @@ def profile():
                 <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_hvac_box')">Save Additional HVAC Specs</button>
             </div>
 
-            <!-- SECTION 4: Saved Payment Cards & Wallet -->
             <div class="section-header">
                 <span><i class="fa-solid fa-credit-card me-1"></i> 4. Saved Payment Cards & Wallet</span>
                 <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_card_box')"><i class="fa-solid fa-plus me-1"></i> Add Additional Card</button>
@@ -1094,7 +1209,6 @@ def profile():
                 <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3" onclick="addNewCard()">Save Card to Wallet</button>
             </div>
 
-            <!-- SECTION 5: Additional Property Locations -->
             <div class="section-header">
                 <span><i class="fa-solid fa-location-dot me-1"></i> 5. Manage Additional Property Locations</span>
                 <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_location_box')"><i class="fa-solid fa-plus me-1"></i> Add Location Specs</button>
