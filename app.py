@@ -197,7 +197,7 @@ def clean_str(val):
     return str(val).replace('"', '').replace("'", '').replace('\n', ' ').strip()
 
 # ==========================================
-# CUSTOMER AUTH / SIGN IN GATEWAY ROUTE
+# CUSTOMER AUTH / GATEWAY ROUTE
 # ==========================================
 @app.route('/')
 def auth_gateway():
@@ -307,7 +307,6 @@ def logout():
     session.clear()
     return redirect('/')
 
-# SHOT #1 RESTORED LOG OFF & SIGN IN / REGISTER GATEWAY BUTTONS
 @app.route('/customer_home')
 def customer_home():
     html = """<!DOCTYPE html>
@@ -369,7 +368,6 @@ def customer_home():
             <i class="fa-solid fa-shield-halved me-1"></i> VERIFIED OLMIOS GUARANTEE - 100% Licensed & Background-Checked
         </div>
 
-        <!-- SHOT #1 RESTORED LOG OFF & AUTH GATEWAY BUTTONS -->
         <div class="d-flex flex-column gap-2 border-top pt-3">
             <a href="/" class="btn-auth-link shadow-sm">
                 <i class="fa-solid fa-right-to-bracket me-1"></i> Sign In / Register Gateway
@@ -523,7 +521,6 @@ def customer_quotes():
 def customer_work_orders():
     return redirect('/customer_services')
 
-# SHOT #2 & SHOT #3 REFINED AI DIAGNOSTIC CHAT ASSISTANT (REMOVED ROBOT EMOJI & CONNECTED DYNAMIC SPECS)
 @app.route('/dispatch_request')
 def dispatch_request():
     is_dispatch_mode = request.args.get('mode') == 'dispatch'
@@ -672,7 +669,6 @@ def dispatch_request():
                     <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AUTO-FILL ISSUE DESCRIPTION
                 </button>
 
-                <!-- SHOT #2: REMOVED ROBOT EMOJI & RETAINED CLEAN PHOENIX BRANDING -->
                 <div id="ai_followup_box" class="ai-followup-box">
                     <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-info-subtle">
                         {{PHOENIX_SMALL}}
@@ -821,14 +817,12 @@ def dispatch_request():
         return result;
     }
 
-    // SHOT #3 DYNAMIC AI COMMUNICATION WITH CUSTOMER PROFILE SAVED SPECS
     function autoFillDescription() {
         let chatInput = document.getElementById('chat_assistant_input').value.trim();
         let issueBox = document.getElementById('issue_description');
         let followupBox = document.getElementById('ai_followup_box');
         let eqSelectVal = document.getElementById('equipment_type_select').value;
 
-        // DYNAMICALLY FETCH SAVED PROFILE SPECS FROM LOCALSTORAGE
         let condModel = localStorage.getItem('olmios_cond_mod') || '5TTR6048';
         let coilModel = localStorage.getItem('olmios_coil_mod') || '5TXCC007';
         let furnModel = localStorage.getItem('olmios_furn_mod') || 'S8X1C080';
@@ -845,7 +839,6 @@ def dispatch_request():
             followupBox.style.display = 'none';
         }
 
-        // TAILOR COMPONENT SPECS BASED ON WHAT THE CUSTOMER TYPES OR SELECTS
         let targetedComponent = "Condenser " + condModel + ", Evaporator Coil " + coilModel + ", Furnace " + furnModel;
         
         if (lowerChat.includes('blower') || lowerChat.includes('motor') || lowerChat.includes('furnace') || lowerChat.includes('heat') || eqSelectVal.includes('Furnace')) {
@@ -1459,6 +1452,235 @@ def download_logo():
 </body>
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER)
+
+# ==========================================
+# FIELD TECHNICIAN APP ROUTE (/tech_home)
+# ==========================================
+@app.route('/tech_home')
+def tech_home():
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios Field Tech Portal</title>
+    {{HEADER}}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 10px; min-height: 100vh; }
+        .tech-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 18px; max-width: 450px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.4); position: relative; }
+        #tech_map { height: 280px; border-radius: 14px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
+        
+        .open-world-go-btn {
+            width: 75px; height: 75px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white; font-weight: 900; font-size: 1.2rem; border: 3px solid #ffffff; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.5);
+            display: flex; align-items: center; justify-content: center; margin: -40px auto 12px auto; z-index: 1000; position: relative; cursor: pointer;
+        }
+
+        .ping-banner { background: #fef3c7; border: 2px solid #f59e0b; border-radius: 14px; padding: 12px; margin-bottom: 12px; display: none; }
+        .drawer-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; }
+        .tech-menu-drawer { position: fixed; top: 0; left: -280px; width: 270px; height: 100%; background: #ffffff; color: #0f172a; z-index: 2100; transition: left 0.3s ease; padding: 20px; box-sizing: border-box; }
+        .tech-menu-drawer.open { left: 0; }
+    </style>
+</head>
+<body>
+    <div class="tech-card">
+        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-light btn-sm rounded-circle shadow-sm" onclick="toggleTechMenu()"><i class="fa-solid fa-bars fs-5"></i></button>
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark" id="assigned_cust_heading">👤 Assigned Client: Ian Olvera</h6>
+                    <span class="text-muted small" id="online_status_sub">18510 Ranch View Trail Cir, Houston TX</span>
+                </div>
+            </div>
+            <span class="badge bg-success py-1.5 px-2.5 rounded-pill fs-7">$0.00 Today</span>
+        </div>
+
+        <div id="tech_map"></div>
+
+        <div class="open-world-go-btn" id="open_world_btn" onclick="toggleOpenWorld()">
+            GO
+        </div>
+
+        <div id="dispatch_ping_banner" class="ping-banner">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-bold text-dark"><i class="fa-solid fa-bolt text-warning me-1"></i> INSTANT DISPATCH PING!</span>
+                <span class="badge bg-danger fs-6" id="ping_timer">30s</span>
+            </div>
+            <p class="small text-muted mb-2">📍 18510 Ranch View Trail Cir — A/C Condenser Diagnostic</p>
+            <button class="btn btn-sm btn-success w-100 fw-bold py-2 rounded-3" onclick="acceptDispatchPing()"><i class="fa-solid fa-circle-check me-1"></i> Accept Dispatch & Launch Route</button>
+        </div>
+
+        <div id="diagnostic_timer_box" class="p-3 bg-light border rounded-3 text-center mb-2" style="display: none;">
+            <span class="text-muted fw-bold small d-block mb-1">ON-SITE DIAGNOSTIC TIMEFRAME</span>
+            <h3 class="fw-bold text-primary mb-2" id="diag_countdown">45:00</h3>
+            <div class="row g-2">
+                <div class="col-6"><button class="btn btn-sm btn-outline-warning w-100 fw-bold" onclick="alert('Requested 15m Extension from Dispatch')">+15m Extension</button></div>
+                <div class="col-6"><button class="btn btn-sm btn-primary w-100 fw-bold" onclick="alert('Quote Form Launched')">Submit Quote</button></div>
+            </div>
+        </div>
+
+        <div class="bg-light p-2.5 rounded-3 border">
+            <span class="fw-bold text-dark small d-block mb-1"><i class="fa-solid fa-user-graduate me-1 text-primary"></i> Apprentice Field Hours Log</span>
+            <div class="progress mb-1" style="height: 10px;">
+                <div class="progress-bar bg-warning" style="width: 65%;">650 / 1,000 Hrs</div>
+            </div>
+            <span class="text-muted style-small" style="font-size: 0.72rem;">Working under Licensed Contractor: Olmios Local Mentorship</span>
+        </div>
+    </div>
+
+    <div class="drawer-overlay" id="drawer_overlay" onclick="toggleTechMenu()"></div>
+    <div class="tech-menu-drawer" id="tech_drawer">
+        <div class="d-flex align-items-center gap-2 mb-4 border-bottom pb-3">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+            <div>
+                <h6 class="fw-bold mb-0">Jose (Field Tech)</h6>
+                <span class="text-warning small fw-bold">★ 4.99 Rating</span>
+            </div>
+        </div>
+        <ul class="list-unstyled d-flex flex-column gap-3 fw-bold text-dark">
+            <li><a href="#" class="text-dark text-decoration-none"><i class="fa-solid fa-inbox me-2 text-primary"></i> Inbox <span class="badge bg-primary rounded-pill float-end">4</span></a></li>
+            <li><a href="#" class="text-dark text-decoration-none"><i class="fa-solid fa-chart-line me-2 text-success"></i> Earnings</a></li>
+            <li><a href="#" class="text-dark text-decoration-none"><i class="fa-solid fa-wallet me-2 text-warning"></i> Wallet / Instant Payout</a></li>
+            <li><a href="#" class="text-dark text-decoration-none"><i class="fa-solid fa-user me-2 text-info"></i> Account Settings</a></li>
+            <li><a href="#" class="text-dark text-decoration-none"><i class="fa-solid fa-circle-question me-2 text-secondary"></i> Help Center</a></li>
+            <li><a href="#" class="text-dark text-decoration-none"><i class="fa-solid fa-graduation-cap me-2 text-danger"></i> Apprentice Learning Center</a></li>
+        </ul>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var techMap = L.map('tech_map').setView([29.7604, -95.3698], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(techMap);
+        L.marker([29.7604, -95.3698]).addTo(techMap).bindPopup("<b>Ian Olvera Residence</b><br>18510 Ranch View Trail Cir");
+
+        var isOnline = false;
+
+        function toggleOpenWorld() {
+            isOnline = !isOnline;
+            let btn = document.getElementById('open_world_btn');
+            let heading = document.getElementById('assigned_cust_heading');
+            let sub = document.getElementById('online_status_sub');
+            let ping = document.getElementById('dispatch_ping_banner');
+
+            if(isOnline) {
+                btn.innerText = "OFF";
+                btn.style.background = "linear-gradient(135deg, #dc2626, #991b1b)";
+                heading.innerText = "⚡ You're Online — Open World Radar Active";
+                sub.innerText = "Scanning 15 mile radius for instant dispatches...";
+                ping.style.display = "block";
+            } else {
+                btn.innerText = "GO";
+                btn.style.background = "linear-gradient(135deg, #2563eb, #1d4ed8)";
+                heading.innerText = "👤 Assigned Client: Ian Olvera";
+                sub.innerText = "18510 Ranch View Trail Cir, Houston TX";
+                ping.style.display = "none";
+            }
+        }
+
+        function acceptDispatchPing() {
+            document.getElementById('dispatch_ping_banner').style.display = "none";
+            document.getElementById('diagnostic_timer_box').style.display = "block";
+            alert("Route Loaded! Navigating to customer location. Dispatch & Customer notified of your arrival.");
+        }
+
+        function toggleTechMenu() {
+            document.getElementById('tech_drawer').classList.toggle('open');
+            let overlay = document.getElementById('drawer_overlay');
+            overlay.style.display = (overlay.style.display === 'block') ? 'none' : 'block';
+        }
+    </script>
+</body>
+</html>"""
+    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42))
+
+# ==========================================
+# ENTERPRISE BACKOFFICE ERP ROUTE (/backoffice)
+# ==========================================
+@app.route('/backoffice')
+def backoffice():
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olmios Enterprise Backoffice ERP</title>
+    {{HEADER}}
+    <style>
+        body { background-color: #0f172a; color: white; font-family: 'Outfit', sans-serif; padding: 20px; min-height: 100vh; }
+        .erp-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 25px; max-width: 1100px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .nav-pills .nav-link { color: #475569; font-weight: 700; border-radius: 10px; font-size: 0.85rem; }
+        .nav-pills .nav-link.active { background: #2563eb; color: white; }
+    </style>
+</head>
+<body>
+    <div class="erp-card">
+        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+            <div class="d-flex align-items-center gap-2">
+                {{PHOENIX}}
+                <div>
+                    <h4 class="fw-bold mb-0 text-dark">OLMIOS Enterprise Backoffice ERP</h4>
+                    <span class="text-muted small">Offline Operations, Payroll, Inventory, CPQ & Supplier Sync</span>
+                </div>
+            </div>
+            <a href="/admin" class="btn btn-sm btn-outline-primary fw-bold"><i class="fa-solid fa-headset me-1"></i> Dispatch Center</a>
+        </div>
+
+        <ul class="nav nav-pills nav-justified mb-4 bg-light p-1.5 rounded-3 border">
+            <li class="nav-item"><button class="nav-link active" onclick="switchErpTab('payroll')"><i class="fa-solid fa-money-check-dollar me-1"></i> Payroll & Timecards</button></li>
+            <li class="nav-item"><button class="nav-link" onclick="switchErpTab('personnel')"><i class="fa-solid fa-users-gear me-1"></i> Onboarding / Subcontractors</button></li>
+            <li class="nav-item"><button class="nav-link" onclick="switchErpTab('inventory')"><i class="fa-solid fa-boxes-packing me-1"></i> Inventory & CPQ</button></li>
+            <li class="nav-item"><button class="nav-link" onclick="switchErpTab('financials')"><i class="fa-solid fa-chart-pie me-1"></i> Financials & Supplier API</button></li>
+        </ul>
+
+        <div id="erp_payroll" class="erp-section">
+            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-clock me-1"></i> Apprentice & Technician Timecard Management (Tax-Ready)</h6>
+            <table class="table table-bordered align-middle small">
+                <thead class="table-light">
+                    <tr><th>Tech / Apprentice</th><th>Clock In</th><th>Clock Out</th><th>Logged Hours</th><th>Hourly Rate</th><th>Instant Payout</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Jose (Apprentice)</td><td>08:00 AM</td><td>04:30 PM</td><td>8.5 hrs</td><td>$28.00 / hr</td><td><button class="btn btn-sm btn-success py-0 px-2 fw-bold" onclick="alert('Instant Payout Released!')">⚡ 1-Click Payout</button></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="erp_personnel" class="erp-section" style="display:none;">
+            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-id-card-clip me-1"></i> Employee & Subcontractor Onboarding / Offboarding</h6>
+            <div class="row g-2">
+                <div class="col-6"><input type="text" class="form-control form-control-sm" placeholder="Full Name"></div>
+                <div class="col-6"><select class="form-select form-select-sm"><option>W-2 Employee</option><option>1099 Subcontractor</option></select></div>
+                <div class="col-12"><button class="btn btn-sm btn-primary fw-bold w-100" onclick="alert('Onboarding Packet Issued!')">Issue Onboarding Documents</button></div>
+            </div>
+        </div>
+
+        <div id="erp_inventory" class="erp-section" style="display:none;">
+            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-box-open me-1"></i> Parts CPQ Catalog & Supplier Data Sync (Johnstone / Carrier API)</h6>
+            <div class="p-3 bg-light rounded-3 border mb-3">
+                <span class="fw-bold text-dark small">Live Supplier API Sync Status: <span class="text-success">Connected</span></span>
+            </div>
+        </div>
+
+        <div id="erp_financials" class="erp-section" style="display:none;">
+            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-file-invoice-dollar me-1"></i> Real-Time Profit & Loss (P&L) Ledger</h6>
+            <div class="p-3 bg-light rounded-3 border">
+                <div class="d-flex justify-content-between mb-1"><span class="fw-bold">Gross Revenue ($99 Dispatches + Repairs):</span><span class="text-success fw-bold">$12,450.00</span></div>
+                <div class="d-flex justify-content-between mb-1"><span class="fw-bold">Vendor Parts Costs:</span><span class="text-danger fw-bold">-$4,200.00</span></div>
+                <hr>
+                <div class="d-flex justify-content-between"><span class="fw-bold fs-6">Net Operating Margin:</span><span class="text-primary fw-bold fs-6">$8,250.00</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchErpTab(tabName) {
+            document.querySelectorAll('.erp-section').forEach(s => s.style.display = 'none');
+            document.getElementById('erp_' + tabName).style.display = 'block';
+        }
+    </script>
+</body>
+</html>"""
+    return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(35, 35))
 
 # ==========================================
 # DISPATCH COMMAND CENTER (/admin)
