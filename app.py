@@ -66,6 +66,17 @@ def init_db():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tech_timecards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tech_name TEXT NOT NULL,
+            clock_in DATETIME,
+            clock_out DATETIME,
+            hours_logged REAL DEFAULT 0.00,
+            is_apprentice INTEGER DEFAULT 1
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -197,6 +208,7 @@ def logout():
     session.clear()
     return redirect('/')
 
+# SHOT #1 UPDATE: RE-LABELED BUTTON TO "⚡ Request HVAC Service & Dispatch - ($99)"
 @app.route('/customer_home')
 def customer_home():
     html = """<!DOCTYPE html>
@@ -233,8 +245,9 @@ def customer_home():
 
         <div id="map"></div>
 
+        <!-- SHOT #1: RE-LABELED SERVICE REQUEST BUTTON -->
         <a href="/dispatch_request" class="btn btn-amber w-100 py-3 rounded-3 fw-bold fs-6 mb-3 shadow-sm">
-            ⚡ REQUEST INSTANT HVAC SERVICE ($99.00)
+            ⚡ Request HVAC Service & Dispatch - ($99)
         </a>
 
         <div class="row g-2 mb-3">
@@ -265,7 +278,6 @@ def customer_home():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(45, 45))
 
-# CUSTOMER SERVICES CONTAINER WITH QT000001, SO000001, IN000001 & MULTI-FACTOR LOOKUP
 @app.route('/customer_services')
 def customer_services():
     html = """<!DOCTYPE html>
@@ -309,7 +321,6 @@ def customer_services():
             <li class="nav-item"><button class="nav-link" id="tab_btn_refund" onclick="switchServiceTab('refund')"><i class="fa-solid fa-rotate-left me-1"></i> Refund/Warranty</button></li>
         </ul>
 
-        <!-- UPDATED REF ID: QT000001 -->
         <div id="service_sec_quote" class="service-sec doc-card" data-ref="QT000001" data-search="QT000001 evaporator coil replacement trane 5ttr6048 1850.00 08/10/2026">
             <div class="card p-3 mb-2 bg-light border">
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -321,7 +332,6 @@ def customer_services():
             </div>
         </div>
 
-        <!-- UPDATED REF ID: SO000001 -->
         <div id="service_sec_order" class="service-sec doc-card" data-ref="SO000001" data-search="SO000001 ian olvera tech a lead 18510 ranch view trail cir" style="display:none;">
             <div class="card p-3 mb-2 bg-light border">
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -333,7 +343,6 @@ def customer_services():
             </div>
         </div>
 
-        <!-- UPDATED REF ID: IN000001 -->
         <div id="service_sec_invoice" class="service-sec doc-card" data-ref="IN000001" data-search="IN000001 capacitor replacement paid 185.00 08/01/2026 1004" style="display:none;">
             <div class="card p-3 mb-2 bg-light border">
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -345,7 +354,6 @@ def customer_services():
             </div>
         </div>
 
-        <!-- REFUND / WARRANTY CONTAINER: CR000001 & WR000001 -->
         <div id="service_sec_refund" class="service-sec doc-card" data-ref="CR000001" data-search="CR000001 WR000001 warranty refund pending 99.00" style="display:none;">
             <div class="card p-3 mb-2 bg-light border mb-2">
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -847,6 +855,7 @@ def confirmation(req_id):
     </html>
     """
 
+# SHOT #2, SHOT #3 & SHOT #4: COLLAPSIBLE BUSINESS DROPBOX, ID PHOTO UPLOAD & TAX EXEMPTION CERTIFICATE
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
     is_dispatch_mode = request.args.get('mode') == 'dispatch'
@@ -878,6 +887,8 @@ def profile():
         .add-on-box { display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
         .card-box { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; margin-bottom: 10px; }
         .uppercase-input { text-transform: uppercase !important; }
+        .prompt-dropbox-header { background: #f0f7ff; border: 1.5px solid #3b82f6; border-radius: 12px; padding: 12px; cursor: pointer; transition: all 0.2s; }
+        .prompt-dropbox-header:hover { background: #e0f2fe; }
     </style>
 </head>
 <body>
@@ -901,6 +912,7 @@ def profile():
                 </div>
             </div>
 
+            <!-- SECTION 1: Personal Information -->
             <div class="section-header">
                 <span><i class="fa-solid fa-user me-1"></i> 1. Basic Personal Information & Residence</span>
             </div>
@@ -931,78 +943,64 @@ def profile():
                 <input type="text" id="primary_street_addr" class="form-control rounded-3" placeholder="Enter street address">
             </div>
 
-            <!-- SECTION 2: Business & Commercial Information -->
-            <div class="section-header">
-                <span><i class="fa-solid fa-briefcase me-1"></i> 2. Business & Commercial Information</span>
-                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_biz_box')"><i class="fa-solid fa-plus me-1"></i> Add-On</button>
-            </div>
-
-            <div class="mb-2">
-                <label class="form-label">DRIVER'S LICENSE / STATE ID # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
-                <input type="text" id="prof_dl" class="form-control rounded-3 uppercase-input" placeholder="Enter Driver's License #" oninput="this.value = this.value.toUpperCase()">
-            </div>
-            
-            <div class="mb-2">
-                <label class="form-label">BUSINESS / COMPANY NAME</label>
-                <input type="text" id="prof_company" class="form-control rounded-3" placeholder="Enter company name">
-            </div>
-            <div class="row g-2 mb-3">
-                <div class="col-6">
-                    <label class="form-label">TAX ID / EIN #</label>
-                    <input type="text" id="prof_taxid" class="form-control rounded-3 uppercase-input" placeholder="XX-XXXXXXX" oninput="this.value = this.value.toUpperCase()">
-                </div>
-                <div class="col-6">
-                    <label class="form-label">ACCOUNTS PAYABLE EMAIL</label>
-                    <input type="email" id="prof_ap_email" class="form-control rounded-3" placeholder="ap@company.com">
+            <!-- SHOT #2: COLLAPSIBLE BUSINESS DROPBOX OPTIONS WITH CUSTOMER PROMPT -->
+            <div class="prompt-dropbox-header mb-3" onclick="toggleAddBox('biz_collapsible_container')">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-primary small"><i class="fa-solid fa-building me-1"></i> Do you own or manage a business? Click here to add commercial details.</span>
+                    <i class="fa-solid fa-chevron-down text-primary"></i>
                 </div>
             </div>
 
-            <div id="add_biz_box" class="add-on-box">
-                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-building-circle-add me-1"></i> Add Commercial / Business Unit Specs</h6>
-                <div class="mb-2">
-                    <label class="form-label">COMMERCIAL SYSTEM TYPE</label>
-                    <select class="form-select rounded-3">
-                        <option value="">Select Equipment Category...</option>
-                        <option>Gas System</option>
-                        <option>Electric System</option>
-                    </select>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">VOLTAGE SPECIFICATION</label>
-                    <select class="form-select rounded-3">
-                        <option value="">Select Voltage...</option>
-                        <option>230/60/1</option>
-                        <option>230/60/3</option>
-                        <option>460/60/3</option>
-                    </select>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">SYSTEM TYPE</label>
-                    <select class="form-select rounded-3" onchange="toggleCommConfig(this.value)">
-                        <option value="">Select Configuration...</option>
-                        <option value="rtu">Rooftop Unit (Under 25 Tons)</option>
-                        <option value="split">Split System (Under 25 Tons)</option>
-                    </select>
+            <div id="biz_collapsible_container" style="display: none;" class="p-3 border rounded-3 bg-light mb-3">
+                <div class="section-header mt-0">
+                    <span><i class="fa-solid fa-briefcase me-1"></i> 2. Business & Commercial Information</span>
                 </div>
 
-                <div id="rtu_fields" style="display:none;">
-                    <div class="row g-2 mb-2">
-                        <div class="col-6"><label class="form-label">RTU MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                        <div class="col-6"><label class="form-label">RTU SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                <!-- SHOT #4: DRIVER LICENSE REQUIRED & PHOTO UPLOAD -->
+                <div class="mb-3">
+                    <label class="form-label">DRIVER'S LICENSE / STATE ID # <span class="text-danger fw-bold">(REQUIRED FOR COMMERCIAL VERIFICATION)</span></label>
+                    <input type="text" id="prof_dl" class="form-control rounded-3 uppercase-input mb-2" placeholder="ENTER DRIVER'S LICENSE #" oninput="this.value = this.value.toUpperCase()">
+                    
+                    <label class="btn btn-sm btn-outline-secondary w-100 fw-bold rounded-3">
+                        <i class="fa-solid fa-id-card me-1"></i> Snap / Upload Photo of Driver's License
+                        <input type="file" accept="image/*" style="display: none;" onchange="alert('Driver License Photo Uploaded!')">
+                    </label>
+                </div>
+                
+                <div class="mb-2">
+                    <label class="form-label">BUSINESS / COMPANY NAME</label>
+                    <input type="text" id="prof_company" class="form-control rounded-3" placeholder="Enter company name">
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">TAX ID / EIN #</label>
+                        <input type="text" id="prof_taxid" class="form-control rounded-3 uppercase-input" placeholder="XX-XXXXXXX" oninput="this.value = this.value.toUpperCase()">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">ACCOUNTS PAYABLE EMAIL</label>
+                        <input type="email" id="prof_ap_email" class="form-control rounded-3" placeholder="ap@company.com">
                     </div>
                 </div>
 
-                <div id="split_fields" style="display:none;">
-                    <div class="row g-2 mb-2">
-                        <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                        <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                    </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                        <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                <!-- TAX EXEMPT / RESALE CERTIFICATE INTEGRATION -->
+                <div class="p-2.5 border rounded-3 bg-white mb-2">
+                    <label class="form-label mb-1">SALES TAX EXEMPT / RESALE STATUS</label>
+                    <select class="form-select rounded-3 fw-bold text-primary mb-2" id="tax_exempt_select" onchange="toggleTaxCertBox(this.value)">
+                        <option value="no" selected>No (Standard Tax Applies)</option>
+                        <option value="yes">Yes (Tax Exempt / Resale Account)</option>
+                    </select>
+
+                    <div id="tax_cert_box" style="display: none;">
+                        <div class="mb-2">
+                            <label class="form-label small">SALES TAX EXEMPTION / RESALE ID #</label>
+                            <input type="text" class="form-control form-control-sm rounded-2 uppercase-input" placeholder="Certificate ID #" oninput="this.value = this.value.toUpperCase()">
+                        </div>
+                        <label class="btn btn-sm btn-outline-primary w-100 fw-bold rounded-2">
+                            <i class="fa-solid fa-file-arrow-up me-1"></i> Upload Tax Exemption / Resale Certificate (PDF / Image)
+                            <input type="file" accept="image/*,application/pdf" style="display: none;" onchange="alert('Tax Exemption Certificate Uploaded!')">
+                        </label>
                     </div>
                 </div>
-                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-2" onclick="toggleAddBox('add_biz_box')">Save Commercial Specs</button>
             </div>
 
             <!-- SECTION 3: HVAC System Specs -->
@@ -1147,6 +1145,10 @@ def profile():
     function toggleAddBox(boxId) {
         let box = document.getElementById(boxId);
         box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function toggleTaxCertBox(val) {
+        document.getElementById('tax_cert_box').style.display = (val === 'yes') ? 'block' : 'none';
     }
 
     function toggleCommConfig(val) {
