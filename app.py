@@ -66,23 +66,11 @@ def init_db():
         )
     """)
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS tech_timecards (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tech_name TEXT NOT NULL,
-            clock_in DATETIME,
-            clock_out DATETIME,
-            hours_logged REAL DEFAULT 0.00,
-            is_apprentice INTEGER DEFAULT 1
-        )
-    """)
-
     conn.commit()
     conn.close()
 
 init_db()
 
-# HELPER FUNCTION FOR 2-LETTER + 6-DIGIT DOCUMENT ID FORMATTING
 def format_doc_id(prefix, num):
     try:
         val = int(num)
@@ -277,7 +265,7 @@ def customer_home():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(45, 45))
 
-# SHOT #4 & SHOT #1/2/3: CUSTOMER SERVICES PARENT CONTAINER WITH MULTI-FACTOR SEARCH & STANDARDIZED IDs
+# CUSTOMER SERVICES CONTAINER WITH QT000001, SO000001, IN000001 & MULTI-FACTOR LOOKUP
 @app.route('/customer_services')
 def customer_services():
     html = """<!DOCTYPE html>
@@ -301,10 +289,9 @@ def customer_services():
             <a href="/customer_home">{{PHOENIX}}</a>
         </div>
 
-        <!-- SHOT #4 MULTI-FACTOR LOOKUP / FILTER SECTION -->
         <div class="search-box-container">
             <label class="form-label text-muted small fw-bold mb-1"><i class="fa-solid fa-magnifying-glass me-1 text-primary"></i> MULTI-FACTOR DOCUMENT LOOKUP</label>
-            <input type="text" id="doc_search_input" class="form-control form-control-sm rounded-2 mb-2" onkeyup="filterCustomerDocs()" placeholder="Look up by Ref ID (QT000001, SO000001), date, amount, model/serial #...">
+            <input type="text" id="doc_search_input" class="form-control form-control-sm rounded-2 mb-2" onkeyup="filterCustomerDocs()" placeholder="Search Ref ID (QT000001, SO000001), date, amount, model/serial #...">
             <div class="d-flex gap-1 flex-wrap">
                 <span class="badge bg-secondary cursor-pointer" onclick="quickFilterDoc('QT')">Quotes</span>
                 <span class="badge bg-primary cursor-pointer" onclick="quickFilterDoc('SO')">Work Orders</span>
@@ -322,7 +309,7 @@ def customer_services():
             <li class="nav-item"><button class="nav-link" id="tab_btn_refund" onclick="switchServiceTab('refund')"><i class="fa-solid fa-rotate-left me-1"></i> Refund/Warranty</button></li>
         </ul>
 
-        <!-- QUOTE CONTAINER (SHOT #1 FORMAT: QT000001) -->
+        <!-- UPDATED REF ID: QT000001 -->
         <div id="service_sec_quote" class="service-sec doc-card" data-ref="QT000001" data-search="QT000001 evaporator coil replacement trane 5ttr6048 1850.00 08/10/2026">
             <div class="card p-3 mb-2 bg-light border">
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -334,7 +321,7 @@ def customer_services():
             </div>
         </div>
 
-        <!-- OPEN WORK ORDER CONTAINER (SHOT #2 FORMAT: SO000001) -->
+        <!-- UPDATED REF ID: SO000001 -->
         <div id="service_sec_order" class="service-sec doc-card" data-ref="SO000001" data-search="SO000001 ian olvera tech a lead 18510 ranch view trail cir" style="display:none;">
             <div class="card p-3 mb-2 bg-light border">
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -346,7 +333,7 @@ def customer_services():
             </div>
         </div>
 
-        <!-- INVOICE CONTAINER (SHOT #3 FORMAT: IN000001) -->
+        <!-- UPDATED REF ID: IN000001 -->
         <div id="service_sec_invoice" class="service-sec doc-card" data-ref="IN000001" data-search="IN000001 capacitor replacement paid 185.00 08/01/2026 1004" style="display:none;">
             <div class="card p-3 mb-2 bg-light border">
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -358,7 +345,7 @@ def customer_services():
             </div>
         </div>
 
-        <!-- REFUND / WARRANTY CONTAINER (CR000001 & WR000001) -->
+        <!-- REFUND / WARRANTY CONTAINER: CR000001 & WR000001 -->
         <div id="service_sec_refund" class="service-sec doc-card" data-ref="CR000001" data-search="CR000001 WR000001 warranty refund pending 99.00" style="display:none;">
             <div class="card p-3 mb-2 bg-light border mb-2">
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -860,7 +847,6 @@ def confirmation(req_id):
     </html>
     """
 
-# FULL RESTORED PROFILE WITH COMMERCIAL, EQUIPMENT, AND WALLET INPUTS
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
     is_dispatch_mode = request.args.get('mode') == 'dispatch'
@@ -1927,7 +1913,6 @@ def admin():
             </div>
         </div>
 
-        <!-- EXISTING CUSTOMER HISTORY MODAL -->
         <div class="modal fade" id="existingCustomerModal" tabindex="-1">
             <div class="modal-dialog modal-xl modal-dialog-centered">
                 <div class="modal-content rounded-4 border-0">
@@ -1967,7 +1952,6 @@ def admin():
             </div>
         </div>
 
-        <!-- REFUNDS & WARRANTY MANAGER APPROVAL MODAL -->
         <div class="modal fade" id="refundsModal" tabindex="-1">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content rounded-4 border-0">
@@ -2008,9 +1992,57 @@ def admin():
     </html>
     """
 
-# ==========================================
-# WORK ORDER TICKET PRINT ROUTE (SO000001 FORMAT)
-# ==========================================
+# OTHER ENDPOINTS
+@app.route("/accept_and_dispatch/<int:req_id>", methods=["POST"])
+def accept_and_dispatch(req_id):
+    tech = request.form.get("tech", "Tech A (Lead)")
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE service_requests SET assigned_tech = ?, status = 'In Progress' WHERE id = ?", (tech, req_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin"))
+
+@app.route("/assign_tech/<int:req_id>", methods=["POST"])
+def assign_tech(req_id):
+    tech = request.form.get("tech")
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE service_requests SET assigned_tech = ? WHERE id = ?", (tech, req_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin"))
+
+@app.route("/toggle_status/<int:req_id>")
+def toggle_status(req_id):
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT status FROM service_requests WHERE id = ?", (req_id,))
+    row = cursor.fetchone()
+
+    if row:
+        current_status = row[0] if row[0] else "Pending"
+        next_status = "Pending"
+        if current_status == "Pending":
+            next_status = "In Progress"
+        elif current_status == "In Progress":
+            next_status = "Completed"
+
+        cursor.execute("UPDATE service_requests SET status = ? WHERE id = ?", (next_status, req_id))
+        conn.commit()
+
+    conn.close()
+    return redirect(url_for("admin"))
+
+@app.route("/delete/<int:req_id>")
+def delete_request(req_id):
+    conn = sqlite3.connect("requests.db")
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM service_requests WHERE id = ?", (req_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin"))
+
 @app.route("/work_order/<int:req_id>")
 def work_order(req_id):
     conn = sqlite3.connect("requests.db")
@@ -2110,57 +2142,6 @@ def work_order(req_id):
     </body>
     </html>
     """
-
-# OTHER ENDPOINTS
-@app.route("/accept_and_dispatch/<int:req_id>", methods=["POST"])
-def accept_and_dispatch(req_id):
-    tech = request.form.get("tech", "Tech A (Lead)")
-    conn = sqlite3.connect("requests.db")
-    cursor = conn.cursor()
-    cursor.execute("UPDATE service_requests SET assigned_tech = ?, status = 'In Progress' WHERE id = ?", (tech, req_id))
-    conn.commit()
-    conn.close()
-    return redirect(url_for("admin"))
-
-@app.route("/assign_tech/<int:req_id>", methods=["POST"])
-def assign_tech(req_id):
-    tech = request.form.get("tech")
-    conn = sqlite3.connect("requests.db")
-    cursor = conn.cursor()
-    cursor.execute("UPDATE service_requests SET assigned_tech = ? WHERE id = ?", (tech, req_id))
-    conn.commit()
-    conn.close()
-    return redirect(url_for("admin"))
-
-@app.route("/toggle_status/<int:req_id>")
-def toggle_status(req_id):
-    conn = sqlite3.connect("requests.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT status FROM service_requests WHERE id = ?", (req_id,))
-    row = cursor.fetchone()
-
-    if row:
-        current_status = row[0] if row[0] else "Pending"
-        next_status = "Pending"
-        if current_status == "Pending":
-            next_status = "In Progress"
-        elif current_status == "In Progress":
-            next_status = "Completed"
-
-        cursor.execute("UPDATE service_requests SET status = ? WHERE id = ?", (next_status, req_id))
-        conn.commit()
-
-    conn.close()
-    return redirect(url_for("admin"))
-
-@app.route("/delete/<int:req_id>")
-def delete_request(req_id):
-    conn = sqlite3.connect("requests.db")
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM service_requests WHERE id = ?", (req_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for("admin"))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
