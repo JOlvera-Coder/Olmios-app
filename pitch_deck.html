@@ -1,4 +1,5 @@
-import os
+with open('app.py', 'w', encoding='utf-8') as f:
+    f.write('''import os
 import json
 import sqlite3
 import urllib.parse
@@ -146,3 +147,4 @@ def customer_home():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+''')
