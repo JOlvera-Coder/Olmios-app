@@ -162,16 +162,30 @@ COMMON_ADMIN_CSS = """
 def get_lat_lng(address_str):
     if not address_str or len(address_str.strip()) < 3:
         return 29.7604, -95.3698
+    
+    query = address_str.strip()
+    if "houston" not in query.lower() and "tx" not in query.lower() and "texas" not in query.lower():
+        query += ", Houston, TX"
+
     try:
-        url = "https://nominatim.openstreetmap.org/search?format=json&q=" + urllib.parse.quote(address_str)
-        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosDispatchApp/1.0"})
-        with urllib.request.urlopen(req, timeout=3) as response:
+        url = "https://nominatim.openstreetmap.org/search?format=json&q=" + urllib.parse.quote(query)
+        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosDispatchEngine/2.0 (operations@olmios.com)"})
+        with urllib.request.urlopen(req, timeout=4) as response:
             data = json.loads(response.read().decode())
             if data and len(data) > 0:
                 return float(data[0]["lat"]), float(data[0]["lon"])
     except Exception:
         pass
     return 29.7604, -95.3698
+
+# ==========================================
+# INTERNAL GEOCODING API FOR LEAFLET
+# ==========================================
+@app.route('/api/geocode')
+def api_geocode():
+    addr = request.args.get('q', '').strip()
+    lat, lng = get_lat_lng(addr)
+    return jsonify({'lat': lat, 'lng': lng, 'address': addr})
 
 def calculate_age(created_at_str):
     if not created_at_str:
@@ -321,7 +335,7 @@ def logout():
     return redirect('/')
 
 # ==========================================
-# CUSTOMER HOME DASHBOARD ROUTE
+# CUSTOMER HOME DASHBOARD ROUTE (ALL RESTORED ELEMENTS)
 # ==========================================
 @app.route('/customer_home')
 def customer_home():
@@ -336,7 +350,8 @@ def customer_home():
     <style>
         body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
         .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        #map { height: 260px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; }
+        .brand-logo-text { font-size: 1.6rem; font-weight: 900; letter-spacing: 4px; color: #0f172a; text-transform: uppercase; }
+        #map { height: 260px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
         .btn-amber:hover { background: #b45309; color: white; }
         .btn-light-gray { background: #f1f5f9; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 800; border-radius: 12px; transition: all 0.2s; text-decoration: none; }
@@ -350,23 +365,40 @@ def customer_home():
 </head>
 <body>
     <div class="main-card">
+        <!-- HEADER WITH BRAND & AVATAR -->
         <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
             <div class="d-flex align-items-center gap-2">
-                <img id="home_avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
+                <img id="home_avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #3b82f6;">
                 <div>
-                    <h6 class="fw-bold mb-0 text-muted small" id="greeting_title">WELCOME BACK</h6>
-                    <span class="fw-bold text-dark fs-6" id="display_fullname">Ian Olvera</span>
+                    <span class="brand-logo-text">OLMIOS</span>
+                    <div class="small fw-bold text-muted" id="display_fullname">Ian Olvera</div>
                 </div>
             </div>
             <a href="/customer_home" title="Home">{{PHOENIX}}</a>
         </div>
 
+        <!-- PROPERTY LOCATION SELECTOR (PRIMARY & SECONDARY) -->
+        <div class="mb-2">
+            <label class="form-label small fw-bold text-muted mb-1"><i class="fa-solid fa-location-dot text-primary me-1"></i> ACTIVE JOB PROPERTY VIEW:</label>
+            <select class="form-select form-select-sm rounded-3 fw-bold text-primary" id="home_property_selector" onchange="switchHomeProperty(this.value)">
+                <option value="primary">📍 Primary Residence</option>
+            </select>
+        </div>
+
+        <!-- LEAFLET MAP WITH DISPATCH RADAR -->
         <div id="map"></div>
 
+        <!-- CONFIDENTIAL LEGAL BRIEFING BUTTON -->
+        <a href="/pitch" class="btn btn-warning w-100 py-2.5 rounded-3 fw-bold small text-dark mb-2 shadow-sm">
+            <i class="fa-solid fa-file-shield me-1"></i> 📋 View Confidential Legal Briefing & Pitch Report
+        </a>
+
+        <!-- SERVICE DISPATCH CTA -->
         <a href="/dispatch_request" class="btn btn-amber w-100 py-3 rounded-3 fw-bold fs-6 mb-3 shadow-sm">
             ⚡ Request HVAC Service & Dispatch - ($99)
         </a>
 
+        <!-- PROFILE & ORDERS SHORTCUTS -->
         <div class="row g-2 mb-3">
             <div class="col-6">
                 <a href="/profile" class="btn btn-light-gray w-100 py-2.5 small d-flex align-items-center justify-content-center gap-1">
@@ -396,35 +428,95 @@ def customer_home():
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        var map = L.map('map').setView([29.7604, -95.3698], 11);
+        var map = L.map('map').setView([29.7604, -95.3698], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-        var userMarker = L.marker([29.7604, -95.3698]).addTo(map);
 
-        function updateCustomerHomeMap() {
-            var savedAddr = localStorage.getItem('olmios_saved_address') || '211 Dominion Park Drive, Houston, TX';
+        var propertyMarker = L.marker([29.7604, -95.3698]).addTo(map);
+        var radarCircle = null;
+        var techMarkers = [];
+
+        function renderNearbyTechs(lat, lng) {
+            techMarkers.forEach(m => map.removeLayer(m));
+            techMarkers = [];
+
+            if (radarCircle) map.removeLayer(radarCircle);
+            radarCircle = L.circle([lat, lng], {
+                color: '#2563eb',
+                fillColor: '#3b82f6',
+                fillOpacity: 0.12,
+                radius: 4000
+            }).addTo(map);
+
+            var offsets = [
+                { lat: lat + 0.015, lng: lng - 0.012, name: "⚡ Tech A (Lead)" },
+                { lat: lat - 0.012, lng: lng + 0.018, name: "⚡ Tech B (Active)" }
+            ];
+
+            offsets.forEach(function(t) {
+                var tm = L.circleMarker([t.lat, t.lng], {
+                    radius: 7,
+                    fillColor: "#16a34a",
+                    color: "#ffffff",
+                    weight: 2,
+                    fillOpacity: 1
+                }).addTo(map).bindPopup("<b>" + t.name + "</b><br>Available for On-Demand Dispatch");
+                techMarkers.push(tm);
+            });
+        }
+
+        function geocodeAndCenter(addressText, label) {
+            fetch('/api/geocode?q=' + encodeURIComponent(addressText))
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.lat && data.lng) {
+                        map.setView([data.lat, data.lng], 13);
+                        propertyMarker.setLatLng([data.lat, data.lng]);
+                        propertyMarker.bindPopup("<b>🏠 " + label + "</b><br>" + addressText).openPopup();
+                        renderNearbyTechs(data.lat, data.lng);
+                    }
+                })
+                .catch(e => console.log('Geocoding error:', e));
+        }
+
+        function switchHomeProperty(val) {
+            var primaryAddr = localStorage.getItem('olmios_saved_address') || '211 Dominion Park Drive, Houston, TX';
+            if (val === 'primary' || val === primaryAddr) {
+                geocodeAndCenter(primaryAddr, "Primary Residence");
+            } else {
+                geocodeAndCenter(val, "Additional Property");
+            }
+        }
+
+        function initCustomerHome() {
+            var primaryAddr = localStorage.getItem('olmios_saved_address') || '211 Dominion Park Drive, Houston, TX';
             var savedName = localStorage.getItem('olmios_fullname') || 'Ian Olvera';
             document.getElementById('display_fullname').innerText = savedName;
 
             var savedPic = localStorage.getItem('olmios_profile_pic');
-            if(savedPic) document.getElementById('home_avatar').src = savedPic;
+            if (savedPic) document.getElementById('home_avatar').src = savedPic;
 
-            userMarker.bindPopup("<b>🏠 Primary Residence Location</b><br>" + savedAddr).openPopup();
+            var selector = document.getElementById('home_property_selector');
+            selector.innerHTML = `<option value="${primaryAddr}">📍 Primary: ${primaryAddr}</option>`;
 
-            fetch("https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(savedAddr))
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if(data && data.length > 0) {
-                        var lat = parseFloat(data[0].lat);
-                        var lon = parseFloat(data[0].lon);
-                        map.setView([lat, lon], 14);
-                        userMarker.setLatLng([lat, lon]);
-                        userMarker.bindPopup("<b>🏠 Primary Residence Location</b><br>" + savedAddr).openPopup();
-                    }
-                })
-                .catch(function(e) { console.log('Geocoding fallback:', e); });
+            var storedSec = localStorage.getItem('olmios_additional_addresses');
+            if (storedSec) {
+                try {
+                    var addrs = JSON.parse(storedSec);
+                    addrs.forEach(function(a) {
+                        if (a && a.trim() !== '') {
+                            var opt = document.createElement('option');
+                            opt.value = a;
+                            opt.text = "📍 Additional: " + a;
+                            selector.appendChild(opt);
+                        }
+                    });
+                } catch(e) { console.log(e); }
+            }
+
+            geocodeAndCenter(primaryAddr, "Primary Residence");
         }
 
-        window.onload = updateCustomerHomeMap;
+        window.onload = initCustomerHome;
     </script>
 </body>
 </html>"""
@@ -567,7 +659,7 @@ def customer_work_orders():
     return redirect('/customer_services')
 
 # ==========================================
-# DISPATCH REQUEST ROUTE (DYNAMIC ADDRESS SELECTOR)
+# DISPATCH REQUEST ROUTE
 # ==========================================
 @app.route('/dispatch_request')
 def dispatch_request():
@@ -1040,7 +1132,7 @@ def confirmation(req_id):
     """
 
 # ==========================================
-# CUSTOMER PROFILE & WALLET (ADDITIONAL LOCATIONS FIXED & ACTIVE)
+# CUSTOMER PROFILE & WALLET
 # ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -1467,7 +1559,7 @@ def profile():
             html = `
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Condenser Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Condenser Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" id="m_coil_mod" class="form-control rounded-3 uppercase-input" placeholder="AHU Model #" oninput="this.value = this.value.toUpperCase()"></div>
