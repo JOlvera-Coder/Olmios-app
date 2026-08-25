@@ -321,7 +321,7 @@ def logout():
     return redirect('/')
 
 # ==========================================
-# CUSTOMER HOME DASHBOARD ROUTE
+# CUSTOMER HOME DASHBOARD ROUTE (LIVE LEAFLET GEOCODING SYNC)
 # ==========================================
 @app.route('/customer_home')
 def customer_home():
@@ -396,9 +396,35 @@ def customer_home():
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        var map = L.map('map').setView([29.7604, -95.3698], 10);
+        var map = L.map('map').setView([29.7604, -95.3698], 11);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-        L.marker([29.7604, -95.3698]).addTo(map).bindPopup("<b>🏠 Saved Residence Location</b><br>18510 Ranch View Trail Cir, Houston, TX").openPopup();
+        var userMarker = L.marker([29.7604, -95.3698]).addTo(map);
+
+        function updateCustomerHomeMap() {
+            var savedAddr = localStorage.getItem('olmios_saved_address') || '211 Dominion Park Drive, Houston, TX';
+            var savedName = localStorage.getItem('olmios_fullname') || 'Ian Olvera';
+            document.getElementById('display_fullname').innerText = savedName;
+
+            var savedPic = localStorage.getItem('olmios_profile_pic');
+            if(savedPic) document.getElementById('home_avatar').src = savedPic;
+
+            userMarker.bindPopup("<b>🏠 Primary Residence Location</b><br>" + savedAddr).openPopup();
+
+            fetch("https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(savedAddr))
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if(data && data.length > 0) {
+                        var lat = parseFloat(data[0].lat);
+                        var lon = parseFloat(data[0].lon);
+                        map.setView([lat, lon], 14);
+                        userMarker.setLatLng([lat, lon]);
+                        userMarker.bindPopup("<b>🏠 Primary Residence Location</b><br>" + savedAddr).openPopup();
+                    }
+                })
+                .catch(function(e) { console.log('Geocoding fallback:', e); });
+        }
+
+        window.onload = updateCustomerHomeMap;
     </script>
 </body>
 </html>"""
@@ -899,7 +925,7 @@ def dispatch_request():
 
     window.onload = function() {
         let name = localStorage.getItem('olmios_fullname') || 'John Doe';
-        let addr = localStorage.getItem('olmios_saved_address') || '18510 Ranch View Trail Cir, Houston, TX';
+        let addr = localStorage.getItem('olmios_saved_address') || '211 Dominion Park Drive, Houston, TX';
         document.getElementById('verified_status_line').innerText = "Profile Verified: " + name;
         document.getElementById('dispatch_address_select').options[0].text = "📍 " + addr;
         document.getElementById('customer_name_hidden').value = name;
@@ -913,7 +939,7 @@ def dispatch_request():
 @app.route('/submit_dispatch', methods=['POST'])
 def submit_dispatch():
     cust_name = request.form.get('customer_name_hidden') or 'Ian Olvera'
-    address = request.form.get('address_hidden') or '18510 Ranch View Trail Cir, Houston, TX 77073'
+    address = request.form.get('address_hidden') or '211 Dominion Park Drive, Houston, TX'
     urgency = request.form.get('urgency', 'Dispatch Now')
     equipment = request.form.get('equipment') or 'A/C Condenser'
     issue_description = request.form.get('issue_description') or 'Customer requested diagnostic service.'
@@ -993,7 +1019,7 @@ def confirmation(req_id):
     """
 
 # ==========================================
-# CUSTOMER PROFILE & WALLET (TARGETED UPDATES APPLIED)
+# CUSTOMER PROFILE & WALLET
 # ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -1289,7 +1315,6 @@ def profile():
         document.getElementById('tax_cert_box').style.display = (val === 'yes') ? 'block' : 'none';
     }
 
-    // DYNAMIC RENDERING (SHOT #1 AND SHOT #2 ADJUSTMENTS APPLIED)
     function renderDynamicHvacFields(systemType, targetId) {
         let container = document.getElementById(targetId);
         if(!container) return;
@@ -1362,7 +1387,6 @@ def profile():
                     <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         } else if (systemType === 'comm_pkg') {
-            // SHOT #2: UNIFORM ALIGNMENT & HEAT KIT SPECS
             html = `
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">COMMERCIAL RTU MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="RTU Model #" oninput="this.value = this.value.toUpperCase()"></div>
@@ -1373,7 +1397,6 @@ def profile():
                     <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         } else if (systemType === 'comm_split') {
-            // SHOT #1: UNIFORM ALIGNMENT & HEAT KIT SPECS
             html = `
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Condenser Model #" oninput="this.value = this.value.toUpperCase()"></div>
