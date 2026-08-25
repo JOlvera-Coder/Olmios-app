@@ -332,7 +332,7 @@ def logout():
     return redirect('/')
 
 # ==========================================
-# CUSTOMER HOME DASHBOARD ROUTE (MATCHING SHOT #1 EXACTLY)
+# CUSTOMER HOME DASHBOARD ROUTE (MATCHING SHOT #1 & SHOT #2)
 # ==========================================
 @app.route('/customer_home')
 def customer_home():
@@ -345,81 +345,88 @@ def customer_home():
     {{HEADER}}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .map-section-title { font-size: 0.76rem; font-weight: 800; color: #475569; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
-        #map { height: 280px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
-        .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 16px 12px; min-height: 100vh; }
+        .dashboard-container { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+        .card-panel { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 18px 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.35); }
+        .map-section-title { font-size: 0.74rem; font-weight: 800; color: #475569; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+        #map { height: 280px; border-radius: 12px; border: 1px solid #cbd5e1; }
+        .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; border-radius: 14px; font-size: 1rem; }
         .btn-amber:hover { background: #b45309; color: white; }
         .btn-light-gray { background: #f8fafc; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 800; border-radius: 12px; transition: all 0.2s; text-decoration: none; }
         .btn-light-gray:hover { background: #e2e8f0; color: #2563eb; border-color: #3b82f6; }
-        .guarantee-box { background: #059669; color: white; padding: 10px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; text-align: center; }
+        .guarantee-box { background: #059669; color: white; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 0.82rem; text-align: center; }
         .btn-terms-link { border: 1px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; border-radius: 12px; padding: 10px; width: 100%; transition: all 0.2s; text-decoration: none; display: block; text-align: center; font-size: 0.9rem; }
         .btn-terms-link:hover { background: #f1f5f9; color: #1e293b; }
         .btn-logoff { border: 1px solid #fca5a5; background: #fef2f2; color: #dc2626; font-weight: 800; border-radius: 12px; padding: 10px; width: 100%; transition: all 0.2s; text-decoration: none; display: block; text-align: center; }
         .btn-logoff:hover { background: #fee2e2; color: #991b1b; }
-        .rating-badge { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; display: inline-block; margin-top: 2px; }
+        .rating-badge { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 2px 10px; border-radius: 8px; font-size: 0.74rem; font-weight: 700; display: inline-block; margin-top: 3px; }
     </style>
 </head>
 <body>
-    <div class="main-card">
-        <!-- HEADER WITH AVATAR, GREETING, CUSTOMER NAME, RATING & PHOENIX (SHOT #1 STYLE) -->
-        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-            <div class="d-flex align-items-center gap-2">
-                <img id="home_avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #3b82f6;">
-                <div>
-                    <div style="font-size: 0.68rem; font-weight: 800; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase;">WELCOME BACK</div>
-                    <div class="fw-bold text-dark fs-6" id="display_fullname">Ian Olvera</div>
-                    <div class="rating-badge">
-                        ⭐⭐⭐⭐⭐ 4.9 (1,250+ Verified Reviews)
+    <div class="dashboard-container">
+        
+        <!-- CARD 1: TOP PROFILE GREETING & RATING (SHOT #1) -->
+        <div class="card-panel">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    <img id="home_avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" style="width: 54px; height: 54px; border-radius: 50%; object-fit: cover; border: 2.5px solid #3b82f6;">
+                    <div>
+                        <div style="font-size: 0.68rem; font-weight: 800; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase;">WELCOME BACK</div>
+                        <div class="fw-bold text-dark fs-6" id="display_fullname">Ian Olvera</div>
+                        <div class="rating-badge">
+                            ⭐⭐⭐⭐⭐ 4.9 (1,250+ Verified Reviews)
+                        </div>
                     </div>
                 </div>
-            </div>
-            <a href="/customer_home" title="Home">{{PHOENIX}}</a>
-        </div>
-
-        <!-- PROPERTY LOCATION SELECTOR -->
-        <div class="mb-2">
-            <label class="form-label small fw-bold text-muted mb-1"><i class="fa-solid fa-location-dot text-primary me-1"></i> ACTIVE JOB PROPERTY VIEW:</label>
-            <select class="form-select form-select-sm rounded-3 fw-bold text-primary" id="home_property_selector" onchange="switchHomeProperty(this.value)">
-                <option value="primary">📍 Primary Residence</option>
-            </select>
-        </div>
-
-        <!-- SECTION TITLE ABOVE MAP (SHOT #1 STYLE) -->
-        <div class="map-section-title">
-            <i class="fa-solid fa-map-location-dot text-primary me-1"></i> LIVE ACTIVE FIELD TECHNICIAN COVERAGE BY ZIP CODE
-        </div>
-
-        <!-- LEAFLET REGIONAL METRO MAP -->
-        <div id="map"></div>
-
-        <!-- 1. TOP MAIN ACTION BUTTON (SHOT #1 EXACT) -->
-        <a href="/dispatch_request" class="btn btn-amber w-100 py-3 rounded-3 fw-bold fs-6 mb-2 shadow-sm">
-            ⚡ Request HVAC Service & Dispatch - ($99)
-        </a>
-
-        <!-- 2. SECOND ROW: PROFILE & WALLET | MY SERVICES & ORDERS (SHOT #1 EXACT) -->
-        <div class="row g-2 mb-2">
-            <div class="col-6">
-                <a href="/profile" class="btn btn-light-gray w-100 py-2.5 small d-flex align-items-center justify-content-center gap-1 shadow-sm">
-                    <i class="fa-solid fa-user-gear text-primary"></i> Profile & Wallet
-                </a>
-            </div>
-            <div class="col-6">
-                <a href="/customer_services" class="btn btn-light-gray w-100 py-2.5 small d-flex align-items-center justify-content-center gap-1 shadow-sm">
-                    <i class="fa-solid fa-layer-group text-primary"></i> My Services & Orders
-                </a>
+                <a href="/customer_home" title="Home">{{PHOENIX}}</a>
             </div>
         </div>
 
-        <!-- 3. GUARANTEE BANNER (SHOT #1 EXACT) -->
-        <div class="guarantee-box shadow-sm mb-3">
-            <i class="fa-solid fa-shield-halved me-1"></i> VERIFIED OLMIOS GUARANTEE - 100% Licensed & Background-Checked
+        <!-- CARD 2: PROPERTY SELECTOR & MAP WITH COVERAGE OVERLAYS (SHOT #1 / SHOT #3) -->
+        <div class="card-panel">
+            <div class="mb-2">
+                <label class="form-label small fw-bold text-muted mb-1"><i class="fa-solid fa-location-dot text-primary me-1"></i> ACTIVE JOB PROPERTY VIEW:</label>
+                <select class="form-select form-select-sm rounded-3 fw-bold text-primary" id="home_property_selector" onchange="switchHomeProperty(this.value)">
+                    <option value="primary">📍 Primary Residence</option>
+                </select>
+            </div>
+
+            <div class="map-section-title">
+                <i class="fa-solid fa-map-location-dot text-primary me-1"></i> LIVE ACTIVE FIELD TECHNICIAN COVERAGE BY ZIP CODE
+            </div>
+
+            <div id="map"></div>
         </div>
 
-        <!-- 4. FOOTER ACTIONS: TERMS & CONDITIONS + LOG OFF -->
-        <div class="d-flex flex-column gap-2 border-top pt-3">
+        <!-- CARD 3: ACTION BUTTONS HIERARCHY (SHOT #1 EXACT) -->
+        <div class="card-panel d-flex flex-column gap-2">
+            <!-- 1. TOP DISPATCH REQUEST CTA -->
+            <a href="/dispatch_request" class="btn btn-amber w-100 py-3 fw-bold shadow-sm">
+                ⚡ Request HVAC Service & Dispatch - ($99)
+            </a>
+
+            <!-- 2. SECOND ROW: PROFILE & WALLET | MY SERVICES & ORDERS -->
+            <div class="row g-2">
+                <div class="col-6">
+                    <a href="/profile" class="btn btn-light-gray w-100 py-2.5 small d-flex align-items-center justify-content-center gap-1 shadow-sm">
+                        <i class="fa-solid fa-user-gear text-primary"></i> Profile & Wallet
+                    </a>
+                </div>
+                <div class="col-6">
+                    <a href="/customer_services" class="btn btn-light-gray w-100 py-2.5 small d-flex align-items-center justify-content-center gap-1 shadow-sm">
+                        <i class="fa-solid fa-layer-group text-primary"></i> My Services & Orders
+                    </a>
+                </div>
+            </div>
+
+            <!-- 3. VERIFIED GUARANTEE BANNER -->
+            <div class="guarantee-box shadow-sm mt-1">
+                <i class="fa-solid fa-shield-halved me-1"></i> VERIFIED OLMIOS GUARANTEE • 100% Licensed, Insured & Background-Checked
+            </div>
+        </div>
+
+        <!-- CARD 4: FOOTER ACTIONS (TERMS & CONDITIONS + LOG OFF) -->
+        <div class="card-panel d-flex flex-column gap-2">
             <a href="/pitch" class="btn-terms-link shadow-sm">
                 <i class="fa-solid fa-file-contract me-1"></i> Terms & Conditions
             </a>
@@ -427,6 +434,7 @@ def customer_home():
                 <i class="fa-solid fa-right-from-bracket me-1"></i> Log Off
             </a>
         </div>
+
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -444,43 +452,43 @@ def customer_home():
             activeTechMarkers.forEach(m => map.removeLayer(m));
             activeTechMarkers = [];
 
-            // Standard Zip Zone (Spring Area - Blue polygon with dashed border)
+            // Standard Zip Zone (Spring Area - Blue polygon with dashed contour matching Shot #1)
             var springCoords = [
-                [lat + 0.05, lng - 0.04],
-                [lat + 0.08, lng - 0.04],
-                [lat + 0.08, lng + 0.02],
-                [lat + 0.05, lng + 0.02]
+                [lat + 0.045, lng - 0.038],
+                [lat + 0.082, lng - 0.038],
+                [lat + 0.082, lng + 0.022],
+                [lat + 0.045, lng + 0.022]
             ];
             var springPoly = L.polygon(springCoords, {
                 color: '#2563eb',
                 fillColor: '#3b82f6',
-                fillOpacity: 0.25,
+                fillOpacity: 0.28,
                 weight: 2,
                 dashArray: '5, 5'
             }).addTo(map);
             activePolygons.push(springPoly);
 
-            // Emergency Zip Zone (Aldine Area - Red polygon with dashed border)
+            // Emergency Zip Zone (Aldine Area - Red polygon matching Shot #1 / Shot #3)
             var aldineCoords = [
-                [lat - 0.01, lng - 0.03],
-                [lat + 0.03, lng - 0.03],
-                [lat + 0.03, lng + 0.04],
-                [lat - 0.01, lng + 0.04]
+                [lat - 0.015, lng - 0.032],
+                [lat + 0.028, lng - 0.032],
+                [lat + 0.028, lng + 0.038],
+                [lat - 0.015, lng + 0.038]
             ];
             var aldinePoly = L.polygon(aldineCoords, {
                 color: '#dc2626',
                 fillColor: '#ef4444',
-                fillOpacity: 0.25,
+                fillOpacity: 0.28,
                 weight: 2,
                 dashArray: '5, 5'
             }).addTo(map);
             activePolygons.push(aldinePoly);
 
-            // Active Field Technician Markers across the regional map
+            // Active roaming technician indicators across the regional metro area
             var techs = [
-                { lat: lat + 0.065, lng: lng - 0.01, label: "Tech A (Lead) - Active in Area" },
-                { lat: lat + 0.012, lng: lng + 0.07, label: "Tech B - En Route" },
-                { lat: lat - 0.04, lng: lng + 0.02, label: "Tech C - Standby" }
+                { lat: lat + 0.065, lng: lng - 0.012, label: "Tech A (Lead) - Active in Area" },
+                { lat: lat + 0.012, lng: lng + 0.075, label: "Tech B - En Route" },
+                { lat: lat - 0.042, lng: lng + 0.018, label: "Tech C - Standby" }
             ];
 
             techs.forEach(function(t) {
@@ -1387,7 +1395,7 @@ def profile():
                     <div class="row g-2 mt-1">
                         <div class="col-12"><input type="text" class="form-control rounded-3 mb-1" value="Ian Olvera"></div>
                         <div class="col-8"><input type="text" class="form-control rounded-3" value="**** **** **** 1004"></div>
-                        <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY" value="12/28"></div>
+                        <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
                     </div>
                 </div>
             </div>
