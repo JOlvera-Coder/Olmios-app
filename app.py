@@ -332,7 +332,7 @@ def logout():
     return redirect('/')
 
 # ==========================================
-# CUSTOMER HOME DASHBOARD ROUTE (EXACT SHOT #1 & #2 REPLICATION)
+# CUSTOMER HOME DASHBOARD ROUTE (MATCHING SHOT #1 EXACTLY)
 # ==========================================
 @app.route('/customer_home')
 def customer_home():
@@ -363,13 +363,13 @@ def customer_home():
 </head>
 <body>
     <div class="main-card">
-        <!-- HEADER WITH AVATAR, GREETING, CUSTOMER NAME, RATING & PHOENIX -->
+        <!-- HEADER WITH AVATAR, GREETING, CUSTOMER NAME, RATING & PHOENIX (SHOT #1 STYLE) -->
         <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
             <div class="d-flex align-items-center gap-2">
                 <img id="home_avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #3b82f6;">
                 <div>
                     <div style="font-size: 0.68rem; font-weight: 800; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase;">WELCOME BACK</div>
-                    <div class="fw-bold text-dark fs-6" id="display_fullname">John Doe</div>
+                    <div class="fw-bold text-dark fs-6" id="display_fullname">Ian Olvera</div>
                     <div class="rating-badge">
                         ⭐⭐⭐⭐⭐ 4.9 (1,250+ Verified Reviews)
                     </div>
@@ -391,10 +391,15 @@ def customer_home():
             <i class="fa-solid fa-map-location-dot text-primary me-1"></i> LIVE ACTIVE FIELD TECHNICIAN COVERAGE BY ZIP CODE
         </div>
 
-        <!-- LEAFLET REGIONAL METRO MAP (CONCEALED LEGEND) -->
+        <!-- LEAFLET REGIONAL METRO MAP -->
         <div id="map"></div>
 
-        <!-- TOP ACTION ROW: PROFILE & WALLET | MY SERVICES & ORDERS -->
+        <!-- 1. TOP MAIN ACTION BUTTON (SHOT #1 EXACT) -->
+        <a href="/dispatch_request" class="btn btn-amber w-100 py-3 rounded-3 fw-bold fs-6 mb-2 shadow-sm">
+            ⚡ Request HVAC Service & Dispatch - ($99)
+        </a>
+
+        <!-- 2. SECOND ROW: PROFILE & WALLET | MY SERVICES & ORDERS (SHOT #1 EXACT) -->
         <div class="row g-2 mb-2">
             <div class="col-6">
                 <a href="/profile" class="btn btn-light-gray w-100 py-2.5 small d-flex align-items-center justify-content-center gap-1 shadow-sm">
@@ -408,17 +413,12 @@ def customer_home():
             </div>
         </div>
 
-        <!-- MAIN ACTION BUTTON -->
-        <a href="/dispatch_request" class="btn btn-amber w-100 py-3 rounded-3 fw-bold fs-6 mb-2 shadow-sm">
-            ⚡ Request HVAC Service & Dispatch - ($99)
-        </a>
-
-        <!-- GUARANTEE BANNER -->
+        <!-- 3. GUARANTEE BANNER (SHOT #1 EXACT) -->
         <div class="guarantee-box shadow-sm mb-3">
             <i class="fa-solid fa-shield-halved me-1"></i> VERIFIED OLMIOS GUARANTEE - 100% Licensed & Background-Checked
         </div>
 
-        <!-- FOOTER ACTIONS: TERMS & CONDITIONS + LOG OFF -->
+        <!-- 4. FOOTER ACTIONS: TERMS & CONDITIONS + LOG OFF -->
         <div class="d-flex flex-column gap-2 border-top pt-3">
             <a href="/pitch" class="btn-terms-link shadow-sm">
                 <i class="fa-solid fa-file-contract me-1"></i> Terms & Conditions
@@ -431,7 +431,6 @@ def customer_home():
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Zoom level 10 covers the regional metropolitan area (Houston, Spring, Woodlands, Cypress, etc.)
         var map = L.map('map').setView([29.7604, -95.3698], 10);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
@@ -521,7 +520,7 @@ def customer_home():
 
         function initCustomerHome() {
             var primaryAddr = localStorage.getItem('olmios_saved_address') || '12655 Kuykendahl Rd, Houston, TX';
-            var savedName = localStorage.getItem('olmios_fullname') || 'John Doe';
+            var savedName = localStorage.getItem('olmios_fullname') || 'Ian Olvera';
             document.getElementById('display_fullname').innerText = savedName;
 
             var savedPic = localStorage.getItem('olmios_profile_pic');
@@ -1052,7 +1051,7 @@ def dispatch_request():
     }
 
     window.onload = function() {
-        let name = localStorage.getItem('olmios_fullname') || 'John Doe';
+        let name = localStorage.getItem('olmios_fullname') || 'Ian Olvera';
         let addr = localStorage.getItem('olmios_saved_address') || '12655 Kuykendahl Rd, Houston, TX';
         document.getElementById('verified_status_line').innerText = "Profile Verified: " + name;
         document.getElementById('customer_name_hidden').value = name;
@@ -1388,7 +1387,7 @@ def profile():
                     <div class="row g-2 mt-1">
                         <div class="col-12"><input type="text" class="form-control rounded-3 mb-1" value="Ian Olvera"></div>
                         <div class="col-8"><input type="text" class="form-control rounded-3" value="**** **** **** 1004"></div>
-                        <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
+                        <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY" value="12/28"></div>
                     </div>
                 </div>
             </div>
@@ -1673,7 +1672,7 @@ def profile():
     }
 
     window.onload = function() {
-        let savedName = localStorage.getItem('olmios_fullname') || '';
+        let savedName = localStorage.getItem('olmios_fullname') || 'Ian Olvera';
         let parts = savedName.split(' ');
         if(parts.length > 0) document.getElementById('prof_fname').value = parts[0] || '';
         if(parts.length > 1) document.getElementById('prof_lname').value = parts.slice(1).join(' ') || '';
@@ -1868,7 +1867,7 @@ def tech_home():
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         var techMap = L.map('tech_map').setView([29.7604, -95.3698], 11);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(techMap);
         L.marker([29.7604, -95.3698]).addTo(techMap).bindPopup("<b>Ian Olvera Residence</b><br>18510 Ranch View Trail Cir");
 
         var isOnline = false;
