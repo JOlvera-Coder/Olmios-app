@@ -208,7 +208,7 @@ def clean_str(val):
     return str(val).replace('"', '').replace("'", '').replace('\n', ' ').strip()
 
 # ==========================================
-# CONFIDENTIAL LEGAL PITCH DECK / TERMS ROUTE (/pitch)
+# CONFIDENTIAL LEGAL BRIEFING / TERMS ROUTE (/pitch)
 # ==========================================
 @app.route('/pitch')
 def pitch_deck_page():
@@ -332,7 +332,7 @@ def logout():
     return redirect('/')
 
 # ==========================================
-# CUSTOMER HOME DASHBOARD ROUTE (MATCHING SHOT #4 LAYOUT)
+# CUSTOMER HOME DASHBOARD ROUTE (EXACT SHOT #1 & #2 REPLICATION)
 # ==========================================
 @app.route('/customer_home')
 def customer_home():
@@ -347,7 +347,7 @@ def customer_home():
     <style>
         body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
         .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .brand-logo-text { font-size: 1.6rem; font-weight: 900; letter-spacing: 4px; color: #0f172a; text-transform: uppercase; }
+        .map-section-title { font-size: 0.76rem; font-weight: 800; color: #475569; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
         #map { height: 280px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
         .btn-amber:hover { background: #b45309; color: white; }
@@ -358,17 +358,21 @@ def customer_home():
         .btn-terms-link:hover { background: #f1f5f9; color: #1e293b; }
         .btn-logoff { border: 1px solid #fca5a5; background: #fef2f2; color: #dc2626; font-weight: 800; border-radius: 12px; padding: 10px; width: 100%; transition: all 0.2s; text-decoration: none; display: block; text-align: center; }
         .btn-logoff:hover { background: #fee2e2; color: #991b1b; }
+        .rating-badge { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; display: inline-block; margin-top: 2px; }
     </style>
 </head>
 <body>
     <div class="main-card">
-        <!-- HEADER WITH AVATAR & BRAND -->
+        <!-- HEADER WITH AVATAR, GREETING, CUSTOMER NAME, RATING & PHOENIX -->
         <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
             <div class="d-flex align-items-center gap-2">
-                <img id="home_avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #3b82f6;">
+                <img id="home_avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #3b82f6;">
                 <div>
-                    <span class="brand-logo-text">OLMIOS</span>
-                    <div class="small fw-bold text-muted" id="display_fullname">Ian Olvera</div>
+                    <div style="font-size: 0.68rem; font-weight: 800; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase;">WELCOME BACK</div>
+                    <div class="fw-bold text-dark fs-6" id="display_fullname">John Doe</div>
+                    <div class="rating-badge">
+                        ⭐⭐⭐⭐⭐ 4.9 (1,250+ Verified Reviews)
+                    </div>
                 </div>
             </div>
             <a href="/customer_home" title="Home">{{PHOENIX}}</a>
@@ -382,7 +386,12 @@ def customer_home():
             </select>
         </div>
 
-        <!-- LEAFLET REGIONAL METRO MAP (SHOT #4 STYLE) -->
+        <!-- SECTION TITLE ABOVE MAP (SHOT #1 STYLE) -->
+        <div class="map-section-title">
+            <i class="fa-solid fa-map-location-dot text-primary me-1"></i> LIVE ACTIVE FIELD TECHNICIAN COVERAGE BY ZIP CODE
+        </div>
+
+        <!-- LEAFLET REGIONAL METRO MAP (CONCEALED LEGEND) -->
         <div id="map"></div>
 
         <!-- TOP ACTION ROW: PROFILE & WALLET | MY SERVICES & ORDERS -->
@@ -427,40 +436,63 @@ def customer_home():
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
         var propertyMarker = L.marker([29.7604, -95.3698]).addTo(map);
-        var regionalZone = null;
+        var activePolygons = [];
         var activeTechMarkers = [];
 
-        function renderMetroCoverage(lat, lng) {
+        function renderZipCodeOverlays(lat, lng) {
+            activePolygons.forEach(p => map.removeLayer(p));
+            activePolygons = [];
             activeTechMarkers.forEach(m => map.removeLayer(m));
             activeTechMarkers = [];
 
-            if (regionalZone) map.removeLayer(regionalZone);
-            
-            // Regional active service radius covering ~20 miles
-            regionalZone = L.circle([lat, lng], {
+            // Standard Zip Zone (Spring Area - Blue polygon with dashed border)
+            var springCoords = [
+                [lat + 0.05, lng - 0.04],
+                [lat + 0.08, lng - 0.04],
+                [lat + 0.08, lng + 0.02],
+                [lat + 0.05, lng + 0.02]
+            ];
+            var springPoly = L.polygon(springCoords, {
                 color: '#2563eb',
                 fillColor: '#3b82f6',
-                fillOpacity: 0.10,
-                radius: 28000,
+                fillOpacity: 0.25,
+                weight: 2,
                 dashArray: '5, 5'
             }).addTo(map);
+            activePolygons.push(springPoly);
 
-            // Active roaming technician markers across the metro area
+            // Emergency Zip Zone (Aldine Area - Red polygon with dashed border)
+            var aldineCoords = [
+                [lat - 0.01, lng - 0.03],
+                [lat + 0.03, lng - 0.03],
+                [lat + 0.03, lng + 0.04],
+                [lat - 0.01, lng + 0.04]
+            ];
+            var aldinePoly = L.polygon(aldineCoords, {
+                color: '#dc2626',
+                fillColor: '#ef4444',
+                fillOpacity: 0.25,
+                weight: 2,
+                dashArray: '5, 5'
+            }).addTo(map);
+            activePolygons.push(aldinePoly);
+
+            // Active Field Technician Markers across the regional map
             var techs = [
-                { lat: lat + 0.08, lng: lng - 0.05, label: "Tech A (Lead) - Active in Area" },
-                { lat: lat - 0.07, lng: lng + 0.06, label: "Tech B - En Route" },
-                { lat: lat + 0.03, lng: lng + 0.09, label: "Tech C - Standby" }
+                { lat: lat + 0.065, lng: lng - 0.01, label: "Tech A (Lead) - Active in Area" },
+                { lat: lat + 0.012, lng: lng + 0.07, label: "Tech B - En Route" },
+                { lat: lat - 0.04, lng: lng + 0.02, label: "Tech C - Standby" }
             ];
 
             techs.forEach(function(t) {
-                var m = L.circleMarker([t.lat, t.lng], {
+                var tm = L.circleMarker([t.lat, t.lng], {
                     radius: 7,
                     fillColor: "#16a34a",
                     color: "#ffffff",
                     weight: 2,
                     fillOpacity: 1
                 }).addTo(map).bindPopup("<b>" + t.label + "</b><br>Available for Dispatch");
-                activeTechMarkers.push(m);
+                activeTechMarkers.push(tm);
             });
         }
 
@@ -469,11 +501,10 @@ def customer_home():
                 .then(r => r.json())
                 .then(data => {
                     if (data && data.lat && data.lng) {
-                        // Keep the regional zoom out (zoom level 10) while centering on customer property
                         map.setView([data.lat, data.lng], 10);
                         propertyMarker.setLatLng([data.lat, data.lng]);
                         propertyMarker.bindPopup("<b>🏠 " + label + "</b><br>" + addressText).openPopup();
-                        renderMetroCoverage(data.lat, data.lng);
+                        renderZipCodeOverlays(data.lat, data.lng);
                     }
                 })
                 .catch(e => console.log('Geocoding error:', e));
@@ -490,7 +521,7 @@ def customer_home():
 
         function initCustomerHome() {
             var primaryAddr = localStorage.getItem('olmios_saved_address') || '12655 Kuykendahl Rd, Houston, TX';
-            var savedName = localStorage.getItem('olmios_fullname') || 'Ian Olvera';
+            var savedName = localStorage.getItem('olmios_fullname') || 'John Doe';
             document.getElementById('display_fullname').innerText = savedName;
 
             var savedPic = localStorage.getItem('olmios_profile_pic');
@@ -1357,7 +1388,7 @@ def profile():
                     <div class="row g-2 mt-1">
                         <div class="col-12"><input type="text" class="form-control rounded-3 mb-1" value="Ian Olvera"></div>
                         <div class="col-8"><input type="text" class="form-control rounded-3" value="**** **** **** 1004"></div>
-                        <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY" value="12/28"></div>
+                        <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
                     </div>
                 </div>
             </div>
@@ -1837,7 +1868,7 @@ def tech_home():
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         var techMap = L.map('tech_map').setView([29.7604, -95.3698], 11);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(techMap);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
         L.marker([29.7604, -95.3698]).addTo(techMap).bindPopup("<b>Ian Olvera Residence</b><br>18510 Ranch View Trail Cir");
 
         var isOnline = false;
