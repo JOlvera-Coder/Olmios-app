@@ -332,7 +332,7 @@ def logout():
     return redirect('/')
 
 # ==========================================
-# CUSTOMER HOME DASHBOARD ROUTE (MATCHING SHOT #1 & SHOT #2)
+# CUSTOMER HOME DASHBOARD ROUTE (EXACT SHOT #1 MULTI-CARD SPACING)
 # ==========================================
 @app.route('/customer_home')
 def customer_home():
@@ -345,31 +345,31 @@ def customer_home():
     {{HEADER}}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 16px 12px; min-height: 100vh; }
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 18px 14px; min-height: 100vh; }
         .dashboard-container { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
-        .card-panel { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 18px 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.35); }
+        .panel-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 16px 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
         .map-section-title { font-size: 0.74rem; font-weight: 800; color: #475569; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
-        #map { height: 280px; border-radius: 12px; border: 1px solid #cbd5e1; }
-        .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; border-radius: 14px; font-size: 1rem; }
-        .btn-amber:hover { background: #b45309; color: white; }
-        .btn-light-gray { background: #f8fafc; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 800; border-radius: 12px; transition: all 0.2s; text-decoration: none; }
-        .btn-light-gray:hover { background: #e2e8f0; color: #2563eb; border-color: #3b82f6; }
-        .guarantee-box { background: #059669; color: white; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 0.82rem; text-align: center; }
-        .btn-terms-link { border: 1px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; border-radius: 12px; padding: 10px; width: 100%; transition: all 0.2s; text-decoration: none; display: block; text-align: center; font-size: 0.9rem; }
-        .btn-terms-link:hover { background: #f1f5f9; color: #1e293b; }
-        .btn-logoff { border: 1px solid #fca5a5; background: #fef2f2; color: #dc2626; font-weight: 800; border-radius: 12px; padding: 10px; width: 100%; transition: all 0.2s; text-decoration: none; display: block; text-align: center; }
-        .btn-logoff:hover { background: #fee2e2; color: #991b1b; }
-        .rating-badge { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 2px 10px; border-radius: 8px; font-size: 0.74rem; font-weight: 700; display: inline-block; margin-top: 3px; }
+        #map { height: 290px; border-radius: 12px; border: 1px solid #cbd5e1; }
+        .btn-cta-orange { background: linear-gradient(135deg, #c25e00, #9a4300); color: white; border: none; font-weight: 800; border-radius: 14px; padding: 14px; font-size: 1.05rem; width: 100%; transition: all 0.2s; text-decoration: none; display: block; text-align: center; box-shadow: 0 6px 18px rgba(194, 94, 0, 0.4); }
+        .btn-cta-orange:hover { background: #823700; color: white; }
+        .btn-white-card { background: #ffffff; color: #1e293b; border: 1.5px solid #cbd5e1; font-weight: 800; border-radius: 14px; padding: 12px 10px; font-size: 0.92rem; width: 100%; transition: all 0.2s; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .btn-white-card:hover { background: #f1f5f9; color: #2563eb; border-color: #3b82f6; }
+        .guarantee-card { background: #059669; color: white; border-radius: 14px; padding: 14px 16px; font-weight: 700; font-size: 0.82rem; text-align: center; box-shadow: 0 6px 18px rgba(5, 150, 105, 0.3); }
+        .btn-terms-white { border: 1px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; border-radius: 14px; padding: 12px; width: 100%; transition: all 0.2s; text-decoration: none; display: block; text-align: center; font-size: 0.9rem; }
+        .btn-terms-white:hover { background: #f8fafc; color: #0f172a; }
+        .btn-logoff-red { border: 1px solid #fca5a5; background: #fef2f2; color: #dc2626; font-weight: 800; border-radius: 14px; padding: 12px; width: 100%; transition: all 0.2s; text-decoration: none; display: block; text-align: center; font-size: 0.9rem; }
+        .btn-logoff-red:hover { background: #fee2e2; color: #991b1b; }
+        .rating-badge { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 3px 10px; border-radius: 8px; font-size: 0.74rem; font-weight: 700; display: inline-block; margin-top: 3px; }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
         
-        <!-- CARD 1: TOP PROFILE GREETING & RATING (SHOT #1) -->
-        <div class="card-panel">
+        <!-- CARD 1: TOP GREETING & RATING (SHOT #1 STYLE) -->
+        <div class="panel-card">
             <div class="d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-3">
-                    <img id="home_avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" style="width: 54px; height: 54px; border-radius: 50%; object-fit: cover; border: 2.5px solid #3b82f6;">
+                    <img id="home_avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2.5px solid #3b82f6;">
                     <div>
                         <div style="font-size: 0.68rem; font-weight: 800; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase;">WELCOME BACK</div>
                         <div class="fw-bold text-dark fs-6" id="display_fullname">Ian Olvera</div>
@@ -382,8 +382,8 @@ def customer_home():
             </div>
         </div>
 
-        <!-- CARD 2: PROPERTY SELECTOR & MAP WITH COVERAGE OVERLAYS (SHOT #1 / SHOT #3) -->
-        <div class="card-panel">
+        <!-- CARD 2: PROPERTY SELECTOR & MAP (ACCURATE SPRING & ALDINE ZIP HIGHLIGHTS) -->
+        <div class="panel-card">
             <div class="mb-2">
                 <label class="form-label small fw-bold text-muted mb-1"><i class="fa-solid fa-location-dot text-primary me-1"></i> ACTIVE JOB PROPERTY VIEW:</label>
                 <select class="form-select form-select-sm rounded-3 fw-bold text-primary" id="home_property_selector" onchange="switchHomeProperty(this.value)">
@@ -398,39 +398,36 @@ def customer_home():
             <div id="map"></div>
         </div>
 
-        <!-- CARD 3: ACTION BUTTONS HIERARCHY (SHOT #1 EXACT) -->
-        <div class="card-panel d-flex flex-column gap-2">
-            <!-- 1. TOP DISPATCH REQUEST CTA -->
-            <a href="/dispatch_request" class="btn btn-amber w-100 py-3 fw-bold shadow-sm">
-                ⚡ Request HVAC Service & Dispatch - ($99)
-            </a>
+        <!-- CARD 3: STANDALONE CTA BUTTON -->
+        <a href="/dispatch_request" class="btn-cta-orange">
+            ⚡ Request HVAC Service & Dispatch - ($99)
+        </a>
 
-            <!-- 2. SECOND ROW: PROFILE & WALLET | MY SERVICES & ORDERS -->
-            <div class="row g-2">
-                <div class="col-6">
-                    <a href="/profile" class="btn btn-light-gray w-100 py-2.5 small d-flex align-items-center justify-content-center gap-1 shadow-sm">
-                        <i class="fa-solid fa-user-gear text-primary"></i> Profile & Wallet
-                    </a>
-                </div>
-                <div class="col-6">
-                    <a href="/customer_services" class="btn btn-light-gray w-100 py-2.5 small d-flex align-items-center justify-content-center gap-1 shadow-sm">
-                        <i class="fa-solid fa-layer-group text-primary"></i> My Services & Orders
-                    </a>
-                </div>
+        <!-- CARD 4: STANDALONE SIDE-BY-SIDE BUTTONS -->
+        <div class="row g-2">
+            <div class="col-6">
+                <a href="/profile" class="btn-white-card">
+                    <i class="fa-solid fa-user-gear text-primary"></i> Profile & Wallet
+                </a>
             </div>
-
-            <!-- 3. VERIFIED GUARANTEE BANNER -->
-            <div class="guarantee-box shadow-sm mt-1">
-                <i class="fa-solid fa-shield-halved me-1"></i> VERIFIED OLMIOS GUARANTEE • 100% Licensed, Insured & Background-Checked
+            <div class="col-6">
+                <a href="/customer_services" class="btn-white-card">
+                    <i class="fa-solid fa-layer-group text-primary"></i> My Services & Orders
+                </a>
             </div>
         </div>
 
-        <!-- CARD 4: FOOTER ACTIONS (TERMS & CONDITIONS + LOG OFF) -->
-        <div class="card-panel d-flex flex-column gap-2">
-            <a href="/pitch" class="btn-terms-link shadow-sm">
+        <!-- CARD 5: STANDALONE VERIFIED GUARANTEE BANNER -->
+        <div class="guarantee-card">
+            <i class="fa-solid fa-shield-halved me-1"></i> VERIFIED OLMIOS GUARANTEE • 100% Licensed, Insured & Background-Checked
+        </div>
+
+        <!-- CARD 6: STANDALONE FOOTER CONTROLS -->
+        <div class="d-flex flex-column gap-2">
+            <a href="/pitch" class="btn-terms-white shadow-sm">
                 <i class="fa-solid fa-file-contract me-1"></i> Terms & Conditions
             </a>
-            <a href="/logout" class="btn-logoff shadow-sm" onclick="localStorage.removeItem('olmios_is_first_login');">
+            <a href="/logout" class="btn-logoff-red shadow-sm" onclick="localStorage.removeItem('olmios_is_first_login');">
                 <i class="fa-solid fa-right-from-bracket me-1"></i> Log Off
             </a>
         </div>
@@ -439,56 +436,57 @@ def customer_home():
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        var map = L.map('map').setView([29.7604, -95.3698], 10);
+        // Metro area regional center (Houston, Spring, Aldine, Woodlands, Cypress)
+        var map = L.map('map').setView([30.00, -95.40], 10);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
         var propertyMarker = L.marker([29.7604, -95.3698]).addTo(map);
         var activePolygons = [];
         var activeTechMarkers = [];
 
-        function renderZipCodeOverlays(lat, lng) {
+        function renderZipCodeOverlays(residenceLat, residenceLng) {
             activePolygons.forEach(p => map.removeLayer(p));
             activePolygons = [];
             activeTechMarkers.forEach(m => map.removeLayer(m));
             activeTechMarkers = [];
 
-            // Standard Zip Zone (Spring Area - Blue polygon with dashed contour matching Shot #1)
+            // 1. Spring Area Zip Code Coverage (Standard Blue Polygon with dashed border directly over Spring)
             var springCoords = [
-                [lat + 0.045, lng - 0.038],
-                [lat + 0.082, lng - 0.038],
-                [lat + 0.082, lng + 0.022],
-                [lat + 0.045, lng + 0.022]
+                [30.09, -95.43],
+                [30.09, -95.37],
+                [30.04, -95.37],
+                [30.04, -95.43]
             ];
             var springPoly = L.polygon(springCoords, {
                 color: '#2563eb',
                 fillColor: '#3b82f6',
-                fillOpacity: 0.28,
+                fillOpacity: 0.32,
                 weight: 2,
                 dashArray: '5, 5'
             }).addTo(map);
             activePolygons.push(springPoly);
 
-            // Emergency Zip Zone (Aldine Area - Red polygon matching Shot #1 / Shot #3)
+            // 2. Aldine Area Zip Code Coverage (Emergency Red Polygon with dashed border directly over Aldine)
             var aldineCoords = [
-                [lat - 0.015, lng - 0.032],
-                [lat + 0.028, lng - 0.032],
-                [lat + 0.028, lng + 0.038],
-                [lat - 0.015, lng + 0.038]
+                [29.96, -95.42],
+                [29.96, -95.34],
+                [29.90, -95.34],
+                [29.90, -95.42]
             ];
             var aldinePoly = L.polygon(aldineCoords, {
                 color: '#dc2626',
                 fillColor: '#ef4444',
-                fillOpacity: 0.28,
+                fillOpacity: 0.32,
                 weight: 2,
                 dashArray: '5, 5'
             }).addTo(map);
             activePolygons.push(aldinePoly);
 
-            // Active roaming technician indicators across the regional metro area
+            // 3. Active roaming technician markers located around active coverage areas
             var techs = [
-                { lat: lat + 0.065, lng: lng - 0.012, label: "Tech A (Lead) - Active in Area" },
-                { lat: lat + 0.012, lng: lng + 0.075, label: "Tech B - En Route" },
-                { lat: lat - 0.042, lng: lng + 0.018, label: "Tech C - Standby" }
+                { lat: 30.065, lng: -95.39, label: "Tech A (Lead) - Active in Spring Zip" },
+                { lat: 29.935, lng: -95.36, label: "Tech B - Active in Aldine Zip" },
+                { lat: 29.82, lng: -95.45, label: "Tech C - Standby in Metro" }
             ];
 
             techs.forEach(function(t) {
@@ -508,7 +506,7 @@ def customer_home():
                 .then(r => r.json())
                 .then(data => {
                     if (data && data.lat && data.lng) {
-                        map.setView([data.lat, data.lng], 10);
+                        map.setView([30.00, -95.40], 10);
                         propertyMarker.setLatLng([data.lat, data.lng]);
                         propertyMarker.bindPopup("<b>🏠 " + label + "</b><br>" + addressText).openPopup();
                         renderZipCodeOverlays(data.lat, data.lng);
