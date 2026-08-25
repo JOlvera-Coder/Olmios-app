@@ -201,13 +201,16 @@ def clean_str(val):
 # ==========================================
 @app.route('/pitch')
 def pitch_deck_page():
+    if os.path.exists('legal_briefing.html'):
+        with open('legal_briefing.html', 'r', encoding='utf-8') as f:
+            return f.read()
     if os.path.exists('pitch_deck.html'):
         with open('pitch_deck.html', 'r', encoding='utf-8') as f:
             return f.read()
-    return "Pitch Deck file pitch_deck.html not found.", 404
+    return "Legal Briefing Document not found.", 404
 
 # ==========================================
-# CUSTOMER AUTH GATEWAY ROUTE
+# CUSTOMER AUTH / GATEWAY ROUTE
 # ==========================================
 @app.route('/')
 def auth_gateway():
@@ -402,7 +405,7 @@ def customer_home():
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(45, 45))
 
 # ==========================================
-# MY SERVICES & ORDERS PARENT CONTAINER
+# MY SERVICES & ORDERS ROUTE
 # ==========================================
 @app.route('/customer_services')
 def customer_services():
@@ -538,7 +541,7 @@ def customer_work_orders():
     return redirect('/customer_services')
 
 # ==========================================
-# INSTANT SERVICE DISPATCH REQUEST ROUTE
+# DISPATCH REQUEST ROUTE
 # ==========================================
 @app.route('/dispatch_request')
 def dispatch_request():
@@ -990,7 +993,7 @@ def confirmation(req_id):
     """
 
 # ==========================================
-# CUSTOMER PROFILE & WALLET ROUTE
+# CUSTOMER PROFILE & WALLET (DYNAMIC HVAC FIELDS RESTORED)
 # ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -1048,6 +1051,7 @@ def profile():
                 </div>
             </div>
 
+            <!-- SECTION 1 -->
             <div class="section-header">
                 <span><i class="fa-solid fa-user me-1"></i> 1. Basic Personal Information & Residence</span>
             </div>
@@ -1078,6 +1082,7 @@ def profile():
                 <input type="text" id="primary_street_addr" class="form-control rounded-3" placeholder="Enter street address">
             </div>
 
+            <!-- SECTION 2: BUSINESS & COMMERCIAL COLLAPSIBLE -->
             <div class="prompt-dropbox-header mb-3" onclick="toggleAddBox('biz_collapsible_container')">
                 <div class="d-flex justify-content-between align-items-center">
                     <span class="fw-bold text-primary small"><i class="fa-solid fa-building me-1"></i> Do you own or manage a business? Click here to add commercial details.</span>
@@ -1135,6 +1140,7 @@ def profile():
                 </div>
             </div>
 
+            <!-- SECTION 3: HVAC SYSTEM SPECS (DYNAMIC FOR ALL 4 OPTIONS) -->
             <div class="section-header">
                 <span><i class="fa-solid fa-sliders me-1"></i> 3. HVAC System Equipment & Data Plate Specs</span>
                 <div class="d-flex gap-1">
@@ -1151,12 +1157,10 @@ def profile():
                     <option value="elec_sys">Electric System</option>
                     <option value="gas_hp">Gas Heat Pump System</option>
                     <option value="elec_hp">Electric Heat Pump System</option>
-                    <option value="res_pkg">Residential Package Unit</option>
-                    <option value="comm_pkg">Commercial Package Unit</option>
-                    <option value="comm_split">Commercial Split System</option>
                 </select>
             </div>
 
+            <!-- DYNAMIC COMPONENT FIELDS CONTAINER -->
             <div id="dynamic_hvac_container"></div>
 
             <div class="mb-3">
@@ -1189,6 +1193,7 @@ def profile():
                 <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_hvac_box')">Save Additional HVAC Specs</button>
             </div>
 
+            <!-- SECTION 4: SAVED CARDS -->
             <div class="section-header">
                 <span><i class="fa-solid fa-credit-card me-1"></i> 4. Saved Payment Cards & Wallet</span>
                 <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_card_box')"><i class="fa-solid fa-plus me-1"></i> Add Additional Card</button>
@@ -1224,6 +1229,7 @@ def profile():
                 <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3" onclick="addNewCard()">Save Card to Wallet</button>
             </div>
 
+            <!-- SECTION 5: PROPERTY LOCATIONS -->
             <div class="section-header">
                 <span><i class="fa-solid fa-location-dot me-1"></i> 5. Manage Additional Property Locations</span>
                 <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_location_box')"><i class="fa-solid fa-plus me-1"></i> Add Location Specs</button>
@@ -1280,12 +1286,14 @@ def profile():
         document.getElementById('tax_cert_box').style.display = (val === 'yes') ? 'block' : 'none';
     }
 
+    // DYNAMIC RENDERING FOR ALL 4 SYSTEM HEATING OPTIONS
     function renderDynamicHvacFields(systemType, targetId) {
         let container = document.getElementById(targetId);
         if(!container) return;
         let html = '';
 
         if (systemType === 'gas_sys') {
+            // SHOT #4: GAS SYSTEM
             html = `
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
@@ -1298,6 +1306,51 @@ def profile():
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">FURNACE MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
                     <div class="col-6"><label class="form-label">FURNACE SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+        } else if (systemType === 'elec_sys') {
+            // SHOT #1: ELECTRIC SYSTEM
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" id="m_coil_mod" class="form-control rounded-3 uppercase-input" placeholder="Air Handler Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" id="m_coil_ser" class="form-control rounded-3 uppercase-input" placeholder="Air Handler Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">ELECTRIC HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL / KW</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="e.g. 10 kW" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+        } else if (systemType === 'gas_hp') {
+            // SHOT #2: GAS HEAT PUMP SYSTEM (DUAL FUEL)
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">HEAT PUMP CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT PUMP CONDENSER SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">EVAPORATOR COIL MODEL #</label><input type="text" id="m_coil_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">COIL SERIAL #</label><input type="text" id="m_coil_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">GAS FURNACE MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Furnace Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">GAS FURNACE SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Furnace Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+        } else if (systemType === 'elec_hp') {
+            // SHOT #3: ELECTRIC HEAT PUMP SYSTEM
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">HEAT PUMP CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT PUMP CONDENSER SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" id="m_coil_mod" class="form-control rounded-3 uppercase-input" placeholder="Air Handler Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" id="m_coil_ser" class="form-control rounded-3 uppercase-input" placeholder="Air Handler Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">AUXILIARY HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">AUX HEAT KIT SERIAL / KW</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="e.g. 10 kW" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         }
         container.innerHTML = html;
