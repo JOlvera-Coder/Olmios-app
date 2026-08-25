@@ -321,7 +321,7 @@ def logout():
     return redirect('/')
 
 # ==========================================
-# CUSTOMER HOME DASHBOARD ROUTE (LIVE LEAFLET GEOCODING SYNC)
+# CUSTOMER HOME DASHBOARD ROUTE
 # ==========================================
 @app.route('/customer_home')
 def customer_home():
@@ -567,7 +567,7 @@ def customer_work_orders():
     return redirect('/customer_services')
 
 # ==========================================
-# DISPATCH REQUEST ROUTE
+# DISPATCH REQUEST ROUTE (DYNAMIC ADDRESS SELECTOR)
 # ==========================================
 @app.route('/dispatch_request')
 def dispatch_request():
@@ -661,7 +661,7 @@ def dispatch_request():
 
             <div class="mb-3">
                 <label class="form-label">SELECT JOB SITE PROPERTY ADDRESS</label>
-                <select class="form-select rounded-3" id="dispatch_address_select" name="address">
+                <select class="form-select rounded-3" id="dispatch_address_select" name="address" onchange="onDispatchAddressChange(this.value)">
                     <option value="primary">📍 Primary Residential Address</option>
                 </select>
             </div>
@@ -923,13 +923,34 @@ def dispatch_request():
         autoFillDescription();
     }
 
+    function onDispatchAddressChange(val) {
+        document.getElementById('address_hidden').value = val;
+    }
+
     window.onload = function() {
         let name = localStorage.getItem('olmios_fullname') || 'John Doe';
         let addr = localStorage.getItem('olmios_saved_address') || '211 Dominion Park Drive, Houston, TX';
         document.getElementById('verified_status_line').innerText = "Profile Verified: " + name;
-        document.getElementById('dispatch_address_select').options[0].text = "📍 " + addr;
         document.getElementById('customer_name_hidden').value = name;
         document.getElementById('address_hidden').value = addr;
+
+        let addrSelect = document.getElementById('dispatch_address_select');
+        addrSelect.innerHTML = `<option value="${addr}">📍 Primary: ${addr}</option>`;
+
+        let storedSecondary = localStorage.getItem('olmios_additional_addresses');
+        if (storedSecondary) {
+            try {
+                let addrs = JSON.parse(storedSecondary);
+                addrs.forEach(a => {
+                    if (a && a.trim() !== '') {
+                        let opt = document.createElement('option');
+                        opt.value = a;
+                        opt.text = "📍 Additional: " + a;
+                        addrSelect.appendChild(opt);
+                    }
+                });
+            } catch(e) { console.log(e); }
+        }
     }
     </script>
 </body>
@@ -939,7 +960,7 @@ def dispatch_request():
 @app.route('/submit_dispatch', methods=['POST'])
 def submit_dispatch():
     cust_name = request.form.get('customer_name_hidden') or 'Ian Olvera'
-    address = request.form.get('address_hidden') or '211 Dominion Park Drive, Houston, TX'
+    address = request.form.get('address_hidden') or request.form.get('address') or '211 Dominion Park Drive, Houston, TX'
     urgency = request.form.get('urgency', 'Dispatch Now')
     equipment = request.form.get('equipment') or 'A/C Condenser'
     issue_description = request.form.get('issue_description') or 'Customer requested diagnostic service.'
@@ -1019,7 +1040,7 @@ def confirmation(req_id):
     """
 
 # ==========================================
-# CUSTOMER PROFILE & WALLET
+# CUSTOMER PROFILE & WALLET (ADDITIONAL LOCATIONS FIXED & ACTIVE)
 # ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -1265,7 +1286,7 @@ def profile():
             </div>
 
             <div class="mb-3">
-                <select class="form-select rounded-3 mb-2">
+                <select class="form-select rounded-3 mb-2" id="profile_additional_locations_select">
                     <option value="">Select Property Address...</option>
                 </select>
             </div>
@@ -1274,9 +1295,9 @@ def profile():
                 <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-house-chimney-medical me-1"></i> Add Additional Location Specs</h6>
                 <div class="mb-2">
                     <label class="form-label">PROPERTY ADDRESS</label>
-                    <input type="text" class="form-control rounded-3" placeholder="Street Address, City, State">
+                    <input type="text" id="new_location_addr_input" class="form-control rounded-3" placeholder="Street Address, City, State">
                 </div>
-                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3" onclick="toggleAddBox('add_location_box')">Save Location Specs</button>
+                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3" onclick="saveAdditionalLocation()">Save Location Specs</button>
             </div>
 
             <div class="row g-2 mb-3 mt-4">
@@ -1313,6 +1334,52 @@ def profile():
 
     function toggleTaxCertBox(val) {
         document.getElementById('tax_cert_box').style.display = (val === 'yes') ? 'block' : 'none';
+    }
+
+    function saveAdditionalLocation() {
+        let input = document.getElementById('new_location_addr_input');
+        let val = input.value.trim();
+        if(!val) {
+            alert('Please enter a valid property address.');
+            return;
+        }
+
+        let select = document.getElementById('profile_additional_locations_select');
+        let opt = document.createElement('option');
+        opt.value = val;
+        opt.text = "📍 " + val;
+        opt.selected = true;
+        select.appendChild(opt);
+
+        let stored = localStorage.getItem('olmios_additional_addresses');
+        let arr = stored ? JSON.parse(stored) : [];
+        if(!arr.includes(val)) {
+            arr.push(val);
+            localStorage.setItem('olmios_additional_addresses', JSON.stringify(arr));
+        }
+
+        input.value = "";
+        toggleAddBox('add_location_box');
+        alert('Additional property address saved successfully!');
+    }
+
+    function loadAdditionalLocations() {
+        let select = document.getElementById('profile_additional_locations_select');
+        select.innerHTML = `<option value="">Select Property Address...</option>`;
+        let stored = localStorage.getItem('olmios_additional_addresses');
+        if(stored) {
+            try {
+                let arr = JSON.parse(stored);
+                arr.forEach(a => {
+                    if(a && a.trim() !== '') {
+                        let opt = document.createElement('option');
+                        opt.value = a;
+                        opt.text = "📍 " + a;
+                        select.appendChild(opt);
+                    }
+                });
+            } catch(e) { console.log(e); }
+        }
     }
 
     function renderDynamicHvacFields(systemType, targetId) {
@@ -1502,6 +1569,8 @@ def profile():
         let savedType = localStorage.getItem('olmios_hvac_type') || 'gas_sys';
         document.getElementById('main_heating_type_select').value = savedType;
         renderDynamicHvacFields(savedType, 'dynamic_hvac_container');
+
+        loadAdditionalLocations();
     }
     </script>
 </body>
