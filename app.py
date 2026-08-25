@@ -779,20 +779,20 @@ def dispatch_request():
         if(savedType === 'elec_sys') typeLabel = "Electric System";
         else if(savedType === 'gas_hp') typeLabel = "Gas Heat Pump System";
         else if(savedType === 'elec_hp') typeLabel = "Electric Heat Pump System";
+        else if(savedType === 'res_pkg') typeLabel = "Residential Package Unit";
         else if(savedType === 'comm_pkg') typeLabel = "Commercial Package Unit";
         else if(savedType === 'comm_split') typeLabel = "Commercial Split System";
-        else if(savedType.includes('mini')) typeLabel = "Mini Split System";
 
         let container = document.getElementById('dynamic_replacement_tabs');
         container.innerHTML = `
             <button type="button" class="btn-category text-start px-3 py-2.5" onclick="toggleMultiReplacementTab(this, 'Complete ${typeLabel} (${condModel})')">
-                <i class="fa-solid fa-arrows-rotate text-success me-2"></i> Replace Complete ${typeLabel} (Condenser: ${condModel})
+                <i class="fa-solid fa-arrows-rotate text-success me-2"></i> Replace Complete ${typeLabel} (${condModel})
             </button>
             <button type="button" class="btn-category text-start px-3 py-2.5" onclick="toggleMultiReplacementTab(this, 'Evaporator Coil (${coilModel})')">
                 <i class="fa-solid fa-box text-info me-2"></i> Replace Evaporator Coil (${coilModel})
             </button>
-            <button type="button" class="btn-category text-start px-3 py-2.5" onclick="toggleMultiReplacementTab(this, 'Furnace / Heating Unit (${furnModel})')">
-                <i class="fa-solid fa-fire text-danger me-2"></i> Replace Furnace / Heating Unit (${furnModel})
+            <button type="button" class="btn-category text-start px-3 py-2.5" onclick="toggleMultiReplacementTab(this, 'Furnace / Air Handler (${furnModel})')">
+                <i class="fa-solid fa-fire text-danger me-2"></i> Replace Furnace / Air Handler (${furnModel})
             </button>`;
     }
 
@@ -993,7 +993,7 @@ def confirmation(req_id):
     """
 
 # ==========================================
-# CUSTOMER PROFILE & WALLET (DYNAMIC HVAC FIELDS RESTORED)
+# CUSTOMER PROFILE & WALLET (ALL 7 HVAC OPTIONS RESTORED)
 # ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -1140,7 +1140,7 @@ def profile():
                 </div>
             </div>
 
-            <!-- SECTION 3: HVAC SYSTEM SPECS (DYNAMIC FOR ALL 4 OPTIONS) -->
+            <!-- SECTION 3: HVAC SYSTEM SPECS (ALL 7 RESIDENTIAL & COMMERCIAL OPTIONS) -->
             <div class="section-header">
                 <span><i class="fa-solid fa-sliders me-1"></i> 3. HVAC System Equipment & Data Plate Specs</span>
                 <div class="d-flex gap-1">
@@ -1157,6 +1157,9 @@ def profile():
                     <option value="elec_sys">Electric System</option>
                     <option value="gas_hp">Gas Heat Pump System</option>
                     <option value="elec_hp">Electric Heat Pump System</option>
+                    <option value="res_pkg">Residential Package Unit</option>
+                    <option value="comm_pkg">Commercial Package Unit (RTU)</option>
+                    <option value="comm_split">Commercial Split System</option>
                 </select>
             </div>
 
@@ -1286,14 +1289,13 @@ def profile():
         document.getElementById('tax_cert_box').style.display = (val === 'yes') ? 'block' : 'none';
     }
 
-    // DYNAMIC RENDERING FOR ALL 4 SYSTEM HEATING OPTIONS
+    // DYNAMIC RENDERING FOR ALL 7 RESIDENTIAL & COMMERCIAL OPTIONS
     function renderDynamicHvacFields(systemType, targetId) {
         let container = document.getElementById(targetId);
         if(!container) return;
         let html = '';
 
         if (systemType === 'gas_sys') {
-            // SHOT #4: GAS SYSTEM
             html = `
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
@@ -1308,7 +1310,6 @@ def profile():
                     <div class="col-6"><label class="form-label">FURNACE SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         } else if (systemType === 'elec_sys') {
-            // SHOT #1: ELECTRIC SYSTEM
             html = `
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
@@ -1323,7 +1324,6 @@ def profile():
                     <div class="col-6"><label class="form-label">HEAT KIT SERIAL / KW</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="e.g. 10 kW" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         } else if (systemType === 'gas_hp') {
-            // SHOT #2: GAS HEAT PUMP SYSTEM (DUAL FUEL)
             html = `
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">HEAT PUMP CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
@@ -1338,7 +1338,6 @@ def profile():
                     <div class="col-6"><label class="form-label">GAS FURNACE SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Furnace Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         } else if (systemType === 'elec_hp') {
-            // SHOT #3: ELECTRIC HEAT PUMP SYSTEM
             html = `
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">HEAT PUMP CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
@@ -1351,6 +1350,40 @@ def profile():
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">AUXILIARY HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
                     <div class="col-6"><label class="form-label">AUX HEAT KIT SERIAL / KW</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="e.g. 10 kW" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+        } else if (systemType === 'res_pkg') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">RESIDENTIAL PACKAGE UNIT MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Package Unit Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">PACKAGE UNIT SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">HEATING CONFIGURATION</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="e.g. Gas Heat / Electric Heat" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">KW / BTU RATING</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="e.g. 80,000 BTU / 10 kW" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+        } else if (systemType === 'comm_pkg') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">COMMERCIAL RTU MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="RTU Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">COMMERCIAL RTU SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="RTU Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">TONNAGE / CAPACITY</label><input type="text" id="m_coil_mod" class="form-control rounded-3 uppercase-input" placeholder="e.g. 7.5 Tons, 10 Tons" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">VOLTAGE / PHASE</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="e.g. 460V 3-Phase / 208-230V" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>`;
+        } else if (systemType === 'comm_split') {
+            html = `
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">COMMERCIAL CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Condenser Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">COMMERCIAL AIR HANDLER MODEL #</label><input type="text" id="m_coil_mod" class="form-control rounded-3 uppercase-input" placeholder="AHU Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" id="m_coil_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">VOLTAGE / PHASE CONFIGURATION</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="e.g. 460V 3PH" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEATING MODULE SPECS</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Electric kW / Gas Manifold" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         }
         container.innerHTML = html;
