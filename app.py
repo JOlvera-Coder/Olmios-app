@@ -993,7 +993,7 @@ def confirmation(req_id):
     """
 
 # ==========================================
-# CUSTOMER PROFILE & WALLET (ALL 7 HVAC OPTIONS RESTORED)
+# CUSTOMER PROFILE & WALLET (TARGETED UPDATES APPLIED)
 # ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -1019,7 +1019,7 @@ def profile():
     <style>
         body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
         .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .form-label { font-weight: 800; color: #334155 !important; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase; }
+        .form-label { font-weight: 800; color: #334155 !important; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
         .section-header { font-weight: 800; color: #0284c7; font-size: 0.92rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; margin-top: 18px; display: flex; justify-content: space-between; align-items: center; }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
         .add-tab-btn { font-size: 0.75rem; padding: 2px 10px; border-radius: 20px; font-weight: 700; }
@@ -1140,7 +1140,7 @@ def profile():
                 </div>
             </div>
 
-            <!-- SECTION 3: HVAC SYSTEM SPECS (ALL 7 RESIDENTIAL & COMMERCIAL OPTIONS) -->
+            <!-- SECTION 3: HVAC SYSTEM SPECS -->
             <div class="section-header">
                 <span><i class="fa-solid fa-sliders me-1"></i> 3. HVAC System Equipment & Data Plate Specs</span>
                 <div class="d-flex gap-1">
@@ -1289,7 +1289,7 @@ def profile():
         document.getElementById('tax_cert_box').style.display = (val === 'yes') ? 'block' : 'none';
     }
 
-    // DYNAMIC RENDERING FOR ALL 7 RESIDENTIAL & COMMERCIAL OPTIONS
+    // DYNAMIC RENDERING (SHOT #1 AND SHOT #2 ADJUSTMENTS APPLIED)
     function renderDynamicHvacFields(systemType, targetId) {
         let container = document.getElementById(targetId);
         if(!container) return;
@@ -1320,8 +1320,8 @@ def profile():
                     <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" id="m_coil_ser" class="form-control rounded-3 uppercase-input" placeholder="Air Handler Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>
                 <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">ELECTRIC HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL / KW</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="e.g. 10 kW" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         } else if (systemType === 'gas_hp') {
             html = `
@@ -1348,42 +1348,44 @@ def profile():
                     <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" id="m_coil_ser" class="form-control rounded-3 uppercase-input" placeholder="Air Handler Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>
                 <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">AUXILIARY HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">AUX HEAT KIT SERIAL / KW</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="e.g. 10 kW" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         } else if (systemType === 'res_pkg') {
             html = `
                 <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">RESIDENTIAL PACKAGE UNIT MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Package Unit Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">PACKAGE UNIT SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">RESIDENTIAL PKG UNIT MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">PKG UNIT SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>
                 <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">HEATING CONFIGURATION</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="e.g. Gas Heat / Electric Heat" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">KW / BTU RATING</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="e.g. 80,000 BTU / 10 kW" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         } else if (systemType === 'comm_pkg') {
+            // SHOT #2: UNIFORM ALIGNMENT & HEAT KIT SPECS
             html = `
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">COMMERCIAL RTU MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="RTU Model #" oninput="this.value = this.value.toUpperCase()"></div>
                     <div class="col-6"><label class="form-label">COMMERCIAL RTU SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="RTU Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>
                 <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">TONNAGE / CAPACITY</label><input type="text" id="m_coil_mod" class="form-control rounded-3 uppercase-input" placeholder="e.g. 7.5 Tons, 10 Tons" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">VOLTAGE / PHASE</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="e.g. 460V 3-Phase / 208-230V" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" id="m_coil_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         } else if (systemType === 'comm_split') {
+            // SHOT #1: UNIFORM ALIGNMENT & HEAT KIT SPECS
             html = `
                 <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">COMMERCIAL CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Condenser Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Condenser Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Condenser Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>
                 <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">COMMERCIAL AIR HANDLER MODEL #</label><input type="text" id="m_coil_mod" class="form-control rounded-3 uppercase-input" placeholder="AHU Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" id="m_coil_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" id="m_coil_mod" class="form-control rounded-3 uppercase-input" placeholder="AHU Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" id="m_coil_ser" class="form-control rounded-3 uppercase-input" placeholder="AHU Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>
                 <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">VOLTAGE / PHASE CONFIGURATION</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="e.g. 460V 3PH" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">HEATING MODULE SPECS</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Electric kW / Gas Manifold" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         }
         container.innerHTML = html;
