@@ -163,9 +163,7 @@ COMMON_ADMIN_CSS = """
 def get_lat_lng(address_str):
     if not address_str or len(address_str.strip()) < 3:
         return 29.9525, -95.4312
-    
     clean_addr = address_str.strip().lower()
-    
     if "dominion park" in clean_addr or "77090" in clean_addr:
         return 29.9525, -95.4312
     if "12655" in clean_addr or "kuykendahl" in clean_addr:
@@ -173,7 +171,7 @@ def get_lat_lng(address_str):
 
     try:
         url = "https://photon.komoot.io/api/?q=" + urllib.parse.quote(address_str.strip()) + "&limit=1&countrycode=us"
-        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosLiveDispatch/7.0 (dispatch@olmios.com)"})
+        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosLiveDispatch/7.5 (dispatch@olmios.com)"})
         with urllib.request.urlopen(req, timeout=3) as response:
             data = json.loads(response.read().decode())
             if data and 'features' in data and len(data['features']) > 0:
@@ -182,7 +180,6 @@ def get_lat_lng(address_str):
                     return float(coords[1]), float(coords[0])
     except Exception:
         pass
-
     return 29.9525, -95.4312
 
 @app.route('/api/geocode')
@@ -214,9 +211,6 @@ def clean_str(val):
         return ""
     return str(val).replace('"', '').replace("'", '').replace('\n', ' ').strip()
 
-# ==========================================
-# CONFIDENTIAL LEGAL BRIEFING / TERMS ROUTE (/pitch)
-# ==========================================
 @app.route('/pitch')
 def pitch_deck_page():
     if os.path.exists('legal_briefing.html'):
@@ -227,9 +221,6 @@ def pitch_deck_page():
             return f.read()
     return "Terms & Conditions document not found.", 404
 
-# ==========================================
-# CUSTOMER AUTH / GATEWAY ROUTE
-# ==========================================
 @app.route('/')
 def auth_gateway():
     html = """<!DOCTYPE html>
@@ -338,9 +329,6 @@ def logout():
     session.clear()
     return redirect('/')
 
-# ==========================================
-# CUSTOMER HOME DASHBOARD ROUTE
-# ==========================================
 @app.route('/customer_home')
 def customer_home():
     html = """<!DOCTYPE html>
@@ -370,8 +358,6 @@ def customer_home():
 </head>
 <body>
     <div class="dashboard-container">
-        
-        <!-- CARD 1: TOP GREETING, RATING & BRAND LOGO -->
         <div class="panel-card">
             <div class="d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-3">
@@ -379,9 +365,7 @@ def customer_home():
                     <div>
                         <div style="font-size: 0.68rem; font-weight: 800; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase;">WELCOME BACK</div>
                         <div class="fw-bold text-dark fs-6" id="display_fullname">Ian Olvera</div>
-                        <div class="rating-badge">
-                            ⭐⭐⭐⭐⭐ 4.9 (1,250+ Verified Reviews)
-                        </div>
+                        <div class="rating-badge">⭐⭐⭐⭐⭐ 4.9 (1,250+ Verified Reviews)</div>
                     </div>
                 </div>
                 <div class="d-flex flex-column align-items-center">
@@ -391,7 +375,6 @@ def customer_home():
             </div>
         </div>
 
-        <!-- CARD 2: PROPERTY SELECTOR & MAP -->
         <div class="panel-card">
             <div class="mb-2">
                 <label class="form-label small fw-bold text-muted mb-1"><i class="fa-solid fa-location-dot text-primary me-1"></i> Active Job Property View</label>
@@ -399,76 +382,28 @@ def customer_home():
                     <option value="primary">📍 Primary Residence</option>
                 </select>
             </div>
-
-            <div class="map-section-title">
-                <i class="fa-solid fa-map-location-dot text-primary me-1"></i> Active Technician Coverage Zones
-            </div>
-
+            <div class="map-section-title"><i class="fa-solid fa-map-location-dot text-primary me-1"></i> Active Technician Coverage Zones</div>
             <div id="map"></div>
         </div>
 
-        <!-- CARD 3: STANDALONE CTA BUTTON -->
-        <a href="/dispatch_request" class="btn-cta-orange">
-            ⚡ Request HVAC Service & Dispatch - ($99)
-        </a>
+        <a href="/dispatch_request" class="btn-cta-orange">⚡ Request HVAC Service & Dispatch - ($99)</a>
 
-        <!-- CARD 4: STANDALONE SIDE-BY-SIDE BUTTONS -->
         <div class="row g-2">
-            <div class="col-6">
-                <a href="/profile" class="btn-white-card">
-                    <i class="fa-solid fa-user-gear text-primary"></i> Profile & Wallet
-                </a>
-            </div>
-            <div class="col-6">
-                <a href="/customer_services" class="btn-white-card">
-                    <i class="fa-solid fa-layer-group text-primary"></i> My Services & Orders
-                </a>
-            </div>
+            <div class="col-6"><a href="/profile" class="btn-white-card"><i class="fa-solid fa-user-gear text-primary"></i> Profile & Wallet</a></div>
+            <div class="col-6"><a href="/customer_services" class="btn-white-card"><i class="fa-solid fa-layer-group text-primary"></i> My Services & Orders</a></div>
         </div>
 
-        <!-- CARD 5: SUBTLE VERIFIED GUARANTEE TEXT BADGE -->
-        <div class="trust-text-badge shadow-sm">
-            <i class="fa-solid fa-shield-halved text-success me-1"></i> Verified Olmios Guarantee • 100% Licensed, Insured & Background-Checked
-        </div>
-
-        <!-- QUIET FOOTER LEGAL LINK -->
-        <div class="text-center pt-2">
-            <a href="/pitch" class="footer-quiet-link">Terms & Conditions</a>
-        </div>
-
+        <div class="trust-text-badge shadow-sm"><i class="fa-solid fa-shield-halved text-success me-1"></i> Verified Olmios Guarantee • 100% Licensed, Insured & Background-Checked</div>
+        <div class="text-center pt-2"><a href="/pitch" class="footer-quiet-link">Terms & Conditions</a></div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         var HOUSTON_AUTHENTIC_ZIPS = {
-            "77373": {
-                color: "#2563eb", fillColor: "#3b82f6",
-                coords: [
-                    [30.138, -95.412], [30.125, -95.348], [30.078, -95.335],
-                    [30.045, -95.362], [30.042, -95.420], [30.068, -95.465], [30.112, -95.455]
-                ]
-            },
-            "77090": {
-                color: "#dc2626", fillColor: "#ef4444",
-                coords: [
-                    [30.038, -95.438], [30.042, -95.378], [29.982, -95.372],
-                    [29.955, -95.405], [29.965, -95.455], [30.012, -95.450]
-                ]
-            },
-            "77060": {
-                color: "#dc2626", fillColor: "#ef4444",
-                coords: [
-                    [29.965, -95.410], [29.982, -95.372], [29.945, -95.345],
-                    [29.905, -95.385], [29.920, -95.442]
-                ]
-            },
-            "77338": {
-                color: "#059669", fillColor: "#10b981",
-                coords: [
-                    [30.042, -95.318], [30.075, -95.235], [30.035, -95.165],
-                    [29.968, -95.195], [29.945, -95.285], [29.988, -95.312]
-                ]
-            }
+            "77373": { color: "#2563eb", fillColor: "#3b82f6", coords: [[30.138, -95.412], [30.125, -95.348], [30.078, -95.335], [30.045, -95.362], [30.042, -95.420], [30.068, -95.465], [30.112, -95.455]] },
+            "77090": { color: "#dc2626", fillColor: "#ef4444", coords: [[30.038, -95.438], [30.042, -95.378], [29.982, -95.372], [29.955, -95.405], [29.965, -95.455], [30.012, -95.450]] },
+            "77060": { color: "#dc2626", fillColor: "#ef4444", coords: [[29.965, -95.410], [29.982, -95.372], [29.945, -95.345], [29.905, -95.385], [29.920, -95.442]] },
+            "77338": { color: "#059669", fillColor: "#10b981", coords: [[30.042, -95.318], [30.075, -95.235], [30.035, -95.165], [29.968, -95.195], [29.945, -95.285], [29.988, -95.312]] }
         };
 
         var map = L.map('map', { autoPanPadding: [20, 20] }).setView([29.980, -95.380], 9.5);
@@ -480,30 +415,21 @@ def customer_home():
         function renderZipPolygons() {
             activePolygons.forEach(p => map.removeLayer(p));
             activePolygons = [];
-
             Object.keys(HOUSTON_AUTHENTIC_ZIPS).forEach(function(k) {
                 var z = HOUSTON_AUTHENTIC_ZIPS[k];
-                var poly = L.polygon(z.coords, {
-                    color: z.color,
-                    fillColor: z.fillColor,
-                    fillOpacity: 0.35,
-                    weight: 2,
-                    dashArray: '5, 5'
-                }).addTo(map);
+                var poly = L.polygon(z.coords, { color: z.color, fillColor: z.fillColor, fillOpacity: 0.35, weight: 2, dashArray: '5, 5' }).addTo(map);
                 activePolygons.push(poly);
             });
         }
 
         function geocodeAndCenter(addressText, label, forcedLat, forcedLng) {
             renderZipPolygons();
-
             if (forcedLat && forcedLng) {
                 map.setView([29.980, -95.380], 9.5);
                 propertyMarker.setLatLng([forcedLat, forcedLng]);
                 propertyMarker.bindPopup("<b>🏠 " + label + "</b><br>" + addressText, { autoPanPadding: [20, 20] }).openPopup();
                 return;
             }
-
             fetch('/api/geocode?q=' + encodeURIComponent(addressText))
                 .then(r => r.json())
                 .then(data => {
@@ -512,15 +438,13 @@ def customer_home():
                         propertyMarker.setLatLng([data.lat, data.lng]);
                         propertyMarker.bindPopup("<b>🏠 " + label + "</b><br>" + addressText, { autoPanPadding: [20, 20] }).openPopup();
                     }
-                })
-                .catch(e => console.log('Geocoding error:', e));
+                }).catch(e => console.log(e));
         }
 
         function switchHomeProperty(val) {
             var primaryAddr = localStorage.getItem('olmios_saved_address') || '211 Dominion Park Dr 607, Houston, TX 77090';
             var pLat = localStorage.getItem('olmios_saved_lat');
             var pLng = localStorage.getItem('olmios_saved_lng');
-
             if (val === 'primary' || val === primaryAddr) {
                 geocodeAndCenter(primaryAddr, "Primary Residence", pLat, pLng);
             } else {
@@ -535,7 +459,6 @@ def customer_home():
             var pLng = localStorage.getItem('olmios_saved_lng') || (primaryAddr.includes('Dominion') ? -95.4312 : -95.4412);
 
             document.getElementById('display_fullname').innerText = savedName;
-
             var savedPic = localStorage.getItem('olmios_profile_pic');
             if (savedPic) document.getElementById('home_avatar').src = savedPic;
 
@@ -556,19 +479,14 @@ def customer_home():
                     });
                 } catch(e) { console.log(e); }
             }
-
             geocodeAndCenter(primaryAddr, "Primary Residence", pLat, pLng);
         }
-
         window.onload = initCustomerHome;
     </script>
 </body>
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(45, 45))
 
-# ==========================================
-# MY SERVICES & ORDERS ROUTE (UNIFORM LIGHT GRAY BUTTON)
-# ==========================================
 @app.route('/customer_services')
 def customer_services():
     html = """<!DOCTYPE html>
@@ -698,16 +616,8 @@ def customer_services():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42))
 
-@app.route('/customer_quotes')
-def customer_quotes():
-    return redirect('/customer_services')
-
-@app.route('/customer_work_orders')
-def customer_work_orders():
-    return redirect('/customer_services')
-
 # ==========================================
-# DISPATCH REQUEST ROUTE
+# DISPATCH REQUEST ROUTE (DISCRETE MULTI-CARD + REPAIR BACK BUTTON + UNIFORM HOME TAB)
 # ==========================================
 @app.route('/dispatch_request')
 def dispatch_request():
@@ -727,10 +637,15 @@ def dispatch_request():
     <title>Olmios - Request Service</title>
     {{HEADER}}
     <style>
-        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
-        .form-label { font-weight: 800; color: #475569 !important; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase; }
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 18px 14px; min-height: 100vh; }
+        .dashboard-container { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+        .panel-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 16px 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+        .form-label { font-weight: 800; color: #334155 !important; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; display: block; }
+        .section-header { font-weight: 800; color: #0284c7; font-size: 0.90rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-cta-orange { background: linear-gradient(135deg, #c25e00, #9a4300); color: white; border: none; font-weight: 800; border-radius: 14px; padding: 14px; font-size: 1.05rem; width: 100%; transition: all 0.2s; text-decoration: none; display: block; text-align: center; box-shadow: 0 6px 18px rgba(194, 94, 0, 0.4); cursor: pointer; }
+        .btn-cta-orange:hover { background: #823700; color: white; }
+        .btn-gray-nav { background: #f1f5f9 !important; color: #334155 !important; border: 1.5px solid #cbd5e1 !important; font-weight: 800; border-radius: 14px; padding: 12px 10px; font-size: 0.95rem; width: 100%; transition: all 0.2s; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+        .btn-gray-nav:hover { background: #e2e8f0 !important; color: #0f172a !important; border-color: #94a3b8 !important; }
         .btn-service-type { border: 2px solid #3b82f6; background: #ffffff; color: #1e3a8a; font-weight: 800; border-radius: 14px; padding: 14px 10px; font-size: 0.95rem; width: 100%; transition: all 0.2s; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); }
         .btn-service-type:hover { background: #f0f7ff; border-color: #1d4ed8; }
         .btn-category { border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; border-radius: 12px; padding: 12px 6px; font-size: 0.85rem; width: 100%; transition: all 0.2s; cursor: pointer; }
@@ -739,156 +654,197 @@ def dispatch_request():
     </style>
 </head>
 <body>
-    <div class="main-card">
+    <div class="dashboard-container">
         {{DISPATCH_HEADER}}
-        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-            <div>
-                <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-truck-fast me-1 text-primary"></i> Instant HVAC Dispatch Request</h5>
+
+        <!-- CARD 1: TOP GREETING & VERIFIED BADGE -->
+        <div class="panel-card">
+            <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                <div>
+                    <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-truck-fast me-1 text-primary"></i> Instant HVAC Dispatch Request</h5>
+                </div>
+                <a href="/customer_home" title="Home">{{PHOENIX}}</a>
             </div>
-            <a href="/customer_home" title="Home">{{PHOENIX}}</a>
+            <div class="p-2.5 rounded-3 bg-success-subtle border border-success-subtle text-success small fw-bold d-flex align-items-center gap-2">
+                <i class="fa-solid fa-circle-check fs-6"></i>
+                <span id="verified_status_line">Profile Verified & Ready</span>
+            </div>
         </div>
 
-        <div class="p-2 mb-3 rounded-3 bg-success-subtle border border-success-subtle text-success small fw-bold d-flex align-items-center gap-2">
-            <i class="fa-solid fa-circle-check fs-6"></i>
-            <span id="verified_status_line">Profile Verified & Ready</span>
-        </div>
-
-        <form method="POST" action="/submit_dispatch">
+        <form method="POST" action="/submit_dispatch" class="d-flex flex-column gap-3">
             <input type="hidden" name="customer_name_hidden" id="customer_name_hidden">
             <input type="hidden" name="address_hidden" id="address_hidden">
 
-            <div id="service_mode_container" class="mb-3">
-                <label class="form-label text-center d-block text-primary fw-bold fs-6 mb-2"><i class="fa-solid fa-list-check me-1"></i> SELECT SERVICE NEED</label>
-                <div class="row g-2">
+            <!-- CARD 2: SERVICE SELECTION (WITH REPAIR BACK BUTTON) -->
+            <div class="panel-card">
+                <div class="section-header">
+                    <span><i class="fa-solid fa-list-check me-1"></i> 1. Select Service Need</span>
+                </div>
+
+                <div id="service_mode_container">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button type="button" class="btn-service-type" onclick="chooseServiceMode('repair')">
+                                <i class="fa-solid fa-screwdriver-wrench text-warning mb-1 d-block fs-4"></i> System Repair
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button" class="btn-service-type" onclick="chooseServiceMode('replacement')">
+                                <i class="fa-solid fa-arrows-rotate text-success mb-1 d-block fs-4"></i> System Replacement
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SYSTEM REPAIR VIEW (WITH BACK BUTTON) -->
+                <div id="repair_tabs_container" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label small text-muted mb-0">CHOOSE REPAIR CATEGORY:</label>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="resetToServiceMode()"><i class="fa-solid fa-arrow-left me-1"></i> Back</button>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <button type="button" class="btn-category active" id="cat_cooling" onclick="selectRepairCategory('cooling')">
+                                <i class="fa-solid fa-snowflake text-info mb-1 d-block fs-5"></i> Cooling
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button type="button" class="btn-category" id="cat_heating" onclick="selectRepairCategory('heating')">
+                                <i class="fa-solid fa-fire text-danger mb-1 d-block fs-5"></i> Heating
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button type="button" class="btn-category" id="cat_thermostat" onclick="selectRepairCategory('thermostat')">
+                                <i class="fa-solid fa-sliders text-primary mb-1 d-block fs-5"></i> Thermostat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SYSTEM REPLACEMENT VIEW -->
+                <div id="replacement_tabs_container" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label small text-muted mb-0">SELECT SAVED EQUIPMENT TO REPLACE:</label>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="resetToServiceMode()"><i class="fa-solid fa-arrow-left me-1"></i> Back</button>
+                    </div>
+                    <div id="dynamic_replacement_tabs" class="d-flex flex-column gap-2"></div>
+                </div>
+            </div>
+
+            <!-- CARD 3: LOCATION & SCHEDULING -->
+            <div class="panel-card">
+                <div class="section-header">
+                    <span><i class="fa-solid fa-location-dot me-1"></i> 2. Location & Urgency</span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">SELECT JOB SITE PROPERTY ADDRESS</label>
+                    <select class="form-select rounded-3" id="dispatch_address_select" name="address" onchange="onDispatchAddressChange(this.value)">
+                        <option value="primary">📍 Primary Residential Address</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">PURCHASE ORDER (PO) # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
+                    <input type="text" name="po_number" class="form-control rounded-3" placeholder="e.g. PO-88204">
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label">SERVICE URGENCY</label>
+                    <select class="form-select rounded-3 fw-bold" id="urgency_select" name="urgency" onchange="toggleUrgencySchedule(this.value)">
+                        <option value="Dispatch Now" selected>⚡ Dispatch Now</option>
+                        <option value="Scheduled">📅 Other (Select Date & Time)</option>
+                    </select>
+                </div>
+
+                <div id="urgency_schedule_box" class="row g-2 mt-2 p-2 bg-light border rounded-3" style="display: none;">
                     <div class="col-6">
-                        <button type="button" class="btn-service-type" onclick="chooseServiceMode('repair')">
-                            <i class="fa-solid fa-screwdriver-wrench text-warning mb-1 d-block fs-4"></i> System Repair
-                        </button>
+                        <label class="form-label small mb-1">SELECT DATE</label>
+                        <input type="date" id="scheduled_date" class="form-control rounded-2">
                     </div>
                     <div class="col-6">
-                        <button type="button" class="btn-service-type" onclick="chooseServiceMode('replacement')">
-                            <i class="fa-solid fa-arrows-rotate text-success mb-1 d-block fs-4"></i> System Replacement
-                        </button>
+                        <label class="form-label small mb-1">SELECT TIME</label>
+                        <input type="time" id="scheduled_time" class="form-control rounded-2">
                     </div>
                 </div>
             </div>
 
-            <div id="repair_tabs_container" class="row g-2 mb-3" style="display: none;">
-                <div class="col-4">
-                    <button type="button" class="btn-category active" id="cat_cooling" onclick="selectRepairCategory('cooling')">
-                        <i class="fa-solid fa-snowflake text-info mb-1 d-block fs-5"></i> Cooling
-                    </button>
+            <!-- CARD 4: DIAGNOSTIC ASSISTANT & EQUIPMENT SPECS -->
+            <div class="panel-card">
+                <div class="section-header">
+                    <span><i class="fa-solid fa-wand-magic-sparkles me-1"></i> 3. Diagnostic & Equipment Details</span>
                 </div>
-                <div class="col-4">
-                    <button type="button" class="btn-category" id="cat_heating" onclick="selectRepairCategory('heating')">
-                        <i class="fa-solid fa-fire text-danger mb-1 d-block fs-5"></i> Heating
-                    </button>
+
+                <div class="mb-3">
+                    <label class="form-label">EQUIPMENT TYPE (INCLUDES RESIDENTIAL & COMMERCIAL)</label>
+                    <select class="form-select rounded-3" id="equipment_type_select" name="equipment" onchange="autoFillDescription()">
+                        <option value="General HVAC Issue">Select HVAC Equipment...</option>
+                        <option value="Cooling Issue">Cooling Issue</option>
+                        <option value="Heating Issue">Heating Issue</option>
+                        <option value="Control / Thermostat Issue">Control / Thermostat Issue</option>
+                        <option value="A/C Condenser">A/C Condenser</option>
+                        <option value="Furnace / Air Handler">Furnace / Air Handler</option>
+                        <option value="Complete Split System">Complete Split System</option>
+                        <option value="Commercial RTU">Commercial RTU</option>
+                    </select>
                 </div>
-                <div class="col-4">
-                    <button type="button" class="btn-category" id="cat_thermostat" onclick="selectRepairCategory('thermostat')">
-                        <i class="fa-solid fa-sliders text-primary mb-1 d-block fs-5"></i> Thermostat
-                    </button>
-                </div>
-            </div>
 
-            <div id="replacement_tabs_container" class="mb-3" style="display: none;">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <label class="form-label small text-muted mb-0">SELECT SAVED EQUIPMENT TO REPLACE:</label>
-                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="resetToServiceMode()"><i class="fa-solid fa-arrow-left me-1"></i> Back</button>
-                </div>
-                <div id="dynamic_replacement_tabs" class="d-flex flex-column gap-2"></div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">SELECT JOB SITE PROPERTY ADDRESS</label>
-                <select class="form-select rounded-3" id="dispatch_address_select" name="address" onchange="onDispatchAddressChange(this.value)">
-                    <option value="primary">📍 Primary Residential Address</option>
-                </select>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">PURCHASE ORDER (PO) # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
-                <input type="text" name="po_number" class="form-control rounded-3" placeholder="e.g. PO-88204">
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">SERVICE URGENCY</label>
-                <select class="form-select rounded-3 fw-bold" id="urgency_select" name="urgency" onchange="toggleUrgencySchedule(this.value)">
-                    <option value="Dispatch Now" selected>⚡ Dispatch Now</option>
-                    <option value="Scheduled">📅 Other (Select Date & Time)</option>
-                </select>
-            </div>
-
-            <div id="urgency_schedule_box" class="row g-2 mb-3 p-2 bg-light border rounded-3" style="display: none;">
-                <div class="col-6">
-                    <label class="form-label small mb-1">SELECT DATE</label>
-                    <input type="date" id="scheduled_date" class="form-control rounded-2">
-                </div>
-                <div class="col-6">
-                    <label class="form-label small mb-1">SELECT TIME</label>
-                    <input type="time" id="scheduled_time" class="form-control rounded-2">
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">EQUIPMENT TYPE (INCLUDES RESIDENTIAL & COMMERCIAL)</label>
-                <select class="form-select rounded-3" id="equipment_type_select" name="equipment" onchange="autoFillDescription()">
-                    <option value="General HVAC Issue">Select HVAC Equipment...</option>
-                    <option value="Cooling Issue">Cooling Issue</option>
-                    <option value="Heating Issue">Heating Issue</option>
-                    <option value="Control / Thermostat Issue">Control / Thermostat Issue</option>
-                    <option value="A/C Condenser">A/C Condenser</option>
-                    <option value="Furnace / Air Handler">Furnace / Air Handler</option>
-                    <option value="Complete Split System">Complete Split System</option>
-                    <option value="Commercial RTU">Commercial RTU</option>
-                </select>
-            </div>
-
-            <div class="p-3 mb-3 rounded-4" style="background: #f0f7ff; border: 1.5px solid #3b82f6;">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    {{PHOENIX_SMALL}}
-                    <h6 class="fw-bold mb-0 text-primary">OLMIOS Diagnostic Chat Assistant</h6>
-                </div>
-                <p class="small text-muted mb-2">Tell us what's going on! Mention symptoms, specific defective part notes, or paste image URLs:</p>
-                
-                <textarea id="chat_assistant_input" class="form-control mb-2" rows="3" placeholder="e.g., Blower motor not spinning..." oninput="autoFillDescription()"></textarea>
-                
-                <button type="button" class="btn btn-primary w-100 py-2 fw-bold rounded-3 shadow-sm" onclick="autoFillDescription()">
-                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AUTO-FILL ISSUE DESCRIPTION
-                </button>
-
-                <div id="ai_followup_box" class="ai-followup-box">
-                    <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-info-subtle">
+                <div class="p-3 mb-3 rounded-4" style="background: #f0f7ff; border: 1.5px solid #3b82f6;">
+                    <div class="d-flex align-items-center gap-2 mb-2">
                         {{PHOENIX_SMALL}}
-                        <span class="fw-bold text-primary small">Olmios AI Diagnostic Follow-Up:</span>
+                        <h6 class="fw-bold mb-0 text-primary">OLMIOS Diagnostic Chat Assistant</h6>
                     </div>
-                    <p class="small text-dark fw-semibold mb-2" id="ai_followup_question">Is the leak on the outdoor condenser coil or the indoor evaporator coil/air handler?</p>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold w-50" onclick="answerAiLeak('Outdoor Condenser Coil')">Outdoor Condenser Coil</button>
-                        <button type="button" class="btn btn-sm btn-primary fw-bold w-50" onclick="answerAiLeak('Indoor Evaporator Coil')">Indoor Evaporator Coil</button>
+                    <p class="small text-muted mb-2">Tell us what's going on! Mention symptoms or part notes:</p>
+                    <textarea id="chat_assistant_input" class="form-control mb-2" rows="3" placeholder="e.g., Blower motor not spinning..." oninput="autoFillDescription()"></textarea>
+                    
+                    <button type="button" class="btn btn-primary w-100 py-2 fw-bold rounded-3 shadow-sm" onclick="autoFillDescription()">
+                        <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AUTO-FILL ISSUE DESCRIPTION
+                    </button>
+
+                    <div id="ai_followup_box" class="ai-followup-box">
+                        <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-info-subtle">
+                            {{PHOENIX_SMALL}}
+                            <span class="fw-bold text-primary small">Olmios AI Diagnostic Follow-Up:</span>
+                        </div>
+                        <p class="small text-dark fw-semibold mb-2" id="ai_followup_question">Is the leak on the outdoor condenser coil or the indoor evaporator coil/air handler?</p>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold w-50" onclick="answerAiLeak('Outdoor Condenser Coil')">Outdoor Condenser Coil</button>
+                            <button type="button" class="btn btn-sm btn-primary fw-bold w-50" onclick="answerAiLeak('Indoor Evaporator Coil')">Indoor Evaporator Coil</button>
+                        </div>
                     </div>
+                </div>
+
+                <div>
+                    <label class="form-label">ISSUE DESCRIPTION (FINAL DISPATCH SUMMARY)</label>
+                    <textarea id="issue_description" name="issue_description" class="form-control rounded-3" rows="3" placeholder="Describe requested HVAC issue or click Auto-Fill above..."></textarea>
                 </div>
             </div>
 
-            <div class="mb-3">
-                <label class="form-label">ISSUE DESCRIPTION (FINAL DISPATCH SUMMARY)</label>
-                <textarea id="issue_description" name="issue_description" class="form-control rounded-3" rows="3" placeholder="Describe requested HVAC issue or click Auto-Fill above..."></textarea>
+            <!-- CARD 5: PAYMENT AUTHORIZATION -->
+            <div class="panel-card">
+                <div class="section-header">
+                    <span><i class="fa-solid fa-credit-card me-1"></i> 4. Payment Authorization</span>
+                </div>
+
+                <div>
+                    <label class="form-label">SELECT SAVED PAYMENT CARD</label>
+                    <select class="form-select rounded-3">
+                        <option value="">Select Payment Method...</option>
+                        <option selected>💳 Visa ending in 1004</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="mb-3">
-                <label class="form-label">SELECT SAVED PAYMENT CARD</label>
-                <select class="form-select rounded-3">
-                    <option value="">Select Payment Method...</option>
-                    <option selected>💳 Visa ending in 1004</option>
-                </select>
-            </div>
-
-            <button type="submit" class="btn btn-amber w-100 py-3 rounded-3 fw-bold mb-2 shadow-sm fs-6">
-                💳 Request Service & Dispatch - $99.00
+            <!-- STANDALONE SUBMIT CTA -->
+            <button type="submit" class="btn-cta-orange shadow-sm fs-6">
+                ⚡ Request Service & Dispatch - $99.00
             </button>
         </form>
 
-        <a href="/customer_home" class="btn btn-outline-secondary w-100 py-2 rounded-3 fw-bold small"><i class="fa-solid fa-house me-1"></i> Home Page</a>
+        <!-- UNIFORM LIGHT GRAY HOME BUTTON -->
+        <div class="text-center mt-2">
+            <a href="/customer_home" class="btn-gray-nav py-3 fs-6"><i class="fa-solid fa-house me-1 text-primary"></i> Home Page</a>
+        </div>
     </div>
 
     <script>
@@ -899,9 +855,8 @@ def dispatch_request():
     function chooseServiceMode(mode) {
         currentServiceMode = mode;
         document.getElementById('service_mode_container').style.display = 'none';
-
         if(mode === 'repair') {
-            document.getElementById('repair_tabs_container').style.display = 'flex';
+            document.getElementById('repair_tabs_container').style.display = 'block';
             document.getElementById('replacement_tabs_container').style.display = 'none';
         } else if(mode === 'replacement') {
             document.getElementById('repair_tabs_container').style.display = 'none';
@@ -1179,9 +1134,6 @@ def confirmation(req_id):
     </html>
     """
 
-# ==========================================
-# CUSTOMER PROFILE & WALLET (LIGHT GRAY HOME BUTTON)
-# ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
     is_dispatch_mode = request.args.get('mode') == 'dispatch'
@@ -1230,7 +1182,6 @@ def profile():
     <div class="dashboard-container">
         {{DISPATCH_HEADER}}
 
-        <!-- CARD 1: TOP GREETING & PROFILE AVATAR -->
         <div class="panel-card">
             <div class="d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-3">
@@ -1254,62 +1205,28 @@ def profile():
         {{SAVED_MSG}}
 
         <form method="POST" id="profile_main_form" onsubmit="saveProfileToLocal(event)" class="d-flex flex-column gap-3">
-            
-            <!-- CARD 2: PERSONAL INFORMATION -->
             <div class="panel-card">
-                <div class="section-header">
-                    <span><i class="fa-solid fa-user me-1"></i> 1. Personal Information</span>
-                </div>
-                
+                <div class="section-header"><span><i class="fa-solid fa-user me-1"></i> 1. Personal Information</span></div>
                 <div class="row g-2 mb-2">
-                    <div class="col-6">
-                        <label class="form-label">FIRST NAME</label>
-                        <input type="text" id="prof_fname" class="form-control rounded-3" placeholder="First name">
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label">LAST NAME</label>
-                        <input type="text" id="prof_lname" class="form-control rounded-3" placeholder="Last name">
-                    </div>
+                    <div class="col-6"><label class="form-label">FIRST NAME</label><input type="text" id="prof_fname" class="form-control rounded-3" placeholder="First name"></div>
+                    <div class="col-6"><label class="form-label">LAST NAME</label><input type="text" id="prof_lname" class="form-control rounded-3" placeholder="Last name"></div>
                 </div>
-                
-                <div class="mb-2">
-                    <label class="form-label">PHONE NUMBER</label>
-                    <input type="text" id="prof_phone" class="form-control rounded-3" placeholder="Phone number">
-                </div>
-
-                <div>
-                    <label class="form-label">EMAIL ADDRESS</label>
-                    <input type="email" id="prof_email" class="form-control rounded-3" placeholder="Email address">
-                </div>
+                <div class="mb-2"><label class="form-label">PHONE NUMBER</label><input type="text" id="prof_phone" class="form-control rounded-3" placeholder="Phone number"></div>
+                <div><label class="form-label">EMAIL ADDRESS</label><input type="email" id="prof_email" class="form-control rounded-3" placeholder="Email address"></div>
             </div>
 
-            <!-- CARD 3: ADDRESSES & PROPERTY LOCATIONS -->
             <div class="panel-card">
                 <div class="section-header">
                     <span><i class="fa-solid fa-location-dot me-1"></i> 2. Residential & Property Locations</span>
                     <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_location_box')"><i class="fa-solid fa-plus me-1"></i> Add Location Specs</button>
                 </div>
-
                 <div class="p-3 border rounded-3 bg-light mb-3">
                     <span class="fw-bold text-primary small d-block mb-2"><i class="fa-solid fa-house-chimney me-1"></i> Primary Residence Address Details</span>
-                    
-                    <div class="mb-2">
-                        <label class="form-label">STREET ADDRESS</label>
-                        <input type="text" id="addr_street" class="form-control rounded-3" placeholder="e.g. 211 Dominion Park Dr">
-                    </div>
-
-                    <div class="mb-2">
-                        <label class="form-label">APT / SUITE / BUILDING # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
-                        <input type="text" id="addr_unit" class="form-control rounded-3" placeholder="e.g. 607, Apt 4B, Bldg 2">
-                    </div>
-
+                    <div class="mb-2"><label class="form-label">STREET ADDRESS</label><input type="text" id="addr_street" class="form-control rounded-3" placeholder="e.g. 211 Dominion Park Dr"></div>
+                    <div class="mb-2"><label class="form-label">APT / SUITE / BUILDING # <span class="text-muted fw-normal">(OPTIONAL)</span></label><input type="text" id="addr_unit" class="form-control rounded-3" placeholder="e.g. 607, Apt 4B, Bldg 2"></div>
                     <div class="row g-2 mb-2">
-                        <div class="col-7">
-                            <label class="form-label">CITY</label>
-                            <input type="text" id="addr_city" class="form-control rounded-3" placeholder="e.g. Houston">
-                        </div>
-                        <div class="col-5">
-                            <label class="form-label">STATE</label>
+                        <div class="col-7"><label class="form-label">CITY</label><input type="text" id="addr_city" class="form-control rounded-3" placeholder="e.g. Houston"></div>
+                        <div class="col-5"><label class="form-label">STATE</label>
                             <select id="addr_state" class="form-select rounded-3 fw-bold">
                                 <option value="TX" selected>TX (Texas)</option>
                                 <option value="AL">AL</option><option value="AZ">AZ</option><option value="CA">CA</option>
@@ -1318,31 +1235,19 @@ def profile():
                             </select>
                         </div>
                     </div>
-
-                    <div>
-                        <label class="form-label">ZIP CODE</label>
-                        <input type="text" id="addr_zip" class="form-control rounded-3 fw-bold text-primary" placeholder="e.g. 77090" maxlength="5">
-                    </div>
+                    <div><label class="form-label">ZIP CODE</label><input type="text" id="addr_zip" class="form-control rounded-3 fw-bold text-primary" placeholder="e.g. 77090" maxlength="5"></div>
                 </div>
-
                 <div>
                     <label class="form-label">SWITCH / VIEW ADDITIONAL PROPERTY LOCATIONS</label>
-                    <select class="form-select rounded-3" id="profile_additional_locations_select">
-                        <option value="">Select Property Address...</option>
-                    </select>
+                    <select class="form-select rounded-3" id="profile_additional_locations_select"><option value="">Select Property Address...</option></select>
                 </div>
-
                 <div id="add_location_box" class="add-on-box mt-3">
                     <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-house-chimney-medical me-1"></i> Add Additional Location Specs</h6>
-                    <div class="mb-2">
-                        <label class="form-label">PROPERTY ADDRESS (STREET, CITY, STATE, ZIP)</label>
-                        <input type="text" id="new_location_addr_input" class="form-control rounded-3" placeholder="e.g. 18510 Ranch View Trail Cir, Houston, TX 77090">
-                    </div>
+                    <div class="mb-2"><label class="form-label">PROPERTY ADDRESS (STREET, CITY, STATE, ZIP)</label><input type="text" id="new_location_addr_input" class="form-control rounded-3" placeholder="e.g. 18510 Ranch View Trail Cir, Houston, TX 77090"></div>
                     <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-2" onclick="saveAdditionalLocation()">Save Location Specs</button>
                 </div>
             </div>
 
-            <!-- CARD 4: BUSINESS & COMMERCIAL DETAILS (COLLAPSIBLE) -->
             <div class="panel-card">
                 <div class="prompt-dropbox-header mb-2" onclick="toggleAddBox('biz_collapsible_container')">
                     <div class="d-flex justify-content-between align-items-center">
@@ -1350,59 +1255,35 @@ def profile():
                         <i class="fa-solid fa-chevron-down text-primary"></i>
                     </div>
                 </div>
-
                 <div id="biz_collapsible_container" style="display: none;" class="p-2 border rounded-3 bg-light">
-                    <div class="section-header mt-1">
-                        <span><i class="fa-solid fa-briefcase me-1"></i> Business & Commercial Information</span>
-                    </div>
-
+                    <div class="section-header mt-1"><span><i class="fa-solid fa-briefcase me-1"></i> Business & Commercial Information</span></div>
                     <div class="mb-3">
                         <label class="form-label">DRIVER'S LICENSE / STATE ID # <span class="text-danger fw-bold">(REQUIRED FOR COMMERCIAL VERIFICATION)</span></label>
                         <input type="text" id="prof_dl" class="form-control rounded-3 uppercase-input mb-2" placeholder="ENTER DRIVER'S LICENSE #" oninput="this.value = this.value.toUpperCase()">
-                        
                         <label class="btn btn-sm btn-outline-secondary w-100 fw-bold rounded-3">
                             <i class="fa-solid fa-id-card me-1"></i> Snap / Upload Photo of Driver's License
                             <input type="file" accept="image/*" capture="environment" style="display: none;" onchange="alert('Driver License Photo Uploaded!')">
                         </label>
                     </div>
-                    
-                    <div class="mb-2">
-                        <label class="form-label">BUSINESS / COMPANY NAME</label>
-                        <input type="text" id="prof_company" class="form-control rounded-3" placeholder="Enter company name">
-                    </div>
+                    <div class="mb-2"><label class="form-label">BUSINESS / COMPANY NAME</label><input type="text" id="prof_company" class="form-control rounded-3" placeholder="Enter company name"></div>
                     <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label">TAX ID / EIN #</label>
-                            <input type="text" id="prof_taxid" class="form-control rounded-3 uppercase-input" placeholder="XX-XXXXXXX" oninput="this.value = this.value.toUpperCase()">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label">ACCOUNTS PAYABLE EMAIL</label>
-                            <input type="email" id="prof_ap_email" class="form-control rounded-3" placeholder="ap@company.com">
-                        </div>
+                        <div class="col-6"><label class="form-label">TAX ID / EIN #</label><input type="text" id="prof_taxid" class="form-control rounded-3 uppercase-input" placeholder="XX-XXXXXXX" oninput="this.value = this.value.toUpperCase()"></div>
+                        <div class="col-6"><label class="form-label">ACCOUNTS PAYABLE EMAIL</label><input type="email" id="prof_ap_email" class="form-control rounded-3" placeholder="ap@company.com"></div>
                     </div>
-
                     <div class="p-2.5 border rounded-3 bg-white mb-2">
                         <label class="form-label mb-1">SALES TAX EXEMPT / RESALE STATUS</label>
                         <select class="form-select rounded-3 fw-bold text-primary mb-2" id="tax_exempt_select" onchange="toggleTaxCertBox(this.value)">
                             <option value="no" selected>No (Standard Tax Applies)</option>
                             <option value="yes">Yes (Tax Exempt / Resale Account)</option>
                         </select>
-
                         <div id="tax_cert_box" style="display: none;">
-                            <div class="mb-2">
-                                <label class="form-label small">SALES TAX EXEMPTION / RESALE ID #</label>
-                                <input type="text" class="form-control form-control-sm rounded-2 uppercase-input" placeholder="Certificate ID #" oninput="this.value = this.value.toUpperCase()">
-                            </div>
-                            <label class="btn btn-sm btn-outline-primary w-100 fw-bold rounded-2">
-                                <i class="fa-solid fa-file-arrow-up me-1"></i> Upload Tax Exemption / Resale Certificate (PDF / Image)
-                            <input type="file" accept="image/*,application/pdf" style="display: none;" onchange="alert('Tax Exemption Certificate Uploaded!')">
-                            </label>
+                            <div class="mb-2"><label class="form-label small">SALES TAX EXEMPTION / RESALE ID #</label><input type="text" class="form-control form-control-sm rounded-2 uppercase-input" placeholder="Certificate ID #" oninput="this.value = this.value.toUpperCase()"></div>
+                            <label class="btn btn-sm btn-outline-primary w-100 fw-bold rounded-2"><i class="fa-solid fa-file-arrow-up me-1"></i> Upload Tax Exemption / Resale Certificate (PDF / Image)<input type="file" accept="image/*,application/pdf" style="display: none;" onchange="alert('Tax Exemption Certificate Uploaded!')"></label>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- CARD 5: HVAC SYSTEM SPECS & CAMERA SNAP UPLOAD -->
             <div class="panel-card">
                 <div class="section-header">
                     <span><i class="fa-solid fa-sliders me-1"></i> 3. HVAC System Equipment Specs</span>
@@ -1411,7 +1292,6 @@ def profile():
                         <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_hvac_box')"><i class="fa-solid fa-plus me-1"></i> Add-On</button>
                     </div>
                 </div>
-                
                 <div class="mb-3">
                     <label class="form-label">SYSTEM HEATING TYPE</label>
                     <select class="form-select rounded-3 fw-bold text-primary" id="main_heating_type_select" onchange="renderDynamicHvacFields(this.value, 'dynamic_hvac_container')">
@@ -1425,19 +1305,13 @@ def profile():
                         <option value="comm_split">Commercial Split System</option>
                     </select>
                 </div>
-
-                <!-- DYNAMIC COMPONENT FIELDS CONTAINER -->
                 <div id="dynamic_hvac_container"></div>
-
-                <!-- INTERACTIVE PHOTO SNAP & UPLOAD DROPZONE -->
                 <div class="mb-2">
                     <label class="form-label"><i class="fa-solid fa-camera text-primary me-1"></i> UNIT RATING PLATE PHOTO / TAG SNAP <span class="text-muted fw-normal">(OPTIONAL)</span></label>
-                    
                     <label class="btn btn-outline-primary w-100 fw-bold rounded-3 py-2.5 d-flex align-items-center justify-content-center gap-2" style="font-size: 0.88rem; cursor: pointer; border: 1.5px dashed #3b82f6; background: #f0f7ff;">
                         <i class="fa-solid fa-camera-retro fs-5"></i> Snap / Upload Equipment Data Tag Photo
                         <input type="file" accept="image/*" capture="environment" style="display: none;" onchange="previewTagPhoto(event)">
                     </label>
-
                     <div id="tag_preview_container" class="tag-preview-box" style="display: none;">
                         <img id="tag_img_preview" src="" style="max-height: 120px; border-radius: 8px; border: 1px solid #cbd5e1; object-fit: cover;" class="mb-2 d-block mx-auto">
                         <div class="d-flex justify-content-center gap-2">
@@ -1452,10 +1326,7 @@ def profile():
                         <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-sliders me-1"></i> Add Additional Accessory</h6>
                         <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="toggleAddBox('add_acc_box')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label">ACCESSORY TYPE / NAME</label>
-                        <input type="text" class="form-control rounded-3" placeholder="e.g., Smart Thermostat, Surge Protector">
-                    </div>
+                    <div class="mb-2"><label class="form-label">ACCESSORY TYPE / NAME</label><input type="text" class="form-control rounded-3" placeholder="e.g., Smart Thermostat, Surge Protector"></div>
                     <div class="row g-2 mb-2">
                         <div class="col-6"><label class="form-label">MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
                         <div class="col-6"><label class="form-label">SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
@@ -1473,13 +1344,11 @@ def profile():
                 </div>
             </div>
 
-            <!-- CARD 6: SAVED PAYMENT CARDS & WALLET -->
             <div class="panel-card">
                 <div class="section-header">
                     <span><i class="fa-solid fa-credit-card me-1"></i> 4. Saved Payment Cards & Wallet</span>
                     <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_card_box')"><i class="fa-solid fa-plus me-1"></i> Add Additional Card</button>
                 </div>
-
                 <div id="card_list_container">
                     <div class="card-box" id="card_1004">
                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -1499,7 +1368,6 @@ def profile():
                         </div>
                     </div>
                 </div>
-
                 <div id="add_card_box" class="add-on-box">
                     <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-credit-card me-1"></i> Add New Payment Card</h6>
                     <input type="text" id="new_card_name" class="form-control rounded-3 mb-2" placeholder="Cardholder Name">
@@ -1511,12 +1379,9 @@ def profile():
                 </div>
             </div>
 
-            <!-- ACTION BUTTONS: HIGH-CONTRAST SOLID WHITE CARDS -->
             <div class="row g-2">
                 <div class="col-6">
-                    <button type="submit" class="btn btn-amber w-100 py-3 rounded-3 fw-bold shadow-sm fs-6">
-                        <i class="fa-solid fa-floppy-disk me-1"></i> Save Profile
-                    </button>
+                    <button type="submit" class="btn btn-amber w-100 py-3 rounded-3 fw-bold shadow-sm fs-6"><i class="fa-solid fa-floppy-disk me-1"></i> Save Profile</button>
                 </div>
                 <div class="col-6">
                     <a href="/customer_home" class="btn btn-white-action py-3 fs-6">Cancel</a>
@@ -1524,16 +1389,12 @@ def profile():
             </div>
         </form>
 
-        <!-- FOOTER HOME & LOG OFF BUTTONS: UNIFORM LIGHT GRAY NAV CARD -->
         <div class="text-center mt-2">
             <a href="/customer_home" class="btn-gray-nav py-3 mb-2 fs-6"><i class="fa-solid fa-house me-1 text-primary"></i> Home Page</a>
             <div>
-                <a href="/logout" class="profile-quiet-logoff" onclick="localStorage.removeItem('olmios_is_first_login');">
-                    <i class="fa-solid fa-right-from-bracket me-1"></i> Securely Log Off
-                </a>
+                <a href="/logout" class="profile-quiet-logoff" onclick="localStorage.removeItem('olmios_is_first_login');"><i class="fa-solid fa-right-from-bracket me-1"></i> Securely Log Off</a>
             </div>
         </div>
-
     </div>
 
     <script>
@@ -1651,7 +1512,7 @@ def profile():
                     <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" id="m_coil_ser" class="form-control rounded-3 uppercase-input" placeholder="Air Handler Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>
                 <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase Nickname" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
                     <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         } else if (systemType === 'gas_hp') {
@@ -1680,7 +1541,7 @@ def profile():
                 </div>
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Serial #" oninput="this.value = this.value.toUpperCase Nickname" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         } else if (systemType === 'res_pkg') {
             html = `
@@ -1947,9 +1808,6 @@ def download_logo():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER)
 
-# ==========================================
-# FIELD TECHNICIAN APP ROUTE (/tech_home)
-# ==========================================
 @app.route('/tech_home')
 def tech_home():
     html = """<!DOCTYPE html>
@@ -2084,9 +1942,6 @@ def tech_home():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42))
 
-# ==========================================
-# ENTERPRISE BACKOFFICE ERP ROUTE (/backoffice)
-# ==========================================
 @app.route('/backoffice')
 def backoffice():
     html = """<!DOCTYPE html>
@@ -2172,9 +2027,6 @@ def backoffice():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(35, 35))
 
-# ==========================================
-# DISPATCH COMMAND CENTER (/admin)
-# ==========================================
 @app.route('/admin')
 def admin():
     conn = sqlite3.connect("requests.db")
@@ -2819,7 +2671,6 @@ def admin():
     </html>
     """
 
-# OTHER ENDPOINTS
 @app.route("/accept_and_dispatch/<int:req_id>", methods=["POST"])
 def accept_and_dispatch(req_id):
     tech = request.form.get("tech", "Tech A (Lead)")
