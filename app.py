@@ -176,7 +176,7 @@ def get_lat_lng(address_str):
 
     try:
         url = "https://photon.komoot.io/api/?q=" + urllib.parse.quote(address_str.strip()) + "&limit=1&countrycode=us"
-        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosLiveDispatch/5.0 (dispatch@olmios.com)"})
+        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosLiveDispatch/6.0 (dispatch@olmios.com)"})
         with urllib.request.urlopen(req, timeout=3) as response:
             data = json.loads(response.read().decode())
             if data and 'features' in data and len(data['features']) > 0:
@@ -342,7 +342,7 @@ def logout():
     return redirect('/')
 
 # ==========================================
-# CUSTOMER HOME DASHBOARD ROUTE
+# CUSTOMER HOME DASHBOARD ROUTE (CENTERED REGIONAL SCALE)
 # ==========================================
 @app.route('/customer_home')
 def customer_home():
@@ -394,7 +394,7 @@ def customer_home():
             </div>
         </div>
 
-        <!-- CARD 2: PROPERTY SELECTOR & MAP -->
+        <!-- CARD 2: PROPERTY SELECTOR & MAP (PERFECT CENTER & ZOOM) -->
         <div class="panel-card">
             <div class="mb-2">
                 <label class="form-label small fw-bold text-muted mb-1"><i class="fa-solid fa-location-dot text-primary me-1"></i> Active Job Property View</label>
@@ -474,7 +474,8 @@ def customer_home():
             }
         };
 
-        var map = L.map('map', { autoPanPadding: [20, 20] }).setView([29.985, -95.395], 10);
+        // Perfectly centered regional map view (Zoom 9.5 centered over North Harris County)
+        var map = L.map('map', { autoPanPadding: [20, 20] }).setView([29.980, -95.380], 9.5);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
         var propertyMarker = L.marker([29.9525, -95.4312]).addTo(map);
@@ -501,7 +502,7 @@ def customer_home():
             renderZipPolygons();
 
             if (forcedLat && forcedLng) {
-                map.setView([29.985, -95.395], 10);
+                map.setView([29.980, -95.380], 9.5);
                 propertyMarker.setLatLng([forcedLat, forcedLng]);
                 propertyMarker.bindPopup("<b>🏠 " + label + "</b><br>" + addressText, { autoPanPadding: [20, 20] }).openPopup();
                 return;
@@ -511,7 +512,7 @@ def customer_home():
                 .then(r => r.json())
                 .then(data => {
                     if (data && data.lat && data.lng) {
-                        map.setView([29.985, -95.395], 10);
+                        map.setView([29.980, -95.380], 9.5);
                         propertyMarker.setLatLng([data.lat, data.lng]);
                         propertyMarker.bindPopup("<b>🏠 " + label + "</b><br>" + addressText, { autoPanPadding: [20, 20] }).openPopup();
                     }
@@ -520,7 +521,7 @@ def customer_home():
         }
 
         function switchHomeProperty(val) {
-            var primaryAddr = localStorage.getItem('olmios_saved_address') || '211 Dominion Park Dr, Houston, TX 77090';
+            var primaryAddr = localStorage.getItem('olmios_saved_address') || '211 Dominion Park Dr 607, Houston, TX 77090';
             var pLat = localStorage.getItem('olmios_saved_lat');
             var pLng = localStorage.getItem('olmios_saved_lng');
 
@@ -532,7 +533,7 @@ def customer_home():
         }
 
         function initCustomerHome() {
-            var primaryAddr = localStorage.getItem('olmios_saved_address') || '211 Dominion Park Dr, Houston, TX 77090';
+            var primaryAddr = localStorage.getItem('olmios_saved_address') || '211 Dominion Park Dr 607, Houston, TX 77090';
             var savedName = localStorage.getItem('olmios_fullname') || 'Ian Olvera';
             var pLat = localStorage.getItem('olmios_saved_lat') || (primaryAddr.includes('Dominion') ? 29.9525 : 29.9985);
             var pLng = localStorage.getItem('olmios_saved_lng') || (primaryAddr.includes('Dominion') ? -95.4312 : -95.4412);
@@ -1068,7 +1069,7 @@ def dispatch_request():
 
     window.onload = function() {
         let name = localStorage.getItem('olmios_fullname') || 'Ian Olvera';
-        let addr = localStorage.getItem('olmios_saved_address') || '211 Dominion Park Dr, Houston, TX 77090';
+        let addr = localStorage.getItem('olmios_saved_address') || '211 Dominion Park Dr 607, Houston, TX 77090';
         document.getElementById('verified_status_line').innerText = "Profile Verified: " + name;
         document.getElementById('customer_name_hidden').value = name;
         document.getElementById('address_hidden').value = addr;
@@ -1099,7 +1100,7 @@ def dispatch_request():
 @app.route('/submit_dispatch', methods=['POST'])
 def submit_dispatch():
     cust_name = request.form.get('customer_name_hidden') or 'Ian Olvera'
-    address = request.form.get('address_hidden') or request.form.get('address') or '211 Dominion Park Dr, Houston, TX 77090'
+    address = request.form.get('address_hidden') or request.form.get('address') or '211 Dominion Park Dr 607, Houston, TX 77090'
     urgency = request.form.get('urgency', 'Dispatch Now')
     equipment = request.form.get('equipment') or 'A/C Condenser'
     issue_description = request.form.get('issue_description') or 'Customer requested diagnostic service.'
@@ -1179,7 +1180,7 @@ def confirmation(req_id):
     """
 
 # ==========================================
-# CUSTOMER PROFILE & WALLET (STRUCTURED ADDRESS GRID)
+# CUSTOMER PROFILE & WALLET (DISCRETE CARD SPACING UI)
 # ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -1203,10 +1204,11 @@ def profile():
     <title>Olmios - Profile & Wallet</title>
     {{HEADER}}
     <style>
-        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .form-label { font-weight: 800; color: #334155 !important; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-        .section-header { font-weight: 800; color: #0284c7; font-size: 0.92rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; margin-top: 18px; display: flex; justify-content: space-between; align-items: center; }
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 18px 14px; min-height: 100vh; }
+        .dashboard-container { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+        .panel-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 16px 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+        .form-label { font-weight: 800; color: #334155 !important; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; display: block; }
+        .section-header { font-weight: 800; color: #0284c7; font-size: 0.90rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
         .add-tab-btn { font-size: 0.75rem; padding: 2px 10px; border-radius: 20px; font-weight: 700; }
         .add-on-box { display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
@@ -1214,282 +1216,305 @@ def profile():
         .uppercase-input { text-transform: uppercase !important; }
         .prompt-dropbox-header { background: #f0f7ff; border: 1.5px solid #3b82f6; border-radius: 12px; padding: 12px; cursor: pointer; transition: all 0.2s; }
         .prompt-dropbox-header:hover { background: #e0f2fe; }
-        .profile-quiet-logoff { color: #dc2626; font-size: 0.85rem; font-weight: 700; text-decoration: none; display: inline-block; margin-top: 12px; }
+        .profile-quiet-logoff { color: #dc2626; font-size: 0.85rem; font-weight: 700; text-decoration: none; display: inline-block; margin-top: 10px; }
         .profile-quiet-logoff:hover { color: #991b1b; text-decoration: underline; }
     </style>
 </head>
 <body>
-    <div class="main-card">
+    <div class="dashboard-container">
         {{DISPATCH_HEADER}}
-        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-id-card me-1 text-primary"></i> Customer Profile & Wallet</h5>
-            <a href="/customer_home" title="Home">{{PHOENIX}}</a>
+
+        <!-- CARD 1: TOP GREETING & PROFILE AVATAR -->
+        <div class="panel-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    <img id="profile_avatar_preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 58px; height: 58px; object-fit: cover; border-radius: 50%; border: 3px solid #3b82f6;">
+                    <div>
+                        <div style="font-size: 0.68rem; font-weight: 800; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase;">CUSTOMER ACCOUNT</div>
+                        <div class="fw-bold text-dark fs-6" id="prof_display_fullname">Ian Olvera</div>
+                        <label class="btn btn-sm btn-outline-primary fw-bold rounded-3 py-0 px-2 mt-1" style="font-size: 0.72rem;">
+                            <i class="fa-solid fa-camera me-1"></i> Change Photo
+                            <input type="file" accept="image/*" capture="user" style="display: none;" onchange="previewProfilePic(event)">
+                        </label>
+                    </div>
+                </div>
+                <div class="d-flex flex-column align-items-center">
+                    <span class="fw-bold text-dark mb-1" style="font-size: 0.90rem; letter-spacing: 2px;">OLMIOS</span>
+                    <a href="/customer_home" title="Home">{{PHOENIX}}</a>
+                </div>
+            </div>
         </div>
 
         {{SAVED_MSG}}
 
-        <form method="POST" id="profile_main_form" onsubmit="saveProfileToLocal(event)">
-            <div class="mb-3 text-center">
-                <img id="profile_avatar_preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 85px; height: 85px; object-fit: cover; border-radius: 50%; border: 3px solid #3b82f6;" class="mb-2">
-                <div>
-                    <label class="btn btn-sm btn-outline-primary fw-bold rounded-3">
-                        <i class="fa-solid fa-camera me-1"></i> Upload Profile Picture
-                        <input type="file" accept="image/*" capture="user" style="display: none;" onchange="previewProfilePic(event)">
-                    </label>
-                </div>
-            </div>
-
-            <!-- SECTION 1: PERSONAL & STRUCTURED ADDRESS -->
-            <div class="section-header">
-                <span><i class="fa-solid fa-user me-1"></i> 1. Basic Personal Information & Residence</span>
-            </div>
+        <form method="POST" id="profile_main_form" onsubmit="saveProfileToLocal(event)" class="d-flex flex-column gap-3">
             
-            <div class="row g-2 mb-2">
-                <div class="col-6">
-                    <label class="form-label">FIRST NAME</label>
-                    <input type="text" id="prof_fname" class="form-control rounded-3" placeholder="Enter first name">
+            <!-- CARD 2: PERSONAL INFORMATION -->
+            <div class="panel-card">
+                <div class="section-header">
+                    <span><i class="fa-solid fa-user me-1"></i> 1. Personal Information</span>
                 </div>
-                <div class="col-6">
-                    <label class="form-label">LAST NAME</label>
-                    <input type="text" id="prof_lname" class="form-control rounded-3" placeholder="Enter last name">
-                </div>
-            </div>
-            
-            <div class="mb-2">
-                <label class="form-label">PHONE NUMBER</label>
-                <input type="text" id="prof_phone" class="form-control rounded-3" placeholder="Enter phone number">
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">EMAIL ADDRESS</label>
-                <input type="email" id="prof_email" class="form-control rounded-3" placeholder="Enter email address">
-            </div>
-
-            <!-- STRUCTURED RESIDENTIAL ADDRESS INPUTS (DISCRETE SLOTS) -->
-            <div class="p-3 border rounded-3 bg-light mb-3">
-                <span class="fw-bold text-primary small d-block mb-2"><i class="fa-solid fa-house-user me-1"></i> Primary Residence Address Details</span>
                 
-                <div class="mb-2">
-                    <label class="form-label">STREET ADDRESS</label>
-                    <input type="text" id="addr_street" class="form-control rounded-3" placeholder="e.g. 211 Dominion Park Dr">
-                </div>
-
-                <div class="mb-2">
-                    <label class="form-label">APT / SUITE / BUILDING # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
-                    <input type="text" id="addr_unit" class="form-control rounded-3" placeholder="e.g. Apt 4B, Bldg 2">
-                </div>
-
                 <div class="row g-2 mb-2">
-                    <div class="col-7">
-                        <label class="form-label">CITY</label>
-                        <input type="text" id="addr_city" class="form-control rounded-3" placeholder="e.g. Houston">
+                    <div class="col-6">
+                        <label class="form-label">FIRST NAME</label>
+                        <input type="text" id="prof_fname" class="form-control rounded-3" placeholder="First name">
                     </div>
-                    <div class="col-5">
-                        <label class="form-label">STATE</label>
-                        <select id="addr_state" class="form-select rounded-3 fw-bold">
-                            <option value="TX" selected>TX (Texas)</option>
-                            <option value="AL">AL</option><option value="AZ">AZ</option><option value="CA">CA</option>
-                            <option value="CO">CO</option><option value="FL">FL</option><option value="GA">GA</option>
-                            <option value="LA">LA</option><option value="NM">NM</option><option value="OK">OK</option>
-                        </select>
+                    <div class="col-6">
+                        <label class="form-label">LAST NAME</label>
+                        <input type="text" id="prof_lname" class="form-control rounded-3" placeholder="Last name">
+                    </div>
+                </div>
+                
+                <div class="mb-2">
+                    <label class="form-label">PHONE NUMBER</label>
+                    <input type="text" id="prof_phone" class="form-control rounded-3" placeholder="Phone number">
+                </div>
+
+                <div>
+                    <label class="form-label">EMAIL ADDRESS</label>
+                    <input type="email" id="prof_email" class="form-control rounded-3" placeholder="Email address">
+                </div>
+            </div>
+
+            <!-- CARD 3: ADDRESSES & PROPERTY LOCATIONS (UNIFIED) -->
+            <div class="panel-card">
+                <div class="section-header">
+                    <span><i class="fa-solid fa-location-dot me-1"></i> 2. Residential & Property Locations</span>
+                    <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_location_box')"><i class="fa-solid fa-plus me-1"></i> Add Location Specs</button>
+                </div>
+
+                <div class="p-3 border rounded-3 bg-light mb-3">
+                    <span class="fw-bold text-primary small d-block mb-2"><i class="fa-solid fa-house-chimney me-1"></i> Primary Residence Address Details</span>
+                    
+                    <div class="mb-2">
+                        <label class="form-label">STREET ADDRESS</label>
+                        <input type="text" id="addr_street" class="form-control rounded-3" placeholder="e.g. 211 Dominion Park Dr">
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label">APT / SUITE / BUILDING # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
+                        <input type="text" id="addr_unit" class="form-control rounded-3" placeholder="e.g. 607, Apt 4B, Bldg 2">
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-7">
+                            <label class="form-label">CITY</label>
+                            <input type="text" id="addr_city" class="form-control rounded-3" placeholder="e.g. Houston">
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label">STATE</label>
+                            <select id="addr_state" class="form-select rounded-3 fw-bold">
+                                <option value="TX" selected>TX (Texas)</option>
+                                <option value="AL">AL</option><option value="AZ">AZ</option><option value="CA">CA</option>
+                                <option value="CO">CO</option><option value="FL">FL</option><option value="GA">GA</option>
+                                <option value="LA">LA</option><option value="NM">NM</option><option value="OK">OK</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label">ZIP CODE</label>
+                        <input type="text" id="addr_zip" class="form-control rounded-3 fw-bold text-primary" placeholder="e.g. 77090" maxlength="5">
                     </div>
                 </div>
 
                 <div>
-                    <label class="form-label">ZIP CODE</label>
-                    <input type="text" id="addr_zip" class="form-control rounded-3 fw-bold text-primary" placeholder="e.g. 77090" maxlength="5">
-                </div>
-            </div>
-
-            <!-- SECTION 2: BUSINESS & COMMERCIAL COLLAPSIBLE -->
-            <div class="prompt-dropbox-header mb-3" onclick="toggleAddBox('biz_collapsible_container')">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-primary small"><i class="fa-solid fa-building me-1"></i> Do you own or manage a business? Click here to add commercial details.</span>
-                    <i class="fa-solid fa-chevron-down text-primary"></i>
-                </div>
-            </div>
-
-            <div id="biz_collapsible_container" style="display: none;" class="p-3 border rounded-3 bg-light mb-3">
-                <div class="section-header mt-0">
-                    <span><i class="fa-solid fa-briefcase me-1"></i> 2. Business & Commercial Information</span>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">DRIVER'S LICENSE / STATE ID # <span class="text-danger fw-bold">(REQUIRED FOR COMMERCIAL VERIFICATION)</span></label>
-                    <input type="text" id="prof_dl" class="form-control rounded-3 uppercase-input mb-2" placeholder="ENTER DRIVER'S LICENSE #" oninput="this.value = this.value.toUpperCase()">
-                    
-                    <label class="btn btn-sm btn-outline-secondary w-100 fw-bold rounded-3">
-                        <i class="fa-solid fa-id-card me-1"></i> Snap / Upload Photo of Driver's License
-                        <input type="file" accept="image/*" style="display: none;" onchange="alert('Driver License Photo Uploaded!')">
-                    </label>
-                </div>
-                
-                <div class="mb-2">
-                    <label class="form-label">BUSINESS / COMPANY NAME</label>
-                    <input type="text" id="prof_company" class="form-control rounded-3" placeholder="Enter company name">
-                </div>
-                <div class="row g-2 mb-3">
-                    <div class="col-6">
-                        <label class="form-label">TAX ID / EIN #</label>
-                        <input type="text" id="prof_taxid" class="form-control rounded-3 uppercase-input" placeholder="XX-XXXXXXX" oninput="this.value = this.value.toUpperCase()">
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label">ACCOUNTS PAYABLE EMAIL</label>
-                        <input type="email" id="prof_ap_email" class="form-control rounded-3" placeholder="ap@company.com">
-                    </div>
-                </div>
-
-                <div class="p-2.5 border rounded-3 bg-white mb-2">
-                    <label class="form-label mb-1">SALES TAX EXEMPT / RESALE STATUS</label>
-                    <select class="form-select rounded-3 fw-bold text-primary mb-2" id="tax_exempt_select" onchange="toggleTaxCertBox(this.value)">
-                        <option value="no" selected>No (Standard Tax Applies)</option>
-                        <option value="yes">Yes (Tax Exempt / Resale Account)</option>
+                    <label class="form-label">SWITCH / VIEW ADDITIONAL PROPERTY LOCATIONS</label>
+                    <select class="form-select rounded-3" id="profile_additional_locations_select">
+                        <option value="">Select Property Address...</option>
                     </select>
+                </div>
 
-                    <div id="tax_cert_box" style="display: none;">
-                        <div class="mb-2">
-                            <label class="form-label small">SALES TAX EXEMPTION / RESALE ID #</label>
-                            <input type="text" class="form-control form-control-sm rounded-2 uppercase-input" placeholder="Certificate ID #" oninput="this.value = this.value.toUpperCase()">
-                        </div>
-                        <label class="btn btn-sm btn-outline-primary w-100 fw-bold rounded-2">
-                            <i class="fa-solid fa-file-arrow-up me-1"></i> Upload Tax Exemption / Resale Certificate (PDF / Image)
-                            <input type="file" accept="image/*,application/pdf" style="display: none;" onchange="alert('Tax Exemption Certificate Uploaded!')">
+                <div id="add_location_box" class="add-on-box mt-3">
+                    <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-house-chimney-medical me-1"></i> Add Additional Location Specs</h6>
+                    <div class="mb-2">
+                        <label class="form-label">PROPERTY ADDRESS (STREET, CITY, STATE, ZIP)</label>
+                        <input type="text" id="new_location_addr_input" class="form-control rounded-3" placeholder="e.g. 18510 Ranch View Trail Cir, Houston, TX 77090">
+                    </div>
+                    <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-2" onclick="saveAdditionalLocation()">Save Location Specs</button>
+                </div>
+            </div>
+
+            <!-- CARD 4: BUSINESS & COMMERCIAL DETAILS (COLLAPSIBLE) -->
+            <div class="panel-card">
+                <div class="prompt-dropbox-header mb-2" onclick="toggleAddBox('biz_collapsible_container')">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-primary small"><i class="fa-solid fa-building me-1"></i> Do you own or manage a business? Click here to add commercial details.</span>
+                        <i class="fa-solid fa-chevron-down text-primary"></i>
+                    </div>
+                </div>
+
+                <div id="biz_collapsible_container" style="display: none;" class="p-2 border rounded-3 bg-light">
+                    <div class="section-header mt-1">
+                        <span><i class="fa-solid fa-briefcase me-1"></i> Business & Commercial Information</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">DRIVER'S LICENSE / STATE ID # <span class="text-danger fw-bold">(REQUIRED FOR COMMERCIAL VERIFICATION)</span></label>
+                        <input type="text" id="prof_dl" class="form-control rounded-3 uppercase-input mb-2" placeholder="ENTER DRIVER'S LICENSE #" oninput="this.value = this.value.toUpperCase()">
+                        
+                        <label class="btn btn-sm btn-outline-secondary w-100 fw-bold rounded-3">
+                            <i class="fa-solid fa-id-card me-1"></i> Snap / Upload Photo of Driver's License
+                            <input type="file" accept="image/*" style="display: none;" onchange="alert('Driver License Photo Uploaded!')">
                         </label>
                     </div>
+                    
+                    <div class="mb-2">
+                        <label class="form-label">BUSINESS / COMPANY NAME</label>
+                        <input type="text" id="prof_company" class="form-control rounded-3" placeholder="Enter company name">
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">TAX ID / EIN #</label>
+                            <input type="text" id="prof_taxid" class="form-control rounded-3 uppercase-input" placeholder="XX-XXXXXXX" oninput="this.value = this.value.toUpperCase()">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">ACCOUNTS PAYABLE EMAIL</label>
+                            <input type="email" id="prof_ap_email" class="form-control rounded-3" placeholder="ap@company.com">
+                        </div>
+                    </div>
+
+                    <div class="p-2.5 border rounded-3 bg-white mb-2">
+                        <label class="form-label mb-1">SALES TAX EXEMPT / RESALE STATUS</label>
+                        <select class="form-select rounded-3 fw-bold text-primary mb-2" id="tax_exempt_select" onchange="toggleTaxCertBox(this.value)">
+                            <option value="no" selected>No (Standard Tax Applies)</option>
+                            <option value="yes">Yes (Tax Exempt / Resale Account)</option>
+                        </select>
+
+                        <div id="tax_cert_box" style="display: none;">
+                            <div class="mb-2">
+                                <label class="form-label small">SALES TAX EXEMPTION / RESALE ID #</label>
+                                <input type="text" class="form-control form-control-sm rounded-2 uppercase-input" placeholder="Certificate ID #" oninput="this.value = this.value.toUpperCase()">
+                            </div>
+                            <label class="btn btn-sm btn-outline-primary w-100 fw-bold rounded-2">
+                                <i class="fa-solid fa-file-arrow-up me-1"></i> Upload Tax Exemption / Resale Certificate (PDF / Image)
+                                <input type="file" accept="image/*,application/pdf" style="display: none;" onchange="alert('Tax Exemption Certificate Uploaded!')">
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- SECTION 3: HVAC SYSTEM SPECS -->
-            <div class="section-header">
-                <span><i class="fa-solid fa-sliders me-1"></i> 3. HVAC System Equipment & Data Plate Specs</span>
-                <div class="d-flex gap-1">
-                    <button type="button" class="btn btn-outline-secondary add-tab-btn" onclick="toggleAddBox('add_acc_box')"><i class="fa-solid fa-plus me-1"></i> Add Accessory</button>
-                    <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_hvac_box')"><i class="fa-solid fa-plus me-1"></i> Add-On</button>
+            <!-- CARD 5: HVAC SYSTEM EQUIPMENT & DATA PLATE SPECS -->
+            <div class="panel-card">
+                <div class="section-header">
+                    <span><i class="fa-solid fa-sliders me-1"></i> 3. HVAC System Equipment Specs</span>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-outline-secondary add-tab-btn" onclick="toggleAddBox('add_acc_box')"><i class="fa-solid fa-plus me-1"></i> Add Accessory</button>
+                        <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_hvac_box')"><i class="fa-solid fa-plus me-1"></i> Add-On</button>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label">SYSTEM HEATING TYPE</label>
-                <select class="form-select rounded-3 fw-bold text-primary" id="main_heating_type_select" onchange="renderDynamicHvacFields(this.value, 'dynamic_hvac_container')">
-                    <option value="">Select System Type...</option>
-                    <option value="gas_sys">Gas System</option>
-                    <option value="elec_sys">Electric System</option>
-                    <option value="gas_hp">Gas Heat Pump System</option>
-                    <option value="elec_hp">Electric Heat Pump System</option>
-                    <option value="res_pkg">Residential Package Unit</option>
-                    <option value="comm_pkg">Commercial Package Unit (RTU)</option>
-                    <option value="comm_split">Commercial Split System</option>
-                </select>
-            </div>
-
-            <!-- DYNAMIC COMPONENT FIELDS CONTAINER -->
-            <div id="dynamic_hvac_container"></div>
-
-            <div class="mb-3">
-                <label class="form-label"><i class="fa-solid fa-image me-1 text-primary"></i> UNIT RATING PLATE PHOTO URL / UPLOAD <span class="text-muted fw-normal">(OPTIONAL)</span></label>
-                <input type="text" id="prof_tag_url" class="form-control rounded-3" placeholder="Upload or paste image URL of equipment tag">
-            </div>
-
-            <div id="add_acc_box" class="add-on-box">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-sliders me-1"></i> Add Additional Accessory</h6>
-                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="toggleAddBox('add_acc_box')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                
+                <div class="mb-3">
+                    <label class="form-label">SYSTEM HEATING TYPE</label>
+                    <select class="form-select rounded-3 fw-bold text-primary" id="main_heating_type_select" onchange="renderDynamicHvacFields(this.value, 'dynamic_hvac_container')">
+                        <option value="">Select System Type...</option>
+                        <option value="gas_sys">Gas System</option>
+                        <option value="elec_sys">Electric System</option>
+                        <option value="gas_hp">Gas Heat Pump System</option>
+                        <option value="elec_hp">Electric Heat Pump System</option>
+                        <option value="res_pkg">Residential Package Unit</option>
+                        <option value="comm_pkg">Commercial Package Unit (RTU)</option>
+                        <option value="comm_split">Commercial Split System</option>
+                    </select>
                 </div>
+
+                <!-- DYNAMIC COMPONENT FIELDS CONTAINER -->
+                <div id="dynamic_hvac_container"></div>
+
                 <div class="mb-2">
-                    <label class="form-label">ACCESSORY TYPE / NAME</label>
-                    <input type="text" class="form-control rounded-3" placeholder="e.g., Smart Thermostat, Surge Protector">
+                    <label class="form-label"><i class="fa-solid fa-image me-1 text-primary"></i> UNIT RATING PLATE PHOTO URL / UPLOAD <span class="text-muted fw-normal">(OPTIONAL)</span></label>
+                    <input type="text" id="prof_tag_url" class="form-control rounded-3" placeholder="Upload or paste image URL of equipment tag">
                 </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
-                </div>
-                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_acc_box')">Save Accessory</button>
-            </div>
 
-            <div id="add_hvac_box" class="add-on-box">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-circle-plus me-1"></i> Add Additional HVAC System Tag</h6>
-                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="toggleAddBox('add_hvac_box')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
-                </div>
-                <div id="addon_hvac_container" class="mb-2"></div>
-                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_hvac_box')">Save Additional HVAC Specs</button>
-            </div>
-
-            <!-- SECTION 4: SAVED CARDS -->
-            <div class="section-header">
-                <span><i class="fa-solid fa-credit-card me-1"></i> 4. Saved Payment Cards & Wallet</span>
-                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_card_box')"><i class="fa-solid fa-plus me-1"></i> Add Additional Card</button>
-            </div>
-
-            <div id="card_list_container">
-                <div class="card-box" id="card_1004">
+                <div id="add_acc_box" class="add-on-box">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="fw-bold text-dark"><i class="fa-brands fa-cc-visa text-primary me-1 fs-5"></i> Visa ending in 1004</span>
-                            <span class="badge bg-primary me-1">Primary</span>
+                        <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-sliders me-1"></i> Add Additional Accessory</h6>
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="toggleAddBox('add_acc_box')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">ACCESSORY TYPE / NAME</label>
+                        <input type="text" class="form-control rounded-3" placeholder="e.g., Smart Thermostat, Surge Protector">
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">MODEL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                        <div class="col-6"><label class="form-label">SERIAL #</label><input type="text" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_acc_box')">Save Accessory</button>
+                </div>
+
+                <div id="add_hvac_box" class="add-on-box">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-circle-plus me-1"></i> Add Additional HVAC System Tag</h6>
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="toggleAddBox('add_hvac_box')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                    </div>
+                    <div id="addon_hvac_container" class="mb-2"></div>
+                    <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-1" onclick="toggleAddBox('add_hvac_box')">Save Additional HVAC Specs</button>
+                </div>
+            </div>
+
+            <!-- CARD 6: SAVED PAYMENT CARDS & WALLET -->
+            <div class="panel-card">
+                <div class="section-header">
+                    <span><i class="fa-solid fa-credit-card me-1"></i> 4. Saved Payment Cards & Wallet</span>
+                    <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_card_box')"><i class="fa-solid fa-plus me-1"></i> Add Additional Card</button>
+                </div>
+
+                <div id="card_list_container">
+                    <div class="card-box" id="card_1004">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fw-bold text-dark"><i class="fa-brands fa-cc-visa text-primary me-1 fs-5"></i> Visa ending in 1004</span>
+                                <span class="badge bg-primary me-1">Primary</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <button type="button" class="btn btn-sm btn-success py-0 px-2 fw-bold" onclick="alert('Card Saved Successfully!')"><i class="fa-solid fa-floppy-disk me-1"></i> Save</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="deleteCard('card_1004')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                            </div>
                         </div>
-                        <div class="d-flex align-items-center gap-1">
-                            <button type="button" class="btn btn-sm btn-success py-0 px-2 fw-bold" onclick="alert('Card Saved Successfully!')"><i class="fa-solid fa-floppy-disk me-1"></i> Save</button>
-                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="deleteCard('card_1004')"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                        <div class="row g-2 mt-1">
+                            <div class="col-12"><input type="text" class="form-control rounded-3 mb-1" value="Ian Olvera"></div>
+                            <div class="col-8"><input type="text" class="form-control rounded-3" value="**** **** **** 1004"></div>
+                            <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY" value="12/28"></div>
                         </div>
                     </div>
-                    <div class="row g-2 mt-1">
-                        <div class="col-12"><input type="text" class="form-control rounded-3 mb-1" value="Ian Olvera"></div>
-                        <div class="col-8"><input type="text" class="form-control rounded-3" value="**** **** **** 1004"></div>
-                        <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY" value="12/28"></div>
+                </div>
+
+                <div id="add_card_box" class="add-on-box">
+                    <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-credit-card me-1"></i> Add New Payment Card</h6>
+                    <input type="text" id="new_card_name" class="form-control rounded-3 mb-2" placeholder="Cardholder Name">
+                    <div class="row g-2 mb-2">
+                        <div class="col-8"><input type="text" id="new_card_num" class="form-control rounded-3" placeholder="Card Number"></div>
+                        <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
                     </div>
+                    <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3" onclick="addNewCard()">Save Card to Wallet</button>
                 </div>
             </div>
 
-            <div id="add_card_box" class="add-on-box">
-                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-credit-card me-1"></i> Add New Payment Card</h6>
-                <input type="text" id="new_card_name" class="form-control rounded-3 mb-2" placeholder="Cardholder Name">
-                <div class="row g-2 mb-2">
-                    <div class="col-8"><input type="text" id="new_card_num" class="form-control rounded-3" placeholder="Card Number"></div>
-                    <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
-                </div>
-                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3" onclick="addNewCard()">Save Card to Wallet</button>
-            </div>
-
-            <!-- SECTION 5: PROPERTY LOCATIONS -->
-            <div class="section-header">
-                <span><i class="fa-solid fa-location-dot me-1"></i> 5. Manage Additional Property Locations</span>
-                <button type="button" class="btn btn-outline-primary add-tab-btn" onclick="toggleAddBox('add_location_box')"><i class="fa-solid fa-plus me-1"></i> Add Location Specs</button>
-            </div>
-
-            <div class="mb-3">
-                <select class="form-select rounded-3 mb-2" id="profile_additional_locations_select">
-                    <option value="">Select Property Address...</option>
-                </select>
-            </div>
-
-            <div id="add_location_box" class="add-on-box">
-                <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-house-chimney-medical me-1"></i> Add Additional Location Specs</h6>
-                <div class="mb-2">
-                    <label class="form-label">PROPERTY ADDRESS (STREET, CITY, STATE, ZIP)</label>
-                    <input type="text" id="new_location_addr_input" class="form-control rounded-3" placeholder="e.g. 18510 Ranch View Trail Cir, Houston, TX 77090">
-                </div>
-                <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-2" onclick="saveAdditionalLocation()">Save Location Specs</button>
-            </div>
-
-            <div class="row g-2 mb-3 mt-4">
+            <!-- ACTION BUTTONS -->
+            <div class="row g-2">
                 <div class="col-6">
-                    <button type="submit" class="btn btn-amber w-100 py-2.5 rounded-3 fw-bold shadow-sm">
+                    <button type="submit" class="btn btn-amber w-100 py-3 rounded-3 fw-bold shadow-sm">
                         <i class="fa-solid fa-floppy-disk me-1"></i> Save Profile
                     </button>
                 </div>
                 <div class="col-6">
-                    <a href="/customer_home" class="btn btn-outline-secondary w-100 py-2.5 rounded-3 fw-bold">Cancel</a>
+                    <a href="/customer_home" class="btn btn-white-card py-3">Cancel</a>
                 </div>
             </div>
         </form>
 
-        <div class="text-center mt-3 pt-2 border-top">
-            <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold mb-2"><i class="fa-solid fa-house me-1"></i> Home Page</a>
-            <a href="/logout" class="profile-quiet-logoff" onclick="localStorage.removeItem('olmios_is_first_login');">
-                <i class="fa-solid fa-right-from-bracket me-1"></i> Securely Log Off
-            </a>
+        <!-- FOOTER HOME & LOG OFF BUTTONS -->
+        <div class="text-center mt-2">
+            <a href="/customer_home" class="btn btn-white-card py-2.5 rounded-3 fw-bold mb-2"><i class="fa-solid fa-house me-1"></i> Home Page</a>
+            <div>
+                <a href="/logout" class="profile-quiet-logoff" onclick="localStorage.removeItem('olmios_is_first_login');">
+                    <i class="fa-solid fa-right-from-bracket me-1"></i> Securely Log Off
+                </a>
+            </div>
         </div>
+
     </div>
 
     <script>
@@ -1644,7 +1669,7 @@ def profile():
             html = `
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">CONDENSER MODEL #</label><input type="text" id="m_cond_mod" class="form-control rounded-3 uppercase-input" placeholder="Condenser Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">CONDENSER SERIAL #</label><input type="text" id="m_cond_ser" class="form-control rounded-3 uppercase-input" placeholder="Condenser Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">AIR HANDLER MODEL #</label><input type="text" id="m_coil_mod" class="form-control rounded-3 uppercase-input" placeholder="AHU Model #" oninput="this.value = this.value.toUpperCase()"></div>
@@ -1686,7 +1711,7 @@ def profile():
                 <div class="row g-2 mt-1">
                     <div class="col-12"><input type="text" class="form-control rounded-3 mb-1" value="${name}"></div>
                     <div class="col-8"><input type="text" class="form-control rounded-3" value="**** **** **** ${last4}"></div>
-                    <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY" value="12/28"></div>
+                    <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
                 </div>
             </div>`;
         document.getElementById('card_list_container').insertAdjacentHTML('beforeend', newCardHtml);
@@ -1754,6 +1779,8 @@ def profile():
 
     window.onload = function() {
         let savedName = localStorage.getItem('olmios_fullname') || 'Ian Olvera';
+        document.getElementById('prof_display_fullname').innerText = savedName;
+
         let parts = savedName.split(' ');
         if(parts.length > 0) document.getElementById('prof_fname').value = parts[0] || '';
         if(parts.length > 1) document.getElementById('prof_lname').value = parts.slice(1).join(' ') || '';
@@ -1761,7 +1788,6 @@ def profile():
         if(localStorage.getItem('olmios_phone')) document.getElementById('prof_phone').value = localStorage.getItem('olmios_phone');
         if(localStorage.getItem('olmios_email')) document.getElementById('prof_email').value = localStorage.getItem('olmios_email');
         
-        // Restore discrete address slots
         let savedStreet = localStorage.getItem('olmios_saved_street');
         let savedUnit = localStorage.getItem('olmios_saved_unit');
         let savedCity = localStorage.getItem('olmios_saved_city');
@@ -1775,8 +1801,8 @@ def profile():
             if(savedState) document.getElementById('addr_state').value = savedState;
             if(savedZip) document.getElementById('addr_zip').value = savedZip;
         } else {
-            // Default initialization
             document.getElementById('addr_street').value = '211 Dominion Park Dr';
+            document.getElementById('addr_unit').value = '607';
             document.getElementById('addr_city').value = 'Houston';
             document.getElementById('addr_state').value = 'TX';
             document.getElementById('addr_zip').value = '77090';
@@ -1910,7 +1936,7 @@ def tech_home():
                 <button type="button" class="btn btn-light btn-sm rounded-circle shadow-sm" onclick="toggleTechMenu()"><i class="fa-solid fa-bars fs-5"></i></button>
                 <div>
                     <h6 class="fw-bold mb-0 text-dark" id="assigned_cust_heading">👤 Assigned Client: Ian Olvera</h6>
-                    <span class="text-muted small" id="online_status_sub">211 Dominion Park Dr, Houston TX</span>
+                    <span class="text-muted small" id="online_status_sub">211 Dominion Park Dr 607, Houston TX</span>
                 </div>
             </div>
             <span class="badge bg-success py-1.5 px-2.5 rounded-pill fs-7">$0.00 Today</span>
@@ -1925,7 +1951,7 @@ def tech_home():
                 <span class="fw-bold text-dark"><i class="fa-solid fa-bolt text-warning me-1"></i> INSTANT DISPATCH PING!</span>
                 <span class="badge bg-danger fs-6" id="ping_timer">30s</span>
             </div>
-            <p class="small text-muted mb-2">📍 211 Dominion Park Dr — A/C Condenser Diagnostic</p>
+            <p class="small text-muted mb-2">📍 211 Dominion Park Dr 607 — A/C Condenser Diagnostic</p>
             <button class="btn btn-sm btn-success w-100 fw-bold py-2 rounded-3" onclick="acceptDispatchPing()"><i class="fa-solid fa-circle-check me-1"></i> Accept Dispatch & Launch Route</button>
         </div>
 
@@ -1968,9 +1994,9 @@ def tech_home():
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        var techMap = L.map('tech_map').setView([29.985, -95.395], 11);
+        var techMap = L.map('tech_map').setView([29.980, -95.380], 10);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(techMap);
-        L.marker([29.9525, -95.4312]).addTo(techMap).bindPopup("<b>Ian Olvera Residence</b><br>211 Dominion Park Dr");
+        L.marker([29.9525, -95.4312]).addTo(techMap).bindPopup("<b>Ian Olvera Residence</b><br>211 Dominion Park Dr 607");
 
         var isOnline = false;
 
@@ -1991,7 +2017,7 @@ def tech_home():
                 btn.innerText = "GO";
                 btn.style.background = "linear-gradient(135deg, #2563eb, #1d4ed8)";
                 heading.innerText = "👤 Assigned Client: Ian Olvera";
-                sub.innerText = "211 Dominion Park Dr, Houston TX";
+                sub.innerText = "211 Dominion Park Dr 607, Houston TX";
                 ping.style.display = "none";
             }
         }
@@ -2391,7 +2417,7 @@ def admin():
             let currentJobId = null;
 
             window.onload = function() {{
-                map = L.map('leafletMap').setView([29.985, -95.395], 10);
+                map = L.map('leafletMap').setView([29.980, -95.380], 9.5);
 
                 L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
                     maxZoom: 18,
