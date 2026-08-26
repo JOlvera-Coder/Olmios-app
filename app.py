@@ -171,7 +171,7 @@ def get_lat_lng(address_str):
 
     try:
         url = "https://photon.komoot.io/api/?q=" + urllib.parse.quote(address_str.strip()) + "&limit=1&countrycode=us"
-        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosLiveDispatch/7.5 (dispatch@olmios.com)"})
+        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosLiveDispatch/8.0 (dispatch@olmios.com)"})
         with urllib.request.urlopen(req, timeout=3) as response:
             data = json.loads(response.read().decode())
             if data and 'features' in data and len(data['features']) > 0:
@@ -487,6 +487,9 @@ def customer_home():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(45, 45))
 
+# ==========================================
+# MY SERVICES & ORDERS ROUTE (DISCRETE MULTI-CARD + UNIFORM BUTTONS)
+# ==========================================
 @app.route('/customer_services')
 def customer_services():
     html = """<!DOCTYPE html>
@@ -497,94 +500,120 @@ def customer_services():
     {{HEADER}}
     <style>
         body { background-color: #0b1329; color: white; font-family: 'Outfit', sans-serif; padding: 18px 14px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 480px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .nav-pills .nav-link { color: #475569; font-weight: 800; font-size: 0.8rem; border-radius: 10px; padding: 6px 4px; }
+        .dashboard-container { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+        .panel-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 16px 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+        .form-label { font-weight: 800; color: #334155 !important; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; display: block; }
+        .section-header { font-weight: 800; color: #0284c7; font-size: 0.90rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .nav-pills .nav-link { color: #475569; font-weight: 800; font-size: 0.8rem; border-radius: 10px; padding: 8px 4px; }
         .nav-pills .nav-link.active { background: #2563eb; color: white; }
-        .search-box-container { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 10px; margin-bottom: 12px; }
         .btn-gray-nav { background: #f1f5f9 !important; color: #334155 !important; border: 1.5px solid #cbd5e1 !important; font-weight: 800; border-radius: 14px; padding: 12px 10px; font-size: 0.95rem; width: 100%; transition: all 0.2s; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
         .btn-gray-nav:hover { background: #e2e8f0 !important; color: #0f172a !important; border-color: #94a3b8 !important; }
+        .cursor-pointer { cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="main-card">
-        <div class="d-flex align-items-center justify-content-between mb-2 border-bottom pb-2">
-            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-layer-group text-primary me-1"></i> My Services & Orders</h5>
-            <a href="/customer_home">{{PHOENIX}}</a>
+    <div class="dashboard-container">
+        
+        <!-- CARD 1: TOP GREETING & BRANDING -->
+        <div class="panel-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-layer-group text-primary me-1"></i> My Services & Orders</h5>
+                    <span class="small text-muted fw-bold">Active Estimates, Work Orders & Invoices</span>
+                </div>
+                <div class="d-flex flex-column align-items-center">
+                    <span class="fw-bold text-dark mb-1" style="font-size: 0.90rem; letter-spacing: 2px;">OLMIOS</span>
+                    <a href="/customer_home" title="Home">{{PHOENIX}}</a>
+                </div>
+            </div>
         </div>
 
-        <div class="search-box-container">
-            <label class="form-label text-muted small fw-bold mb-1"><i class="fa-solid fa-magnifying-glass me-1 text-primary"></i> MULTI-FACTOR DOCUMENT LOOKUP</label>
-            <input type="text" id="doc_search_input" class="form-control form-control-sm rounded-2 mb-2" onkeyup="filterCustomerDocs()" placeholder="Search Ref ID (QT000001, SO000001), date, amount, model/serial #...">
+        <!-- CARD 2: MULTI-FACTOR DOCUMENT LOOKUP -->
+        <div class="panel-card">
+            <div class="section-header">
+                <span><i class="fa-solid fa-magnifying-glass me-1"></i> Document Lookup & Filter</span>
+            </div>
+            <input type="text" id="doc_search_input" class="form-control rounded-3 mb-2" onkeyup="filterCustomerDocs()" placeholder="Search Ref ID (QT000001, SO000001), date, amount, model/serial #...">
             <div class="d-flex gap-1 flex-wrap">
-                <span class="badge bg-secondary cursor-pointer" onclick="quickFilterDoc('QT')">Quotes</span>
-                <span class="badge bg-primary cursor-pointer" onclick="quickFilterDoc('SO')">Work Orders</span>
-                <span class="badge bg-success cursor-pointer" onclick="quickFilterDoc('IN')">Invoices</span>
-                <span class="badge bg-danger cursor-pointer" onclick="quickFilterDoc('CR')">Refunds</span>
-                <span class="badge bg-warning text-dark cursor-pointer" onclick="quickFilterDoc('WR')">Warranties</span>
-                <span class="badge bg-dark cursor-pointer" onclick="quickFilterDoc('')">Clear All</span>
+                <span class="badge bg-secondary cursor-pointer py-1.5 px-2" onclick="quickFilterDoc('QT')">Quotes</span>
+                <span class="badge bg-primary cursor-pointer py-1.5 px-2" onclick="quickFilterDoc('SO')">Work Orders</span>
+                <span class="badge bg-success cursor-pointer py-1.5 px-2" onclick="quickFilterDoc('IN')">Invoices</span>
+                <span class="badge bg-danger cursor-pointer py-1.5 px-2" onclick="quickFilterDoc('CR')">Refunds</span>
+                <span class="badge bg-warning text-dark cursor-pointer py-1.5 px-2" onclick="quickFilterDoc('WR')">Warranties</span>
+                <span class="badge bg-dark cursor-pointer py-1.5 px-2" onclick="quickFilterDoc('')">Clear All</span>
             </div>
         </div>
 
-        <ul class="nav nav-pills nav-justified mb-3 bg-light p-1 rounded-3 border">
-            <li class="nav-item"><button class="nav-link active" id="tab_btn_quote" onclick="switchServiceTab('quote')"><i class="fa-solid fa-calculator me-1"></i> Quote</button></li>
-            <li class="nav-item"><button class="nav-link" id="tab_btn_order" onclick="switchServiceTab('order')"><i class="fa-solid fa-clock-rotate-left me-1"></i> Open Order</button></li>
-            <li class="nav-item"><button class="nav-link" id="tab_btn_invoice" onclick="switchServiceTab('invoice')"><i class="fa-solid fa-file-invoice-dollar me-1"></i> Invoice</button></li>
-            <li class="nav-item"><button class="nav-link" id="tab_btn_refund" onclick="switchServiceTab('refund')"><i class="fa-solid fa-rotate-left me-1"></i> Refund/Warranty</button></li>
-        </ul>
+        <!-- CARD 3: NAVIGATION SWITCHER -->
+        <div class="panel-card p-2">
+            <ul class="nav nav-pills nav-justified bg-light p-1 rounded-3 border mb-0">
+                <li class="nav-item"><button class="nav-link active" id="tab_btn_quote" onclick="switchServiceTab('quote')"><i class="fa-solid fa-calculator me-1"></i> Quote</button></li>
+                <li class="nav-item"><button class="nav-link" id="tab_btn_order" onclick="switchServiceTab('order')"><i class="fa-solid fa-clock-rotate-left me-1"></i> Open Order</button></li>
+                <li class="nav-item"><button class="nav-link" id="tab_btn_invoice" onclick="switchServiceTab('invoice')"><i class="fa-solid fa-file-invoice-dollar me-1"></i> Invoice</button></li>
+                <li class="nav-item"><button class="nav-link" id="tab_btn_refund" onclick="switchServiceTab('refund')"><i class="fa-solid fa-rotate-left me-1"></i> Refund/Warranty</button></li>
+            </ul>
+        </div>
 
-        <div id="service_sec_quote" class="service-sec doc-card" data-ref="QT000001" data-search="QT000001 evaporator coil replacement trane 5ttr6048 1850.00 08/10/2026">
-            <div class="card p-3 mb-2 bg-light border">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-dark">QT000001 (Evaporator Coil Replacement)</span>
-                    <span class="badge bg-warning text-dark">Pending Sign-off</span>
+        <!-- CARD 4: DOCUMENT DETAILS VIEW -->
+        <div class="panel-card">
+            
+            <div id="service_sec_quote" class="service-sec doc-card" data-ref="QT000001" data-search="QT000001 evaporator coil replacement trane 5ttr6048 1850.00 08/10/2026">
+                <div class="p-3 bg-light rounded-3 border">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold text-dark">QT000001 (Evaporator Coil Replacement)</span>
+                        <span class="badge bg-warning text-dark">Pending Sign-off</span>
+                    </div>
+                    <p class="small text-muted mb-2">Trane 4.0 Ton Coil + R-454B Refrigerant | Total: <strong>$1,850.00</strong> | Date: 08/10/2026</p>
+                    <button type="button" class="btn btn-sm btn-success fw-bold w-100 py-2 rounded-3" onclick="alert('Quote Approved & Converted to Work Order SO000001!')"><i class="fa-solid fa-signature me-1"></i> Approve & Sign Work Order</button>
                 </div>
-                <p class="small text-muted mb-2">Trane 4.0 Ton Coil + R-454B Refrigerant | Total: <strong>$1,850.00</strong> | Date: 08/10/2026</p>
-                <button type="button" class="btn btn-sm btn-success fw-bold w-100" onclick="alert('Quote Approved & Converted to Work Order SO000001!')"><i class="fa-solid fa-signature me-1"></i> Approve & Sign Work Order</button>
             </div>
+
+            <div id="service_sec_order" class="service-sec doc-card" data-ref="SO000001" data-search="SO000001 ian olvera tech a lead 211 dominion park dr" style="display:none;">
+                <div class="p-3 bg-light rounded-3 border">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold text-dark">SO000001 — Ian Olvera</span>
+                        <span class="badge bg-primary">In Progress (Tech En Route)</span>
+                    </div>
+                    <p class="small text-muted mb-1">Assigned Tech: <strong>Tech A (Lead)</strong></p>
+                    <p class="small text-muted mb-0">Location: 211 Dominion Park Dr 607, Houston TX</p>
+                </div>
+            </div>
+
+            <div id="service_sec_invoice" class="service-sec doc-card" data-ref="IN000001" data-search="IN000001 capacitor replacement paid 185.00 08/01/2026 1004" style="display:none;">
+                <div class="p-3 bg-light rounded-3 border">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold text-dark">IN000001 (Capacitor Replacement)</span>
+                        <span class="badge bg-success">Paid</span>
+                    </div>
+                    <p class="small text-muted mb-2">Date: 08/01/2026 | Card: **** 1004 | Amount: $185.00</p>
+                    <button class="btn btn-outline-primary btn-sm w-100 fw-bold py-2 rounded-3" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> Print Invoice</button>
+                </div>
+            </div>
+
+            <div id="service_sec_refund" class="service-sec doc-card" data-ref="CR000001" data-search="CR000001 WR000001 warranty refund pending 99.00" style="display:none;">
+                <div class="p-3 bg-light rounded-3 border mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold text-dark">CR000001 (Credit / Refund Request)</span>
+                        <span class="badge bg-danger">Pending Manager Approval</span>
+                    </div>
+                    <p class="small text-muted mb-0">Diagnostic Fee Credit Request | Amount: $99.00</p>
+                </div>
+                <div class="p-3 bg-light rounded-3 border">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold text-dark">WR000001 (Compressor Warranty Claim)</span>
+                        <span class="badge bg-info text-dark">Manufacturer Verified</span>
+                    </div>
+                    <p class="small text-muted mb-0">Trane Factory Warranty Registered | Coverage Active</p>
+                </div>
+            </div>
+
         </div>
 
-        <div id="service_sec_order" class="service-sec doc-card" data-ref="SO000001" data-search="SO000001 ian olvera tech a lead 18510 ranch view trail cir" style="display:none;">
-            <div class="card p-3 mb-2 bg-light border">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-dark">SO000001 — Ian Olvera</span>
-                    <span class="badge bg-primary">In Progress (Tech En Route)</span>
-                </div>
-                <p class="small text-muted mb-1">Assigned Tech: <strong>Tech A (Lead)</strong></p>
-                <p class="small text-muted mb-0">Location: 18510 Ranch View Trail Cir, Houston TX</p>
-            </div>
+        <!-- CARD 5: UNIFORM LIGHT GRAY HOME NAVIGATION CARD -->
+        <div class="text-center mt-2">
+            <a href="/customer_home" class="btn-gray-nav py-3 fs-6"><i class="fa-solid fa-house me-1 text-primary"></i> Home Page</a>
         </div>
 
-        <div id="service_sec_invoice" class="service-sec doc-card" data-ref="IN000001" data-search="IN000001 capacitor replacement paid 185.00 08/01/2026 1004" style="display:none;">
-            <div class="card p-3 mb-2 bg-light border">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-dark">IN000001 (Capacitor Replacement)</span>
-                    <span class="badge bg-success">Paid</span>
-                </div>
-                <p class="small text-muted mb-2">Date: 08/01/2026 | Card: **** 1004 | Amount: $185.00</p>
-                <button class="btn btn-outline-primary btn-sm w-100 fw-bold" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> Print Invoice</button>
-            </div>
-        </div>
-
-        <div id="service_sec_refund" class="service-sec doc-card" data-ref="CR000001" data-search="CR000001 WR000001 warranty refund pending 99.00" style="display:none;">
-            <div class="card p-3 mb-2 bg-light border mb-2">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-dark">CR000001 (Credit / Refund Request)</span>
-                    <span class="badge bg-danger">Pending Manager Approval</span>
-                </div>
-                <p class="small text-muted mb-0">Diagnostic Fee Credit Request | Amount: $99.00</p>
-            </div>
-            <div class="card p-3 mb-2 bg-light border">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-dark">WR000001 (Compressor Warranty Claim)</span>
-                    <span class="badge bg-info text-dark">Manufacturer Verified</span>
-                </div>
-                <p class="small text-muted mb-0">Trane Factory Warranty Registered | Coverage Active</p>
-            </div>
-        </div>
-
-        <div class="mt-3">
-            <a href="/customer_home" class="btn-gray-nav"><i class="fa-solid fa-house me-1 text-primary"></i> Home Page</a>
-        </div>
     </div>
 
     <script>
@@ -616,9 +645,14 @@ def customer_services():
 </html>"""
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(42, 42))
 
-# ==========================================
-# DISPATCH REQUEST ROUTE (DISCRETE MULTI-CARD + REPAIR BACK BUTTON + UNIFORM HOME TAB)
-# ==========================================
+@app.route('/customer_quotes')
+def customer_quotes():
+    return redirect('/customer_services')
+
+@app.route('/customer_work_orders')
+def customer_work_orders():
+    return redirect('/customer_services')
+
 @app.route('/dispatch_request')
 def dispatch_request():
     is_dispatch_mode = request.args.get('mode') == 'dispatch'
@@ -657,12 +691,9 @@ def dispatch_request():
     <div class="dashboard-container">
         {{DISPATCH_HEADER}}
 
-        <!-- CARD 1: TOP GREETING & VERIFIED BADGE -->
         <div class="panel-card">
             <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-                <div>
-                    <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-truck-fast me-1 text-primary"></i> Instant HVAC Dispatch Request</h5>
-                </div>
+                <div><h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-truck-fast me-1 text-primary"></i> Instant HVAC Dispatch Request</h5></div>
                 <a href="/customer_home" title="Home">{{PHOENIX}}</a>
             </div>
             <div class="p-2.5 rounded-3 bg-success-subtle border border-success-subtle text-success small fw-bold d-flex align-items-center gap-2">
@@ -675,53 +706,25 @@ def dispatch_request():
             <input type="hidden" name="customer_name_hidden" id="customer_name_hidden">
             <input type="hidden" name="address_hidden" id="address_hidden">
 
-            <!-- CARD 2: SERVICE SELECTION (WITH REPAIR BACK BUTTON) -->
             <div class="panel-card">
-                <div class="section-header">
-                    <span><i class="fa-solid fa-list-check me-1"></i> 1. Select Service Need</span>
-                </div>
-
+                <div class="section-header"><span><i class="fa-solid fa-list-check me-1"></i> 1. Select Service Need</span></div>
                 <div id="service_mode_container">
                     <div class="row g-2">
-                        <div class="col-6">
-                            <button type="button" class="btn-service-type" onclick="chooseServiceMode('repair')">
-                                <i class="fa-solid fa-screwdriver-wrench text-warning mb-1 d-block fs-4"></i> System Repair
-                            </button>
-                        </div>
-                        <div class="col-6">
-                            <button type="button" class="btn-service-type" onclick="chooseServiceMode('replacement')">
-                                <i class="fa-solid fa-arrows-rotate text-success mb-1 d-block fs-4"></i> System Replacement
-                            </button>
-                        </div>
+                        <div class="col-6"><button type="button" class="btn-service-type" onclick="chooseServiceMode('repair')"><i class="fa-solid fa-screwdriver-wrench text-warning mb-1 d-block fs-4"></i> System Repair</button></div>
+                        <div class="col-6"><button type="button" class="btn-service-type" onclick="chooseServiceMode('replacement')"><i class="fa-solid fa-arrows-rotate text-success mb-1 d-block fs-4"></i> System Replacement</button></div>
                     </div>
                 </div>
-
-                <!-- SYSTEM REPAIR VIEW (WITH BACK BUTTON) -->
                 <div id="repair_tabs_container" style="display: none;">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <label class="form-label small text-muted mb-0">CHOOSE REPAIR CATEGORY:</label>
                         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" onclick="resetToServiceMode()"><i class="fa-solid fa-arrow-left me-1"></i> Back</button>
                     </div>
                     <div class="row g-2">
-                        <div class="col-4">
-                            <button type="button" class="btn-category active" id="cat_cooling" onclick="selectRepairCategory('cooling')">
-                                <i class="fa-solid fa-snowflake text-info mb-1 d-block fs-5"></i> Cooling
-                            </button>
-                        </div>
-                        <div class="col-4">
-                            <button type="button" class="btn-category" id="cat_heating" onclick="selectRepairCategory('heating')">
-                                <i class="fa-solid fa-fire text-danger mb-1 d-block fs-5"></i> Heating
-                            </button>
-                        </div>
-                        <div class="col-4">
-                            <button type="button" class="btn-category" id="cat_thermostat" onclick="selectRepairCategory('thermostat')">
-                                <i class="fa-solid fa-sliders text-primary mb-1 d-block fs-5"></i> Thermostat
-                            </button>
-                        </div>
+                        <div class="col-4"><button type="button" class="btn-category active" id="cat_cooling" onclick="selectRepairCategory('cooling')"><i class="fa-solid fa-snowflake text-info mb-1 d-block fs-5"></i> Cooling</button></div>
+                        <div class="col-4"><button type="button" class="btn-category" id="cat_heating" onclick="selectRepairCategory('heating')"><i class="fa-solid fa-fire text-danger mb-1 d-block fs-5"></i> Heating</button></div>
+                        <div class="col-4"><button type="button" class="btn-category" id="cat_thermostat" onclick="selectRepairCategory('thermostat')"><i class="fa-solid fa-sliders text-primary mb-1 d-block fs-5"></i> Thermostat</button></div>
                     </div>
                 </div>
-
-                <!-- SYSTEM REPLACEMENT VIEW -->
                 <div id="replacement_tabs_container" style="display: none;">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <label class="form-label small text-muted mb-0">SELECT SAVED EQUIPMENT TO REPLACE:</label>
@@ -731,24 +734,16 @@ def dispatch_request():
                 </div>
             </div>
 
-            <!-- CARD 3: LOCATION & SCHEDULING -->
             <div class="panel-card">
-                <div class="section-header">
-                    <span><i class="fa-solid fa-location-dot me-1"></i> 2. Location & Urgency</span>
-                </div>
-
+                <div class="section-header"><span><i class="fa-solid fa-location-dot me-1"></i> 2. Location & Urgency</span></div>
                 <div class="mb-3">
                     <label class="form-label">SELECT JOB SITE PROPERTY ADDRESS</label>
-                    <select class="form-select rounded-3" id="dispatch_address_select" name="address" onchange="onDispatchAddressChange(this.value)">
-                        <option value="primary">📍 Primary Residential Address</option>
-                    </select>
+                    <select class="form-select rounded-3" id="dispatch_address_select" name="address" onchange="onDispatchAddressChange(this.value)"><option value="primary">📍 Primary Residential Address</option></select>
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">PURCHASE ORDER (PO) # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
                     <input type="text" name="po_number" class="form-control rounded-3" placeholder="e.g. PO-88204">
                 </div>
-
                 <div class="mb-2">
                     <label class="form-label">SERVICE URGENCY</label>
                     <select class="form-select rounded-3 fw-bold" id="urgency_select" name="urgency" onchange="toggleUrgencySchedule(this.value)">
@@ -756,25 +751,14 @@ def dispatch_request():
                         <option value="Scheduled">📅 Other (Select Date & Time)</option>
                     </select>
                 </div>
-
                 <div id="urgency_schedule_box" class="row g-2 mt-2 p-2 bg-light border rounded-3" style="display: none;">
-                    <div class="col-6">
-                        <label class="form-label small mb-1">SELECT DATE</label>
-                        <input type="date" id="scheduled_date" class="form-control rounded-2">
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label small mb-1">SELECT TIME</label>
-                        <input type="time" id="scheduled_time" class="form-control rounded-2">
-                    </div>
+                    <div class="col-6"><label class="form-label small mb-1">SELECT DATE</label><input type="date" id="scheduled_date" class="form-control rounded-2"></div>
+                    <div class="col-6"><label class="form-label small mb-1">SELECT TIME</label><input type="time" id="scheduled_time" class="form-control rounded-2"></div>
                 </div>
             </div>
 
-            <!-- CARD 4: DIAGNOSTIC ASSISTANT & EQUIPMENT SPECS -->
             <div class="panel-card">
-                <div class="section-header">
-                    <span><i class="fa-solid fa-wand-magic-sparkles me-1"></i> 3. Diagnostic & Equipment Details</span>
-                </div>
-
+                <div class="section-header"><span><i class="fa-solid fa-wand-magic-sparkles me-1"></i> 3. Diagnostic & Equipment Details</span></div>
                 <div class="mb-3">
                     <label class="form-label">EQUIPMENT TYPE (INCLUDES RESIDENTIAL & COMMERCIAL)</label>
                     <select class="form-select rounded-3" id="equipment_type_select" name="equipment" onchange="autoFillDescription()">
@@ -788,24 +772,13 @@ def dispatch_request():
                         <option value="Commercial RTU">Commercial RTU</option>
                     </select>
                 </div>
-
                 <div class="p-3 mb-3 rounded-4" style="background: #f0f7ff; border: 1.5px solid #3b82f6;">
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        {{PHOENIX_SMALL}}
-                        <h6 class="fw-bold mb-0 text-primary">OLMIOS Diagnostic Chat Assistant</h6>
-                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-2">{{PHOENIX_SMALL}}<h6 class="fw-bold mb-0 text-primary">OLMIOS Diagnostic Chat Assistant</h6></div>
                     <p class="small text-muted mb-2">Tell us what's going on! Mention symptoms or part notes:</p>
                     <textarea id="chat_assistant_input" class="form-control mb-2" rows="3" placeholder="e.g., Blower motor not spinning..." oninput="autoFillDescription()"></textarea>
-                    
-                    <button type="button" class="btn btn-primary w-100 py-2 fw-bold rounded-3 shadow-sm" onclick="autoFillDescription()">
-                        <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AUTO-FILL ISSUE DESCRIPTION
-                    </button>
-
+                    <button type="button" class="btn btn-primary w-100 py-2 fw-bold rounded-3 shadow-sm" onclick="autoFillDescription()"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> AUTO-FILL ISSUE DESCRIPTION</button>
                     <div id="ai_followup_box" class="ai-followup-box">
-                        <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-info-subtle">
-                            {{PHOENIX_SMALL}}
-                            <span class="fw-bold text-primary small">Olmios AI Diagnostic Follow-Up:</span>
-                        </div>
+                        <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-info-subtle">{{PHOENIX_SMALL}}<span class="fw-bold text-primary small">Olmios AI Diagnostic Follow-Up:</span></div>
                         <p class="small text-dark fw-semibold mb-2" id="ai_followup_question">Is the leak on the outdoor condenser coil or the indoor evaporator coil/air handler?</p>
                         <div class="d-flex gap-2">
                             <button type="button" class="btn btn-sm btn-outline-primary fw-bold w-50" onclick="answerAiLeak('Outdoor Condenser Coil')">Outdoor Condenser Coil</button>
@@ -813,35 +786,23 @@ def dispatch_request():
                         </div>
                     </div>
                 </div>
-
                 <div>
                     <label class="form-label">ISSUE DESCRIPTION (FINAL DISPATCH SUMMARY)</label>
                     <textarea id="issue_description" name="issue_description" class="form-control rounded-3" rows="3" placeholder="Describe requested HVAC issue or click Auto-Fill above..."></textarea>
                 </div>
             </div>
 
-            <!-- CARD 5: PAYMENT AUTHORIZATION -->
             <div class="panel-card">
-                <div class="section-header">
-                    <span><i class="fa-solid fa-credit-card me-1"></i> 4. Payment Authorization</span>
-                </div>
-
+                <div class="section-header"><span><i class="fa-solid fa-credit-card me-1"></i> 4. Payment Authorization</span></div>
                 <div>
                     <label class="form-label">SELECT SAVED PAYMENT CARD</label>
-                    <select class="form-select rounded-3">
-                        <option value="">Select Payment Method...</option>
-                        <option selected>💳 Visa ending in 1004</option>
-                    </select>
+                    <select class="form-select rounded-3"><option selected>💳 Visa ending in 1004</option></select>
                 </div>
             </div>
 
-            <!-- STANDALONE SUBMIT CTA -->
-            <button type="submit" class="btn-cta-orange shadow-sm fs-6">
-                ⚡ Request Service & Dispatch - $99.00
-            </button>
+            <button type="submit" class="btn-cta-orange shadow-sm fs-6">⚡ Request Service & Dispatch - $99.00</button>
         </form>
 
-        <!-- UNIFORM LIGHT GRAY HOME BUTTON -->
         <div class="text-center mt-2">
             <a href="/customer_home" class="btn-gray-nav py-3 fs-6"><i class="fa-solid fa-house me-1 text-primary"></i> Home Page</a>
         </div>
@@ -943,13 +904,9 @@ def dispatch_request():
         else if(m.includes('GSX') || m.includes('GM9')) result.brand = 'Goodman';
         else if(m.includes('XC') || m.includes('EL19')) result.brand = 'Lennox';
 
-        if(m.startsWith('5')) {
-            result.refrig = 'R-454B';
-        } else if(m.startsWith('4')) {
-            result.refrig = 'R-410A';
-        } else if(m.startsWith('2')) {
-            result.refrig = 'R-22';
-        }
+        if(m.startsWith('5')) result.refrig = 'R-454B';
+        else if(m.startsWith('4')) result.refrig = 'R-410A';
+        else if(m.startsWith('2')) result.refrig = 'R-22';
 
         if(m.includes('048')) result.tonnage = '4.0 Tons';
         else if(m.includes('036')) result.tonnage = '3.0 Tons';
@@ -995,7 +952,6 @@ def dispatch_request():
         }
 
         let issueContextStr = eqSelectVal ? " | [ISSUE CATEGORY]: " + eqSelectVal : "";
-
         let prioritizedSpecs = issueContextStr + " | [TECH SPECS SUMMARY]: " +
             "1. Manufacturer: " + parsed.brand + " " +
             "| 2. System Energy: " + sysEnergyLabel + " " +
@@ -1380,12 +1336,8 @@ def profile():
             </div>
 
             <div class="row g-2">
-                <div class="col-6">
-                    <button type="submit" class="btn btn-amber w-100 py-3 rounded-3 fw-bold shadow-sm fs-6"><i class="fa-solid fa-floppy-disk me-1"></i> Save Profile</button>
-                </div>
-                <div class="col-6">
-                    <a href="/customer_home" class="btn btn-white-action py-3 fs-6">Cancel</a>
-                </div>
+                <div class="col-6"><button type="submit" class="btn btn-amber w-100 py-3 rounded-3 fw-bold shadow-sm fs-6"><i class="fa-solid fa-floppy-disk me-1"></i> Save Profile</button></div>
+                <div class="col-6"><a href="/customer_home" class="btn btn-white-action py-3 fs-6">Cancel</a></div>
             </div>
         </form>
 
@@ -1763,16 +1715,8 @@ def invoices():
                 </div>
                 <div class="small text-muted mb-2">Date: 08/01/2026 | Card: **** 1004 | Amount: $185.00</div>
                 <div class="row g-2">
-                    <div class="col-6">
-                        <button class="btn btn-outline-danger btn-sm w-100 fw-bold rounded-2" onclick="alert('Refund Request Submitted.')">
-                            <i class="fa-solid fa-rotate-left me-1"></i> Request Refund
-                        </button>
-                    </div>
-                    <div class="col-6">
-                        <button class="btn btn-outline-primary btn-sm w-100 fw-bold rounded-2" onclick="window.print()">
-                            <i class="fa-solid fa-print me-1"></i> Print Invoice
-                        </button>
-                    </div>
+                    <div class="col-6"><button class="btn btn-outline-danger btn-sm w-100 fw-bold rounded-2" onclick="alert('Refund Request Submitted.')"><i class="fa-solid fa-rotate-left me-1"></i> Request Refund</button></div>
+                    <div class="col-6"><button class="btn btn-outline-primary btn-sm w-100 fw-bold rounded-2" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> Print Invoice</button></div>
                 </div>
             </div>
         </div>
