@@ -173,7 +173,7 @@ def get_lat_lng(address_str):
 
     try:
         url = "https://photon.komoot.io/api/?q=" + urllib.parse.quote(address_str.strip()) + "&limit=1&countrycode=us"
-        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosLiveDispatch/6.5 (dispatch@olmios.com)"})
+        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosLiveDispatch/7.0 (dispatch@olmios.com)"})
         with urllib.request.urlopen(req, timeout=3) as response:
             data = json.loads(response.read().decode())
             if data and 'features' in data and len(data['features']) > 0:
@@ -567,7 +567,7 @@ def customer_home():
     return html.replace('{{HEADER}}', COMMON_HEADER).replace('{{PHOENIX}}', get_phoenix_svg(45, 45))
 
 # ==========================================
-# MY SERVICES & ORDERS ROUTE
+# MY SERVICES & ORDERS ROUTE (UNIFORM LIGHT GRAY BUTTON)
 # ==========================================
 @app.route('/customer_services')
 def customer_services():
@@ -578,11 +578,13 @@ def customer_services():
     <title>Olmios - My Services & Orders</title>
     {{HEADER}}
     <style>
-        body { background-color: #0b1329; color: white; font-family: 'Outfit', sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 550px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', sans-serif; padding: 18px 14px; min-height: 100vh; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 480px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .nav-pills .nav-link { color: #475569; font-weight: 800; font-size: 0.8rem; border-radius: 10px; padding: 6px 4px; }
         .nav-pills .nav-link.active { background: #2563eb; color: white; }
         .search-box-container { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 10px; margin-bottom: 12px; }
+        .btn-gray-nav { background: #f1f5f9 !important; color: #334155 !important; border: 1.5px solid #cbd5e1 !important; font-weight: 800; border-radius: 14px; padding: 12px 10px; font-size: 0.95rem; width: 100%; transition: all 0.2s; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+        .btn-gray-nav:hover { background: #e2e8f0 !important; color: #0f172a !important; border-color: #94a3b8 !important; }
     </style>
 </head>
 <body>
@@ -662,7 +664,9 @@ def customer_services():
             </div>
         </div>
 
-        <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold mt-3"><i class="fa-solid fa-house me-1"></i> Return Home</a>
+        <div class="mt-3">
+            <a href="/customer_home" class="btn-gray-nav"><i class="fa-solid fa-house me-1 text-primary"></i> Home Page</a>
+        </div>
     </div>
 
     <script>
@@ -1176,7 +1180,7 @@ def confirmation(req_id):
     """
 
 # ==========================================
-# CUSTOMER PROFILE & WALLET (HIGH-CONTRAST BUTTONS & CAMERA TAG UPLOAD)
+# CUSTOMER PROFILE & WALLET (LIGHT GRAY HOME BUTTON)
 # ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -1209,6 +1213,8 @@ def profile():
         .btn-amber:hover { background: #b45309; color: white; }
         .btn-white-action { background: #ffffff !important; color: #1e293b !important; border: 1.5px solid #cbd5e1 !important; font-weight: 800; border-radius: 14px; padding: 12px 10px; font-size: 0.95rem; width: 100%; transition: all 0.2s; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
         .btn-white-action:hover { background: #f1f5f9 !important; color: #2563eb !important; border-color: #3b82f6 !important; }
+        .btn-gray-nav { background: #f1f5f9 !important; color: #334155 !important; border: 1.5px solid #cbd5e1 !important; font-weight: 800; border-radius: 14px; padding: 12px 10px; font-size: 0.95rem; width: 100%; transition: all 0.2s; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+        .btn-gray-nav:hover { background: #e2e8f0 !important; color: #0f172a !important; border-color: #94a3b8 !important; }
         .add-tab-btn { font-size: 0.75rem; padding: 2px 10px; border-radius: 20px; font-weight: 700; }
         .add-on-box { display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
         .card-box { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; margin-bottom: 10px; }
@@ -1389,7 +1395,7 @@ def profile():
                             </div>
                             <label class="btn btn-sm btn-outline-primary w-100 fw-bold rounded-2">
                                 <i class="fa-solid fa-file-arrow-up me-1"></i> Upload Tax Exemption / Resale Certificate (PDF / Image)
-                                <input type="file" accept="image/*,application/pdf" style="display: none;" onchange="alert('Tax Exemption Certificate Uploaded!')">
+                            <input type="file" accept="image/*,application/pdf" style="display: none;" onchange="alert('Tax Exemption Certificate Uploaded!')">
                             </label>
                         </div>
                     </div>
@@ -1518,9 +1524,9 @@ def profile():
             </div>
         </form>
 
-        <!-- FOOTER HOME & LOG OFF BUTTONS: HIGH-CONTRAST SOLID WHITE CARDS -->
+        <!-- FOOTER HOME & LOG OFF BUTTONS: UNIFORM LIGHT GRAY NAV CARD -->
         <div class="text-center mt-2">
-            <a href="/customer_home" class="btn btn-white-action py-3 rounded-3 fw-bold mb-2 fs-6"><i class="fa-solid fa-house me-1 text-primary"></i> Home Page</a>
+            <a href="/customer_home" class="btn-gray-nav py-3 mb-2 fs-6"><i class="fa-solid fa-house me-1 text-primary"></i> Home Page</a>
             <div>
                 <a href="/logout" class="profile-quiet-logoff" onclick="localStorage.removeItem('olmios_is_first_login');">
                     <i class="fa-solid fa-right-from-bracket me-1"></i> Securely Log Off
@@ -1645,7 +1651,7 @@ def profile():
                     <div class="col-6"><label class="form-label">AIR HANDLER SERIAL #</label><input type="text" id="m_coil_ser" class="form-control rounded-3 uppercase-input" placeholder="Air Handler Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>
                 <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase Nickname" oninput="this.value = this.value.toUpperCase()"></div>
                     <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Serial #" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         } else if (systemType === 'gas_hp') {
@@ -1674,7 +1680,7 @@ def profile():
                 </div>
                 <div class="row g-2 mb-2">
                     <div class="col-6"><label class="form-label">HEAT KIT MODEL #</label><input type="text" id="m_furn_mod" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Model #" oninput="this.value = this.value.toUpperCase()"></div>
-                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Serial #" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="col-6"><label class="form-label">HEAT KIT SERIAL #</label><input type="text" id="m_furn_ser" class="form-control rounded-3 uppercase-input" placeholder="Heat Kit Serial #" oninput="this.value = this.value.toUpperCase Nickname" oninput="this.value = this.value.toUpperCase()"></div>
                 </div>`;
         } else if (systemType === 'res_pkg') {
             html = `
@@ -1874,9 +1880,11 @@ def invoices():
     <title>Olmios - Invoices</title>
     {{HEADER}}
     <style>
-        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 15px; min-height: 100vh; }
-        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        body { background-color: #0b1329; color: white; font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 18px 14px; min-height: 100vh; }
+        .main-card { background: #ffffff; color: #0f172a; border-radius: 20px; padding: 20px; max-width: 480px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .invoice-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; background: #f8fafc; margin-bottom: 12px; }
+        .btn-gray-nav { background: #f1f5f9 !important; color: #334155 !important; border: 1.5px solid #cbd5e1 !important; font-weight: 800; border-radius: 14px; padding: 12px 10px; font-size: 0.95rem; width: 100%; transition: all 0.2s; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+        .btn-gray-nav:hover { background: #e2e8f0 !important; color: #0f172a !important; border-color: #94a3b8 !important; }
     </style>
 </head>
 <body>
@@ -1908,7 +1916,9 @@ def invoices():
             </div>
         </div>
 
-        <a href="/customer_home" class="btn btn-secondary w-100 py-2 rounded-3 fw-bold mt-2"><i class="fa-solid fa-house me-1"></i> Return Home</a>
+        <div class="mt-2">
+            <a href="/customer_home" class="btn-gray-nav"><i class="fa-solid fa-house me-1 text-primary"></i> Return Home</a>
+        </div>
     </div>
 </body>
 </html>"""
