@@ -160,9 +160,6 @@ COMMON_ADMIN_CSS = """
     .btn-outline-admin:hover { background: #f1f5f9; color: #2563eb; }
 """
 
-# ==========================================
-# PRECISE PARCEL GEOCODING RESOLUTION
-# ==========================================
 def get_lat_lng(address_str):
     if not address_str or len(address_str.strip()) < 3:
         return 29.9525, -95.4312
@@ -176,7 +173,7 @@ def get_lat_lng(address_str):
 
     try:
         url = "https://photon.komoot.io/api/?q=" + urllib.parse.quote(address_str.strip()) + "&limit=1&countrycode=us"
-        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosLiveDispatch/6.0 (dispatch@olmios.com)"})
+        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosLiveDispatch/6.5 (dispatch@olmios.com)"})
         with urllib.request.urlopen(req, timeout=3) as response:
             data = json.loads(response.read().decode())
             if data and 'features' in data and len(data['features']) > 0:
@@ -342,7 +339,7 @@ def logout():
     return redirect('/')
 
 # ==========================================
-# CUSTOMER HOME DASHBOARD ROUTE (CENTERED REGIONAL SCALE)
+# CUSTOMER HOME DASHBOARD ROUTE
 # ==========================================
 @app.route('/customer_home')
 def customer_home():
@@ -394,7 +391,7 @@ def customer_home():
             </div>
         </div>
 
-        <!-- CARD 2: PROPERTY SELECTOR & MAP (PERFECT CENTER & ZOOM) -->
+        <!-- CARD 2: PROPERTY SELECTOR & MAP -->
         <div class="panel-card">
             <div class="mb-2">
                 <label class="form-label small fw-bold text-muted mb-1"><i class="fa-solid fa-location-dot text-primary me-1"></i> Active Job Property View</label>
@@ -474,7 +471,6 @@ def customer_home():
             }
         };
 
-        // Perfectly centered regional map view (Zoom 9.5 centered over North Harris County)
         var map = L.map('map', { autoPanPadding: [20, 20] }).setView([29.980, -95.380], 9.5);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
@@ -1180,7 +1176,7 @@ def confirmation(req_id):
     """
 
 # ==========================================
-# CUSTOMER PROFILE & WALLET (DISCRETE CARD SPACING UI)
+# CUSTOMER PROFILE & WALLET (HIGH-CONTRAST BUTTONS & CAMERA TAG UPLOAD)
 # ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -1210,6 +1206,9 @@ def profile():
         .form-label { font-weight: 800; color: #334155 !important; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; display: block; }
         .section-header { font-weight: 800; color: #0284c7; font-size: 0.90rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
         .btn-amber { background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 800; }
+        .btn-amber:hover { background: #b45309; color: white; }
+        .btn-white-action { background: #ffffff !important; color: #1e293b !important; border: 1.5px solid #cbd5e1 !important; font-weight: 800; border-radius: 14px; padding: 12px 10px; font-size: 0.95rem; width: 100%; transition: all 0.2s; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .btn-white-action:hover { background: #f1f5f9 !important; color: #2563eb !important; border-color: #3b82f6 !important; }
         .add-tab-btn { font-size: 0.75rem; padding: 2px 10px; border-radius: 20px; font-weight: 700; }
         .add-on-box { display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
         .card-box { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; margin-bottom: 10px; }
@@ -1218,6 +1217,7 @@ def profile():
         .prompt-dropbox-header:hover { background: #e0f2fe; }
         .profile-quiet-logoff { color: #dc2626; font-size: 0.85rem; font-weight: 700; text-decoration: none; display: inline-block; margin-top: 10px; }
         .profile-quiet-logoff:hover { color: #991b1b; text-decoration: underline; }
+        .tag-preview-box { border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 12px; text-align: center; background: #f8fafc; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -1277,7 +1277,7 @@ def profile():
                 </div>
             </div>
 
-            <!-- CARD 3: ADDRESSES & PROPERTY LOCATIONS (UNIFIED) -->
+            <!-- CARD 3: ADDRESSES & PROPERTY LOCATIONS -->
             <div class="panel-card">
                 <div class="section-header">
                     <span><i class="fa-solid fa-location-dot me-1"></i> 2. Residential & Property Locations</span>
@@ -1356,7 +1356,7 @@ def profile():
                         
                         <label class="btn btn-sm btn-outline-secondary w-100 fw-bold rounded-3">
                             <i class="fa-solid fa-id-card me-1"></i> Snap / Upload Photo of Driver's License
-                            <input type="file" accept="image/*" style="display: none;" onchange="alert('Driver License Photo Uploaded!')">
+                            <input type="file" accept="image/*" capture="environment" style="display: none;" onchange="alert('Driver License Photo Uploaded!')">
                         </label>
                     </div>
                     
@@ -1396,7 +1396,7 @@ def profile():
                 </div>
             </div>
 
-            <!-- CARD 5: HVAC SYSTEM EQUIPMENT & DATA PLATE SPECS -->
+            <!-- CARD 5: HVAC SYSTEM SPECS & CAMERA SNAP UPLOAD -->
             <div class="panel-card">
                 <div class="section-header">
                     <span><i class="fa-solid fa-sliders me-1"></i> 3. HVAC System Equipment Specs</span>
@@ -1423,9 +1423,22 @@ def profile():
                 <!-- DYNAMIC COMPONENT FIELDS CONTAINER -->
                 <div id="dynamic_hvac_container"></div>
 
+                <!-- INTERACTIVE PHOTO SNAP & UPLOAD DROPZONE -->
                 <div class="mb-2">
-                    <label class="form-label"><i class="fa-solid fa-image me-1 text-primary"></i> UNIT RATING PLATE PHOTO URL / UPLOAD <span class="text-muted fw-normal">(OPTIONAL)</span></label>
-                    <input type="text" id="prof_tag_url" class="form-control rounded-3" placeholder="Upload or paste image URL of equipment tag">
+                    <label class="form-label"><i class="fa-solid fa-camera text-primary me-1"></i> UNIT RATING PLATE PHOTO / TAG SNAP <span class="text-muted fw-normal">(OPTIONAL)</span></label>
+                    
+                    <label class="btn btn-outline-primary w-100 fw-bold rounded-3 py-2.5 d-flex align-items-center justify-content-center gap-2" style="font-size: 0.88rem; cursor: pointer; border: 1.5px dashed #3b82f6; background: #f0f7ff;">
+                        <i class="fa-solid fa-camera-retro fs-5"></i> Snap / Upload Equipment Data Tag Photo
+                        <input type="file" accept="image/*" capture="environment" style="display: none;" onchange="previewTagPhoto(event)">
+                    </label>
+
+                    <div id="tag_preview_container" class="tag-preview-box" style="display: none;">
+                        <img id="tag_img_preview" src="" style="max-height: 120px; border-radius: 8px; border: 1px solid #cbd5e1; object-fit: cover;" class="mb-2 d-block mx-auto">
+                        <div class="d-flex justify-content-center gap-2">
+                            <span class="badge bg-success small"><i class="fa-solid fa-circle-check me-1"></i> Photo Attached</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="removeTagPhoto()"><i class="fa-solid fa-trash me-1"></i> Remove</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="add_acc_box" class="add-on-box">
@@ -1492,22 +1505,22 @@ def profile():
                 </div>
             </div>
 
-            <!-- ACTION BUTTONS -->
+            <!-- ACTION BUTTONS: HIGH-CONTRAST SOLID WHITE CARDS -->
             <div class="row g-2">
                 <div class="col-6">
-                    <button type="submit" class="btn btn-amber w-100 py-3 rounded-3 fw-bold shadow-sm">
+                    <button type="submit" class="btn btn-amber w-100 py-3 rounded-3 fw-bold shadow-sm fs-6">
                         <i class="fa-solid fa-floppy-disk me-1"></i> Save Profile
                     </button>
                 </div>
                 <div class="col-6">
-                    <a href="/customer_home" class="btn btn-white-card py-3">Cancel</a>
+                    <a href="/customer_home" class="btn btn-white-action py-3 fs-6">Cancel</a>
                 </div>
             </div>
         </form>
 
-        <!-- FOOTER HOME & LOG OFF BUTTONS -->
+        <!-- FOOTER HOME & LOG OFF BUTTONS: HIGH-CONTRAST SOLID WHITE CARDS -->
         <div class="text-center mt-2">
-            <a href="/customer_home" class="btn btn-white-card py-2.5 rounded-3 fw-bold mb-2"><i class="fa-solid fa-house me-1"></i> Home Page</a>
+            <a href="/customer_home" class="btn btn-white-action py-3 rounded-3 fw-bold mb-2 fs-6"><i class="fa-solid fa-house me-1 text-primary"></i> Home Page</a>
             <div>
                 <a href="/logout" class="profile-quiet-logoff" onclick="localStorage.removeItem('olmios_is_first_login');">
                     <i class="fa-solid fa-right-from-bracket me-1"></i> Securely Log Off
@@ -1527,6 +1540,24 @@ def profile():
             }
             reader.readAsDataURL(e.target.files[0]);
         }
+    }
+
+    function previewTagPhoto(e) {
+        if(e.target.files && e.target.files[0]) {
+            let reader = new FileReader();
+            reader.onload = function(evt) {
+                document.getElementById('tag_img_preview').src = evt.target.result;
+                document.getElementById('tag_preview_container').style.display = 'block';
+                localStorage.setItem('olmios_tag_photo', evt.target.result);
+            }
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    }
+
+    function removeTagPhoto() {
+        document.getElementById('tag_img_preview').src = '';
+        document.getElementById('tag_preview_container').style.display = 'none';
+        localStorage.removeItem('olmios_tag_photo');
     }
 
     function toggleAddBox(boxId) {
@@ -1812,7 +1843,12 @@ def profile():
         if(localStorage.getItem('olmios_company')) document.getElementById('prof_company').value = localStorage.getItem('olmios_company');
         if(localStorage.getItem('olmios_taxid')) document.getElementById('prof_taxid').value = localStorage.getItem('olmios_taxid');
         if(localStorage.getItem('olmios_ap_email')) document.getElementById('prof_ap_email').value = localStorage.getItem('olmios_ap_email');
-        if(localStorage.getItem('olmios_tag_url')) document.getElementById('prof_tag_url').value = localStorage.getItem('olmios_tag_url');
+
+        let savedTagPhoto = localStorage.getItem('olmios_tag_photo');
+        if(savedTagPhoto) {
+            document.getElementById('tag_img_preview').src = savedTagPhoto;
+            document.getElementById('tag_preview_container').style.display = 'block';
+        }
 
         let savedPic = localStorage.getItem('olmios_profile_pic');
         if(savedPic) document.getElementById('profile_avatar_preview').src = savedPic;
