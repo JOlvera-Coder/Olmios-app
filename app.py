@@ -165,7 +165,7 @@ COMMON_ADMIN_CSS = """
 # ==========================================
 def get_lat_lng(address_str):
     if not address_str or len(address_str.strip()) < 3:
-        return 29.9985, -95.4412
+        return 29.9525, -95.4312
     
     clean_addr = address_str.strip().lower()
     
@@ -176,7 +176,7 @@ def get_lat_lng(address_str):
 
     try:
         url = "https://photon.komoot.io/api/?q=" + urllib.parse.quote(address_str.strip()) + "&limit=1&countrycode=us"
-        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosLiveDispatch/3.5 (dispatch@olmios.com)"})
+        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosLiveDispatch/5.0 (dispatch@olmios.com)"})
         with urllib.request.urlopen(req, timeout=3) as response:
             data = json.loads(response.read().decode())
             if data and 'features' in data and len(data['features']) > 0:
@@ -186,82 +186,13 @@ def get_lat_lng(address_str):
     except Exception:
         pass
 
-    return 29.9985, -95.4412
+    return 29.9525, -95.4312
 
 @app.route('/api/geocode')
 def api_geocode():
     addr = request.args.get('q', '').strip()
     lat, lng = get_lat_lng(addr)
     return jsonify({'lat': lat, 'lng': lng, 'address': addr})
-
-# ==========================================
-# ENHANCED AUTOCOMPLETE: HOUSE NUMBER PRESERVATION & PARCEL PARSER
-# ==========================================
-@app.route('/api/suggest_address')
-def api_suggest_address():
-    q = request.args.get('q', '').strip()
-    if len(q) < 3:
-        return jsonify([])
-
-    # Extract leading house number if entered by user (e.g., '211' from '211 Dominion Park Dr')
-    match = re.match(r'^(\d+)\s+(.*)', q)
-    user_num = match.group(1) if match else ""
-    search_query = match.group(2) if match else q
-
-    try:
-        url = "https://photon.komoot.io/api/?q=" + urllib.parse.quote(q) + "&limit=6&countrycode=us"
-        req = urllib.request.Request(url, headers={"User-Agent": "OlmiosLiveDispatch/4.0 (dispatch@olmios.com)"})
-        with urllib.request.urlopen(req, timeout=3) as response:
-            data = json.loads(response.read().decode())
-            results = []
-            if data and 'features' in data:
-                for feat in data['features']:
-                    props = feat.get('properties', {})
-                    coords = feat.get('geometry', {}).get('coordinates', [])
-                    
-                    housenumber = props.get('housenumber', '') or user_num
-                    street = props.get('street', '') or props.get('name', '')
-                    city = props.get('city', '') or props.get('district', '') or 'Houston'
-                    state = props.get('state', '') or 'TX'
-                    postcode = props.get('postcode', '')
-
-                    # Accurate postal code disambiguation for Dominion Park Dr
-                    if 'dominion park' in street.lower() and not postcode:
-                        postcode = '77090'
-
-                    if street:
-                        full_street = f"{housenumber} {street}".strip()
-                        display_parts = [full_street, city, state]
-                        if postcode:
-                            display_parts.append(postcode)
-                        
-                        full_label = ", ".join(display_parts)
-                        if coords and len(coords) >= 2:
-                            results.append({
-                                'label': full_label,
-                                'lat': coords[1],
-                                'lng': coords[0],
-                                'postcode': postcode or '77090',
-                                'city': city,
-                                'state': state
-                            })
-            
-            # Fallback if API only returned generic street without full house number
-            if not results and user_num:
-                results.append({
-                    'label': f"{user_num} {search_query.title()}, Houston, TX 77090",
-                    'lat': 29.9525 if 'dominion' in search_query.lower() else 29.9985,
-                    'lng': -95.4312 if 'dominion' in search_query.lower() else -95.4412,
-                    'postcode': '77090',
-                    'city': 'Houston',
-                    'state': 'TX'
-                })
-
-            return jsonify(results)
-    except Exception:
-        pass
-
-    return jsonify([])
 
 def calculate_age(created_at_str):
     if not created_at_str:
@@ -411,7 +342,7 @@ def logout():
     return redirect('/')
 
 # ==========================================
-# CUSTOMER HOME DASHBOARD ROUTE (EXACT SHOT #1 MULTI-CARD HIERARCHY)
+# CUSTOMER HOME DASHBOARD ROUTE
 # ==========================================
 @app.route('/customer_home')
 def customer_home():
@@ -512,7 +443,6 @@ def customer_home():
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // High-precision geographic ZIP polygons (Spring, Aldine, Humble) embedded directly to guarantee 100% display reliability
         var HOUSTON_AUTHENTIC_ZIPS = {
             "77373": {
                 color: "#2563eb", fillColor: "#3b82f6",
@@ -544,7 +474,6 @@ def customer_home():
             }
         };
 
-        // Regional Metro Houston view centered on North Houston (Zoom 10)
         var map = L.map('map', { autoPanPadding: [20, 20] }).setView([29.985, -95.395], 10);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
@@ -1250,7 +1179,7 @@ def confirmation(req_id):
     """
 
 # ==========================================
-# CUSTOMER PROFILE & WALLET (INTELLIGENT AUTOCOMPLETE)
+# CUSTOMER PROFILE & WALLET (STRUCTURED ADDRESS GRID)
 # ==========================================
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -1287,9 +1216,6 @@ def profile():
         .prompt-dropbox-header:hover { background: #e0f2fe; }
         .profile-quiet-logoff { color: #dc2626; font-size: 0.85rem; font-weight: 700; text-decoration: none; display: inline-block; margin-top: 12px; }
         .profile-quiet-logoff:hover { color: #991b1b; text-decoration: underline; }
-        .autocomplete-dropdown { position: absolute; z-index: 1000; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; width: 100%; max-height: 190px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; }
-        .autocomplete-item { padding: 10px 14px; font-size: 0.85rem; font-weight: 600; color: #1e293b; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
-        .autocomplete-item:hover { background: #f0f7ff; color: #2563eb; }
     </style>
 </head>
 <body>
@@ -1313,7 +1239,7 @@ def profile():
                 </div>
             </div>
 
-            <!-- SECTION 1 -->
+            <!-- SECTION 1: PERSONAL & STRUCTURED ADDRESS -->
             <div class="section-header">
                 <span><i class="fa-solid fa-user me-1"></i> 1. Basic Personal Information & Residence</span>
             </div>
@@ -1334,15 +1260,45 @@ def profile():
                 <input type="text" id="prof_phone" class="form-control rounded-3" placeholder="Enter phone number">
             </div>
 
-            <div class="mb-2">
+            <div class="mb-3">
                 <label class="form-label">EMAIL ADDRESS</label>
                 <input type="email" id="prof_email" class="form-control rounded-3" placeholder="Enter email address">
             </div>
 
-            <div class="mb-3 position-relative">
-                <label class="form-label"><i class="fa-solid fa-location-crosshairs text-primary me-1"></i> PRIMARY RESIDENCE STREET ADDRESS (LIVE AUTOCOMPLETE)</label>
-                <input type="text" id="primary_street_addr" class="form-control rounded-3" placeholder="Start typing address..." oninput="handleAddressAutocomplete(this.value, 'primary_addr_suggestions')" autocomplete="off">
-                <div id="primary_addr_suggestions" class="autocomplete-dropdown"></div>
+            <!-- STRUCTURED RESIDENTIAL ADDRESS INPUTS (DISCRETE SLOTS) -->
+            <div class="p-3 border rounded-3 bg-light mb-3">
+                <span class="fw-bold text-primary small d-block mb-2"><i class="fa-solid fa-house-user me-1"></i> Primary Residence Address Details</span>
+                
+                <div class="mb-2">
+                    <label class="form-label">STREET ADDRESS</label>
+                    <input type="text" id="addr_street" class="form-control rounded-3" placeholder="e.g. 211 Dominion Park Dr">
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label">APT / SUITE / BUILDING # <span class="text-muted fw-normal">(OPTIONAL)</span></label>
+                    <input type="text" id="addr_unit" class="form-control rounded-3" placeholder="e.g. Apt 4B, Bldg 2">
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-7">
+                        <label class="form-label">CITY</label>
+                        <input type="text" id="addr_city" class="form-control rounded-3" placeholder="e.g. Houston">
+                    </div>
+                    <div class="col-5">
+                        <label class="form-label">STATE</label>
+                        <select id="addr_state" class="form-select rounded-3 fw-bold">
+                            <option value="TX" selected>TX (Texas)</option>
+                            <option value="AL">AL</option><option value="AZ">AZ</option><option value="CA">CA</option>
+                            <option value="CO">CO</option><option value="FL">FL</option><option value="GA">GA</option>
+                            <option value="LA">LA</option><option value="NM">NM</option><option value="OK">OK</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label">ZIP CODE</label>
+                    <input type="text" id="addr_zip" class="form-control rounded-3 fw-bold text-primary" placeholder="e.g. 77090" maxlength="5">
+                </div>
             </div>
 
             <!-- SECTION 2: BUSINESS & COMMERCIAL COLLAPSIBLE -->
@@ -1507,12 +1463,11 @@ def profile():
                 </select>
             </div>
 
-            <div id="add_location_box" class="add-on-box position-relative">
+            <div id="add_location_box" class="add-on-box">
                 <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-house-chimney-medical me-1"></i> Add Additional Location Specs</h6>
-                <div class="mb-2 position-relative">
-                    <label class="form-label">PROPERTY ADDRESS (LIVE AUTOCOMPLETE)</label>
-                    <input type="text" id="new_location_addr_input" class="form-control rounded-3" placeholder="Start typing address..." oninput="handleAddressAutocomplete(this.value, 'modal_addr_suggestions')" autocomplete="off">
-                    <div id="modal_addr_suggestions" class="autocomplete-dropdown"></div>
+                <div class="mb-2">
+                    <label class="form-label">PROPERTY ADDRESS (STREET, CITY, STATE, ZIP)</label>
+                    <input type="text" id="new_location_addr_input" class="form-control rounded-3" placeholder="e.g. 18510 Ranch View Trail Cir, Houston, TX 77090">
                 </div>
                 <button type="button" class="btn btn-sm btn-success fw-bold w-100 rounded-3 mt-2" onclick="saveAdditionalLocation()">Save Location Specs</button>
             </div>
@@ -1538,60 +1493,6 @@ def profile():
     </div>
 
     <script>
-    var debounceTimer = null;
-
-    function handleAddressAutocomplete(query, dropdownId) {
-        clearTimeout(debounceTimer);
-        var dd = document.getElementById(dropdownId);
-        if(!query || query.trim().length < 3) {
-            dd.style.display = 'none';
-            return;
-        }
-
-        debounceTimer = setTimeout(function() {
-            fetch('/api/suggest_address?q=' + encodeURIComponent(query))
-                .then(r => r.json())
-                .then(items => {
-                    if(!items || items.length === 0) {
-                        dd.style.display = 'none';
-                        return;
-                    }
-                    dd.innerHTML = '';
-                    items.forEach(function(item) {
-                        var div = document.createElement('div');
-                        div.className = 'autocomplete-item';
-                        div.innerHTML = `<i class="fa-solid fa-location-dot text-primary me-2"></i> ${item.label}`;
-                        div.onclick = function() {
-                            if(dropdownId === 'primary_addr_suggestions') {
-                                document.getElementById('primary_street_addr').value = item.label;
-                                localStorage.setItem('olmios_saved_address', item.label);
-                                localStorage.setItem('olmios_saved_lat', item.lat);
-                                localStorage.setItem('olmios_saved_lng', item.lng);
-                                localStorage.setItem('olmios_saved_zip', item.postcode);
-                            } else {
-                                document.getElementById('new_location_addr_input').value = item.label;
-                            }
-                            dd.style.display = 'none';
-                        };
-                        dd.appendChild(div);
-                    });
-                    dd.style.display = 'block';
-                })
-                .catch(() => dd.style.display = 'none');
-        }, 200);
-    }
-
-    document.addEventListener('click', function(e) {
-        if(!e.target.closest('#primary_street_addr') && !e.target.closest('#primary_addr_suggestions')) {
-            var el = document.getElementById('primary_addr_suggestions');
-            if(el) el.style.display = 'none';
-        }
-        if(!e.target.closest('#new_location_addr_input') && !e.target.closest('#modal_addr_suggestions')) {
-            var el = document.getElementById('modal_addr_suggestions');
-            if(el) el.style.display = 'none';
-        }
-    });
-
     function previewProfilePic(e) {
         if(e.target.files && e.target.files[0]) {
             let reader = new FileReader();
@@ -1785,7 +1686,7 @@ def profile():
                 <div class="row g-2 mt-1">
                     <div class="col-12"><input type="text" class="form-control rounded-3 mb-1" value="${name}"></div>
                     <div class="col-8"><input type="text" class="form-control rounded-3" value="**** **** **** ${last4}"></div>
-                    <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY"></div>
+                    <div class="col-4"><input type="text" class="form-control rounded-3" placeholder="MM/YY" value="12/28"></div>
                 </div>
             </div>`;
         document.getElementById('card_list_container').insertAdjacentHTML('beforeend', newCardHtml);
@@ -1797,12 +1698,39 @@ def profile():
         let lname = document.getElementById('prof_lname').value.trim();
         let phone = document.getElementById('prof_phone').value.trim();
         let email = document.getElementById('prof_email').value.trim();
-        let addr = document.getElementById('primary_street_addr').value.trim();
+        
+        let street = document.getElementById('addr_street').value.trim();
+        let unit = document.getElementById('addr_unit').value.trim();
+        let city = document.getElementById('addr_city').value.trim() || 'Houston';
+        let state = document.getElementById('addr_state').value || 'TX';
+        let zip = document.getElementById('addr_zip').value.trim() || '77090';
+
+        let fullAddress = street;
+        if(unit) fullAddress += ' ' + unit;
+        if(city) fullAddress += ', ' + city;
+        if(state) fullAddress += ', ' + state;
+        if(zip) fullAddress += ' ' + zip;
 
         if(fname || lname) localStorage.setItem('olmios_fullname', (fname + ' ' + lname).trim());
         if(phone) localStorage.setItem('olmios_phone', phone);
         if(email) localStorage.setItem('olmios_email', email);
-        if(addr) localStorage.setItem('olmios_saved_address', addr);
+        
+        if(street) {
+            localStorage.setItem('olmios_saved_address', fullAddress);
+            localStorage.setItem('olmios_saved_street', street);
+            localStorage.setItem('olmios_saved_unit', unit);
+            localStorage.setItem('olmios_saved_city', city);
+            localStorage.setItem('olmios_saved_state', state);
+            localStorage.setItem('olmios_saved_zip', zip);
+
+            if(street.toLowerCase().includes('dominion') || zip === '77090') {
+                localStorage.setItem('olmios_saved_lat', 29.9525);
+                localStorage.setItem('olmios_saved_lng', -95.4312);
+            } else if(street.toLowerCase().includes('kuykendahl')) {
+                localStorage.setItem('olmios_saved_lat', 29.9985);
+                localStorage.setItem('olmios_saved_lng', -95.4412);
+            }
+        }
 
         let hvacType = document.getElementById('main_heating_type_select').value;
         if(hvacType) localStorage.setItem('olmios_hvac_type', hvacType);
@@ -1832,7 +1760,28 @@ def profile():
         
         if(localStorage.getItem('olmios_phone')) document.getElementById('prof_phone').value = localStorage.getItem('olmios_phone');
         if(localStorage.getItem('olmios_email')) document.getElementById('prof_email').value = localStorage.getItem('olmios_email');
-        if(localStorage.getItem('olmios_saved_address')) document.getElementById('primary_street_addr').value = localStorage.getItem('olmios_saved_address');
+        
+        // Restore discrete address slots
+        let savedStreet = localStorage.getItem('olmios_saved_street');
+        let savedUnit = localStorage.getItem('olmios_saved_unit');
+        let savedCity = localStorage.getItem('olmios_saved_city');
+        let savedState = localStorage.getItem('olmios_saved_state');
+        let savedZip = localStorage.getItem('olmios_saved_zip');
+
+        if(savedStreet) {
+            document.getElementById('addr_street').value = savedStreet;
+            if(savedUnit) document.getElementById('addr_unit').value = savedUnit;
+            if(savedCity) document.getElementById('addr_city').value = savedCity;
+            if(savedState) document.getElementById('addr_state').value = savedState;
+            if(savedZip) document.getElementById('addr_zip').value = savedZip;
+        } else {
+            // Default initialization
+            document.getElementById('addr_street').value = '211 Dominion Park Dr';
+            document.getElementById('addr_city').value = 'Houston';
+            document.getElementById('addr_state').value = 'TX';
+            document.getElementById('addr_zip').value = '77090';
+        }
+
         if(localStorage.getItem('olmios_dl')) document.getElementById('prof_dl').value = localStorage.getItem('olmios_dl');
         if(localStorage.getItem('olmios_company')) document.getElementById('prof_company').value = localStorage.getItem('olmios_company');
         if(localStorage.getItem('olmios_taxid')) document.getElementById('prof_taxid').value = localStorage.getItem('olmios_taxid');
@@ -1913,7 +1862,7 @@ def download_logo():
     <title>Olmios - Download Phoenix Logo (.JPG)</title>
     {{HEADER}}
     <style>
-        body { background-color: #0b1329; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; padding: 20px; }
+        body { background-color: #0b1329; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; padding: 20px; min-height: 100vh; }
         .logo-card { background: #ffffff; padding: 40px; border-radius: 24px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); max-width: 480px; width: 100%; color: #0f172a; }
     </style>
 </head>
